@@ -12,26 +12,40 @@ interface Props {
   onUpdate: (updated: Client) => void
 }
 
-function formatCurrency(amount: number, currency: string) {
+function fmt(amount: number, currency: string) {
   return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function PaymentDot({ installment, onToggle }: { installment: PaymentInstallment; onToggle: () => void }) {
   const isPast = new Date(installment.due_date) < new Date()
   const color = installment.paid
-    ? 'bg-green-400 border-green-400'
+    ? 'bg-green-400 border-green-400 text-white'
     : isPast
-      ? 'bg-red-400 border-red-400'
-      : 'bg-gray-100 border-gray-300'
+      ? 'bg-red-400 border-red-400 text-white'
+      : 'bg-gray-100 border-gray-300 text-gray-500'
 
   return (
     <button
       onClick={onToggle}
-      title={`Month ${installment.month_number}: ${installment.paid ? 'Paid ✓' : 'Pending'} — ${new Date(installment.due_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`}
-      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all hover:scale-110 ${color} ${installment.paid ? 'text-white' : 'text-gray-500'}`}
+      title={`Month ${installment.month_number} — due ${fmtDate(installment.due_date)} — ${installment.paid ? '✓ Paid' : 'Pending'}`}
+      className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all hover:scale-110 ${color}`}
     >
       {installment.month_number}
     </button>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  if (!value) return null
+  return (
+    <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-xs font-medium text-gray-900 text-right max-w-[60%]">{value}</span>
+    </div>
   )
 }
 
@@ -41,11 +55,22 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
   const [upsellMonth, setUpsellMonth] = useState(client.upsell_reminder_month ?? 3)
   const [saving, setSaving] = useState(false)
   const [insts, setInsts] = useState<PaymentInstallment[]>(installments)
+  const [tab, setTab] = useState<'overview' | 'payments' | 'notes'>('overview')
   const supabase = createClient()
 
-  const monthsElapsed = Math.floor(
-    (Date.now() - new Date(client.started_at).getTime()) / (30 * 24 * 60 * 60 * 1000)
-  )
+  // LTV calculations
+  const totalContracted = client.total_amount
+  const totalPaid = insts.filter(i => i.paid).reduce((sum, i) => sum + i.amount, 0)
+  const totalOutstanding = Math.max(0, totalContracted - totalPaid)
+  const paidPercent = totalContracted > 0 ? Math.round((totalPaid / totalContracted) * 100) : 0
+
+  // Contract dates
+  const startDate = new Date(client.started_at)
+  const endDate = client.plan_months
+    ? new Date(new Date(client.started_at).setMonth(startDate.getMonth() + client.plan_months))
+    : null
+  const monthsElapsed = Math.floor((Date.now() - startDate.getTime()) / (30 * 24 * 60 * 60 * 1000))
+  const monthsRemaining = client.plan_months ? Math.max(0, client.plan_months - monthsElapsed) : null
 
   async function saveNotes() {
     setSaving(true)
@@ -74,18 +99,21 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
     setInsts(is => is.map(i => i.id === instId ? { ...i, paid: newPaid, manually_confirmed: newPaid } : i))
   }
 
-  const paidInstallments = insts.filter(i => i.paid)
-  const ltvCollected = paidInstallments.reduce((sum, i) => sum + i.amount, 0)
-
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col">
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <h2 className="font-bold text-gray-900">{client.full_name || client.ig_username}</h2>
-            <p className="text-xs text-gray-400">@{client.ig_username}</p>
+            <p className="text-xs text-gray-400">
+              @{client.ig_username}
+              {(client as Client & { program_type?: string }).program_type && (
+                <span className="ml-2 text-blue-500">· {(client as Client & { program_type?: string }).program_type}</span>
+              )}
+            </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
@@ -94,91 +122,175 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {/* Overview */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Payment type', value: client.payment_type === 'pif' ? 'Paid in full' : client.payment_type === 'split' ? 'Split pay' : `Payment plan` },
-              { label: 'Monthly', value: client.monthly_amount ? formatCurrency(client.monthly_amount, baseCurrency) : '—' },
-              { label: 'LTV collected', value: formatCurrency(ltvCollected || client.total_amount, baseCurrency) },
-              { label: 'Progress', value: client.plan_months ? `Month ${monthsElapsed + 1} of ${client.plan_months}` : 'Active' },
-            ].map(item => (
-              <div key={item.label} className="bg-gray-50 rounded-xl p-3">
-                <p className="text-xs text-gray-500 mb-0.5">{item.label}</p>
-                <p className="text-sm font-semibold text-gray-900">{item.value}</p>
-              </div>
-            ))}
+        {/* LTV Summary bar */}
+        <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-0.5">Contract value</p>
+              <p className="text-sm font-bold text-gray-900">{fmt(totalContracted, baseCurrency)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-0.5">Collected</p>
+              <p className="text-sm font-bold text-green-600">{fmt(totalPaid || (client.payment_type === 'pif' ? totalContracted : 0), baseCurrency)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-gray-400 mb-0.5">Outstanding</p>
+              <p className={`text-sm font-bold ${totalOutstanding > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                {fmt(client.payment_type === 'pif' ? 0 : totalOutstanding, baseCurrency)}
+              </p>
+            </div>
           </div>
-
-          {/* Payment dots */}
           {insts.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Payment tracker</p>
-              <div className="flex flex-wrap gap-2">
-                {[...insts].sort((a, b) => a.month_number - b.month_number).map(inst => (
-                  <PaymentDot
-                    key={inst.id}
-                    installment={inst}
-                    onToggle={() => togglePayment(inst.id, inst.paid)}
-                  />
-                ))}
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{paidPercent}% collected</span>
+                <span>{insts.filter(i => i.paid).length}/{insts.length} payments</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">Tap a dot to mark as paid/unpaid</p>
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{ width: `${paidPercent}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-100">
+          {(['overview', 'payments', 'notes'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors ${
+                tab === t ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Overview tab */}
+          {tab === 'overview' && (
+            <div className="p-5 space-y-4">
+              <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+                <InfoRow label="Start date" value={fmtDate(client.started_at)} />
+                {endDate && <InfoRow label="Contract ends" value={fmtDate(endDate.toISOString())} />}
+                {client.plan_months && <InfoRow label="Duration" value={`${client.plan_months} months`} />}
+                {monthsRemaining !== null && monthsRemaining > 0 && (
+                  <InfoRow label="Months remaining" value={`${monthsRemaining} months`} />
+                )}
+                <InfoRow label="Payment type" value={
+                  client.payment_type === 'pif' ? 'Paid in full' :
+                  client.payment_type === 'split' ? 'Split pay' : 'Payment plan'
+                } />
+                {client.monthly_amount ? <InfoRow label="Monthly" value={fmt(client.monthly_amount, baseCurrency)} /> : null}
+                {(client as Client & { email?: string }).email && (
+                  <InfoRow label="Email" value={(client as Client & { email?: string }).email!} />
+                )}
+                {(client as Client & { phone?: string }).phone && (
+                  <InfoRow label="Phone" value={(client as Client & { phone?: string }).phone!} />
+                )}
+                {(client as Client & { referred_by?: string }).referred_by && (
+                  <InfoRow label="Referred by" value={(client as Client & { referred_by?: string }).referred_by!} />
+                )}
+              </div>
+
+              {/* Upsell reminder */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Upsell reminder</p>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Remind me to upsell</p>
+                    <p className="text-xs text-gray-400">Creates a task at the selected month</p>
+                  </div>
+                  <button
+                    onClick={toggleUpsell}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${upsellOn ? 'bg-purple-600' : 'bg-gray-200'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${upsellOn ? 'translate-x-7' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {upsellOn && (
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-2">Alert at month:</p>
+                    <div className="flex gap-2">
+                      {[2, 3, 4, 5, 6].map(m => (
+                        <button
+                          key={m}
+                          onClick={() => setUpsellMonth(m)}
+                          className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${upsellMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Upsell reminder */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Upsell reminder</p>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Remind me to upsell</p>
-                <p className="text-xs text-gray-400">Creates a task at the selected month</p>
-              </div>
+          {/* Payments tab */}
+          {tab === 'payments' && (
+            <div className="p-5 space-y-4">
+              {insts.length > 0 ? (
+                <>
+                  <p className="text-xs text-gray-400">Tap a dot to mark as paid or unpaid</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[...insts].sort((a, b) => a.month_number - b.month_number).map(inst => (
+                      <PaymentDot
+                        key={inst.id}
+                        installment={inst}
+                        onToggle={() => togglePayment(inst.id, inst.paid)}
+                      />
+                    ))}
+                  </div>
+                  <div className="space-y-2 mt-4">
+                    {[...insts].sort((a, b) => a.month_number - b.month_number).map(inst => (
+                      <div
+                        key={inst.id}
+                        className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
+                          inst.paid ? 'bg-green-50' : new Date(inst.due_date) < new Date() ? 'bg-red-50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <span className="font-medium text-gray-700">Month {inst.month_number}</span>
+                        <span className="text-gray-500">{fmtDate(inst.due_date)}</span>
+                        <span className={`font-semibold ${inst.paid ? 'text-green-600' : 'text-gray-400'}`}>
+                          {inst.paid ? '✓ Paid' : fmt(inst.amount, baseCurrency)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-sm">No payment installments</p>
+                  <p className="text-xs mt-1">This client paid in full or split</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notes tab */}
+          {tab === 'notes' && (
+            <div className="p-5">
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={10}
+                placeholder="Anything useful about this client — goals, objections handled, what they respond to…"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
               <button
-                onClick={toggleUpsell}
-                className={`relative w-12 h-6 rounded-full transition-colors ${upsellOn ? 'bg-purple-600' : 'bg-gray-200'}`}
+                onClick={saveNotes}
+                disabled={saving || notes === client.notes}
+                className="mt-3 w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40"
               >
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${upsellOn ? 'translate-x-7' : 'translate-x-1'}`} />
+                {saving ? 'Saving…' : 'Save notes'}
               </button>
             </div>
-
-            {upsellOn && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-2">Alert at month:</p>
-                <div className="flex gap-2">
-                  {[2, 3, 4, 5].map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setUpsellMonth(m)}
-                      className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${upsellMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Notes</p>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={4}
-              placeholder="Anything useful about this client…"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
-            <button
-              onClick={saveNotes}
-              disabled={saving || notes === client.notes}
-              className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40"
-            >
-              {saving ? 'Saving…' : 'Save notes'}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </>
