@@ -414,6 +414,126 @@ function GoogleSheetsCard() {
   )
 }
 
+function StripeCard({ webhookUrl }: { webhookUrl: string }) {
+  const [connected, setConnected] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [secret, setSecret] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [showInput, setShowInput] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings/stripe')
+      .then(r => r.json())
+      .then(d => { setConnected(d.connected); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  async function handleSave() {
+    if (!secret.trim()) return
+    setSaving(true)
+    await fetch('/api/settings/stripe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secret.trim() }),
+    })
+    setConnected(true)
+    setShowInput(false)
+    setSecret('')
+    setSaving(false)
+  }
+
+  async function handleDisconnect() {
+    await fetch('/api/settings/stripe', { method: 'DELETE' })
+    setConnected(false)
+  }
+
+  function copyUrl() {
+    navigator.clipboard.writeText(webhookUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className={`bg-white rounded-xl border p-4 transition-all ${connected ? 'border-green-200' : 'border-gray-100'}`}>
+      <div className="flex items-start gap-4">
+        <span className="text-2xl mt-0.5">💳</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-gray-900 text-sm">Stripe</p>
+            {!loading && (
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">Automatically log payments and failed charges from Stripe.</p>
+
+          {!connected && !showInput && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-medium text-gray-700">To connect:</p>
+              <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+                <li>Go to Stripe → Developers → Webhooks</li>
+                <li>Click "Add destination" → My account → Endpoint</li>
+                <li>Give it a name and paste the URL below</li>
+                <li>Add events: <span className="font-mono text-gray-700">payment_intent.succeeded</span> + <span className="font-mono text-gray-700">payment_intent.payment_failed</span></li>
+                <li>Save — Stripe shows you a signing secret. Paste it below.</li>
+              </ol>
+              <div className="flex items-center gap-2 mt-2">
+                <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1.5 truncate text-gray-600">{webhookUrl}</code>
+                <button onClick={copyUrl} className="px-2 py-1.5 text-xs bg-gray-100 rounded hover:bg-gray-200 flex-shrink-0">
+                  {copied ? '✓' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showInput && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-gray-600">Paste your Stripe signing secret (starts with <span className="font-mono">whsec_</span>):</p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={secret}
+                  onChange={e => setSecret(e.target.value)}
+                  placeholder="whsec_..."
+                  className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !secret.trim()}
+                  className="px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button onClick={() => setShowInput(false)} className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {connected && (
+            <p className="text-xs text-green-600 mt-2 font-medium">✓ Connected — payments sync automatically</p>
+          )}
+        </div>
+
+        <div className="flex-shrink-0">
+          {loading ? (
+            <span className="text-xs text-gray-400">Loading…</span>
+          ) : connected ? (
+            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200">
+              Disconnect
+            </button>
+          ) : !showInput ? (
+            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
+              Connect
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function IntegrationsSection() {
   const [status, setStatus] = useState<IntegrationStatus | null>(null)
 
@@ -443,20 +563,7 @@ function IntegrationsSection() {
         docsUrl="https://zapier.com"
       />
 
-      <WebhookCard
-        emoji="💳"
-        name="Stripe"
-        desc="Automatically log payments and failed charges when they happen in Stripe."
-        configured={status?.stripe.configured ?? false}
-        webhookUrl={stripeUrl}
-        instructions={[
-          'Go to Stripe Dashboard → Developers → Webhooks',
-          'Click "Add destination" → My account → Endpoint',
-          'Give it a name and paste the URL above',
-          'Add events: payment_intent.succeeded + payment_intent.payment_failed → Save',
-        ]}
-        docsUrl="https://dashboard.stripe.com/webhooks"
-      />
+      <StripeCard webhookUrl={stripeUrl} />
 
       <GoogleSheetsCard />
     </div>

@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server'
-
-// Returns which integrations are configured (env vars present).
-// Never exposes secret values — only boolean status.
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://yourapp.com'
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let stripeConnected = false
+  if (user) {
+    const { data } = await supabase
+      .from('users')
+      .select('stripe_connected')
+      .eq('id', user.id)
+      .single()
+    stripeConnected = data?.stripe_connected ?? false
+  }
 
   return NextResponse.json({
     zapier: {
@@ -15,7 +25,7 @@ export async function GET() {
       webhook_url: `${appUrl}/api/webhooks/zapier`,
     },
     stripe: {
-      configured: !!(process.env.STRIPE_WEBHOOK_SECRET),
+      configured: stripeConnected,
       webhook_url: `${appUrl}/api/webhooks/stripe`,
     },
   })
