@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 
 interface NavItem {
   href: string
@@ -40,6 +41,14 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps) {
+  const router = useRouter()
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
+
   return (
     <aside className="hidden md:flex flex-col w-56 bg-white border-r border-gray-100 h-full flex-shrink-0">
       {/* Logo */}
@@ -67,11 +76,18 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
         <NavLink href="/eod" label="EOD Reports" icon={<EodIcon />} />
       </nav>
 
-      {/* Bottom: Settings */}
-      <div className="px-3 py-4 border-t border-gray-100">
+      {/* Bottom: Settings + Logout */}
+      <div className="px-3 py-4 border-t border-gray-100 space-y-0.5">
         {isOwner && (
           <NavLink href="/settings" label="Settings" icon={<SettingsIcon />} />
         )}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        >
+          <span className="w-5 h-5 flex-shrink-0"><LogoutIcon /></span>
+          <span>Log out</span>
+        </button>
       </div>
     </aside>
   )
@@ -132,6 +148,15 @@ function EodIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
       <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+      <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h7a1 1 0 100-2H4V5h6a1 1 0 100-2H3zm11.707 4.293a1 1 0 010 1.414L13.414 10l1.293 1.293a1 1 0 01-1.414 1.414l-2-2a1 1 0 010-1.414l2-2a1 1 0 011.414 0z" clipRule="evenodd" />
+      <path fillRule="evenodd" d="M13 10a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1z" clipRule="evenodd" />
     </svg>
   )
 }
