@@ -425,24 +425,37 @@ function IntegrationsSection() {
   }, [])
 
   const zapierUrl = status?.zapier.webhook_url ?? `${window.location.origin}/api/webhooks/zapier`
+  const stripeUrl = status?.stripe.webhook_url ?? `${window.location.origin}/api/webhooks/stripe`
 
   return (
     <div className="space-y-3">
       <WebhookCard
         emoji="⚡"
         name="Zapier"
-        desc="One webhook URL connects everything — ManyChat leads, Stripe payments, and any other tool you already use in Zapier."
+        desc="One webhook URL connects everything — ManyChat leads, Stripe payments, and any other tool you use in Zapier."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         instructions={[
-          'In Zapier, open any Zap that handles leads or payments (ManyChat, Stripe, etc.)',
-          'Add a new action: Webhooks by Zapier → POST',
-          'Paste this URL as the webhook URL',
-          'Add a header: x-zapier-secret → your secret from .env.local',
-          'Set the JSON body with type + data fields (e.g. type: "new_lead" for ManyChat, "stripe_payment_succeeded" for Stripe)',
-          'Save and turn on — that\'s it. All your existing tools feed into your pipeline automatically.',
+          'In Zapier, open any Zap (ManyChat, Stripe, or any trigger)',
+          'Add action: Webhooks by Zapier → POST',
+          'Paste the URL above → Save → Done',
         ]}
         docsUrl="https://zapier.com"
+      />
+
+      <WebhookCard
+        emoji="💳"
+        name="Stripe"
+        desc="Automatically log payments and failed charges when they happen in Stripe."
+        configured={status?.stripe.configured ?? false}
+        webhookUrl={stripeUrl}
+        instructions={[
+          'Go to Stripe Dashboard → Developers → Webhooks',
+          'Click "Add destination" → My account → Endpoint',
+          'Give it a name and paste the URL above',
+          'Add events: payment_intent.succeeded + payment_intent.payment_failed → Save',
+        ]}
+        docsUrl="https://dashboard.stripe.com/webhooks"
       />
 
       <GoogleSheetsCard />
