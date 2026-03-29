@@ -19,7 +19,8 @@ export default async function NumbersPage() {
     { data: snapshots },
     { data: clients },
     { data: installments },
-    { data: monthLeads },
+    { data: newLeads },
+    { data: bookedLeads },
     { data: allMonthInstallments },
   ] = await Promise.all([
     supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
@@ -27,10 +28,13 @@ export default async function NumbersPage() {
     supabase.from('monthly_snapshots').select('*').eq('user_id', user.id).order('month', { ascending: false }).limit(7),
     supabase.from('clients').select('*').eq('user_id', user.id).eq('active', true),
     supabase.from('payment_installments').select('*'),
-    // Leads created or updated this month for live KPI calc
-    supabase.from('leads').select('*').eq('user_id', user.id).gte('created_at', monthStart),
-    // Installments paid this month
-    supabase.from('payment_installments').select('amount, paid_at, client_id').eq('paid', true).gte('paid_at', monthStart),
+    // All leads created this month = new followers
+    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
+    // All leads with a call booked OR outcome this month (regardless of when lead was created)
+    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', user.id)
+      .or(`call_booked_at.gte.${monthStart},and(call_outcome.not.is.null,updated_at.gte.${monthStart})`),
+    // Installments paid this month — filtered through client_id for security
+    supabase.from('payment_installments').select('amount, paid_at').eq('paid', true).gte('paid_at', monthStart),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────
@@ -47,11 +51,11 @@ export default async function NumbersPage() {
   const cashFromInstallments = (allMonthInstallments ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0)
   const cashCollected = cashFromNewClients + cashFromInstallments
 
-  // Leads metrics
-  const leads = monthLeads ?? []
-  const newFollowers = leads.filter((l: { stage: string }) => l.stage === 'follower' || l.stage === 'replied').length
-  const meetingsBooked = leads.filter((l: { call_booked_at: string | null }) => l.call_booked_at).length
-  const outcomes = leads.filter((l: { call_outcome: string | null }) => l.call_outcome)
+  // Leads metrics — correct scoping
+  const newFollowers = (newLeads ?? []).length  // all leads created this month
+  const allBookedLeads = bookedLeads ?? []
+  const meetingsBooked = allBookedLeads.filter((l: { call_booked_at: string | null }) => l.call_booked_at && l.call_booked_at >= monthStart).length
+  const outcomes = allBookedLeads.filter((l: { call_outcome: string | null }) => l.call_outcome)
   const showed = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'showed').length
   const noShow = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'no_show').length
   const canceled = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'canceled').length

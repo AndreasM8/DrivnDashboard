@@ -526,14 +526,20 @@ async function buildKpiDashboard(
   spreadsheetId: string,
   snapshots: MonthlySnapshot[],
   clients: Client[],
-  installments: PaymentInstallment[]
+  installments: PaymentInstallment[],
+  currency: string,
+  liveSnap: MonthlySnapshot | null
 ) {
   const title = 'KPI Dashboard'
   const sheetId = await getOrCreateSheet(sheets, spreadsheetId, title, C.darkBlue)
   await clearSheet(sheets, spreadsheetId, title)
 
-  // Calculate totals from latest snapshot + clients
-  const latest = snapshots.sort((a, b) => b.month.localeCompare(a.month))[0]
+  // Use live snapshot for current month if no stored snapshot, else use latest stored
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const stored = snapshots.sort((a, b) => b.month.localeCompare(a.month))
+  const latest = stored.find(s => s.month === currentMonth) ?? liveSnap ?? stored[0]
+
+  const fmt = (n: number) => new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n)
 
   const totalRevenue = clients.filter(c => c.active).reduce((s, c) => s + c.total_amount, 0)
   const totalCashCollected = installments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
@@ -549,7 +555,6 @@ async function buildKpiDashboard(
   const noShowRate = latest?.no_show_rate ?? 0
   const cancelRate = latest?.cancellation_rate ?? 0
   const meetings = latest?.meetings_booked ?? 0
-  const callsHeld = latest?.calls_held ?? 0
   const closedDeals = latest?.clients_signed ?? 0
 
   const offerSentRate = meetings > 0 ? (closedDeals / meetings) * 100 : 0
@@ -565,34 +570,34 @@ async function buildKpiDashboard(
     // Row 2: KPIs / Target KPIs
     [null, null, null, null, 'KPIs', null, 'TARGET KPIs', null, 'KPIs', null, null, 'TARGET KPIs', null],
     // Row 3
-    ['SALES (CLOSED DEALS)', `$${totalRevenue.toLocaleString()}`, null, null, 'RESPONSE RATE', pct(0), null, null, 'SHOW UP RATE', pct(showUpRate), null, null, null],
+    ['SALES (CLOSED DEALS)', fmt(totalRevenue), null, null, 'RESPONSE RATE', pct(0), null, null, 'SHOW UP RATE', pct(showUpRate), null, null, null],
     // Row 4
-    ['CASH COLLECTED', `$${totalCashCollected.toLocaleString()}`, null, null, 'OFFER SENT', pct(offerSentRate), null, null, 'CLOSING RATE', pct(closeRate), null, null, null],
+    ['CASH COLLECTED', fmt(totalCashCollected), null, null, 'OFFER SENT', pct(offerSentRate), null, null, 'CLOSING RATE', pct(closeRate), null, null, null],
     // Row 5
-    ['TO BE PAID', `$${toBePaid.toLocaleString()}`, null, null, 'BOOKING LINK SENT', pct(meetings > 0 ? 100 : 0), null, null, 'NO SHOWS %', pct(noShowRate), null, null, null],
+    ['TO BE PAID', fmt(toBePaid), null, null, 'BOOKING RATE', pct(bookingRate), null, null, 'NO SHOWS %', pct(noShowRate), null, null, null],
     // Row 6
-    ['BACKEND REV', `$${totalRevenue.toLocaleString()}`, null, null, 'BOOKING RATE', pct(bookingRate), null, null, 'CANCELED %', pct(cancelRate), null, null, null],
+    ['BACKEND REV', fmt(totalRevenue), null, null, 'OFFER TO BOOKING RATE', pct(offerSentRate > 0 ? (bookingRate / offerSentRate) * 100 : 0), null, null, 'CANCELED %', pct(cancelRate), null, null, null],
     // Row 7
-    ['CLIENT LTV (months)', ltvMonths.toFixed(1), null, null, 'OFFER TO BOOKING RATE', pct(offerSentRate > 0 ? (bookingRate / offerSentRate) * 100 : 0), null, null, 'TOTAL SALES', closedDeals, null, null, null],
+    ['CLIENT LTV (months)', ltvMonths.toFixed(1), null, null, null, null, null, null, 'TOTAL SALES', closedDeals, null, null, null],
     // Row 8
-    ['AVG CASH COLLECTED', `$${avgCash.toFixed(2)}`, null, null, null, null, null, null, null, null, null, null, null],
+    ['AVG CASH COLLECTED', fmt(avgCash), null, null, null, null, null, null, null, null, null, null, null],
     // Row 9
-    ['AVG SALES AMOUNT', `$${avgSales.toFixed(2)}`, null, null, null, null, null, null, null, null, null, null, null],
+    ['AVG SALES AMOUNT', fmt(avgSales), null, null, null, null, null, null, null, null, null, null, null],
     // Row 10: spacer
     [null],
     // Row 11: ADS section header
     ['ADS PERFORMANCE', null, null, null, null, null, null, null, null, null, null, null, null],
     // Row 12: sub-header
     ['VARIABLE', 'VALUE', null, null, null, null, null, null, null, null, null, null, null],
-    // Row 13-20: ads metrics (blank — user fills in)
+    // Row 13-20: current month live metrics
     ['NEW FOLLOWERS', latest?.new_followers ?? 0],
     ['MEETINGS BOOKED', latest?.meetings_booked ?? 0],
     ['CALLS HELD', latest?.calls_held ?? 0],
     ['CLIENTS SIGNED', latest?.clients_signed ?? 0],
     ['CLOSE RATE', pct(closeRate)],
     ['SHOW UP RATE', pct(showUpRate)],
-    ['CASH COLLECTED', `$${totalCashCollected.toLocaleString()}`],
-    ['REVENUE', `$${totalRevenue.toLocaleString()}`],
+    ['CASH COLLECTED', fmt(totalCashCollected)],
+    ['REVENUE', fmt(totalRevenue)],
   ]
 
   await write(sheets, spreadsheetId, title, rows)
@@ -945,8 +950,9 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
   let spreadsheetUrl: string
 
   const { data: userProfile } = await supabase
-    .from('users').select('business_name').eq('id', userId).single()
+    .from('users').select('business_name, base_currency').eq('id', userId).single()
   const businessName = userProfile?.business_name ?? 'DrivnDashboardr'
+  const currency = userProfile?.base_currency ?? 'USD'
 
   if (!spreadsheetId) {
     const file = await drive.files.create({
@@ -961,15 +967,23 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
   }
 
   // Fetch all data — clients first so we can query their installments
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const monthStart = `${currentMonth}-01`
+
   const [
     { data: leadsData }, { data: clientsData }, { data: settersData },
     { data: adSpendData }, { data: snapshotsData },
+    { data: newLeadsThisMonth }, { data: bookedLeadsThisMonth }, { data: monthInstallments },
   ] = await Promise.all([
     supabase.from('leads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
     supabase.from('clients').select('*').eq('user_id', userId).order('started_at', { ascending: false }),
     supabase.from('setters').select('*').eq('user_id', userId).eq('active', true),
     supabase.from('ad_spend_log').select('*').eq('user_id', userId).order('month', { ascending: false }),
     supabase.from('monthly_snapshots').select('*').eq('user_id', userId).order('month', { ascending: false }),
+    supabase.from('leads').select('id').eq('user_id', userId).gte('created_at', monthStart),
+    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', userId)
+      .or(`call_booked_at.gte.${monthStart},and(call_outcome.not.is.null,updated_at.gte.${monthStart})`),
+    supabase.from('payment_installments').select('amount').eq('paid', true).gte('paid_at', monthStart),
   ])
 
   const leads = (leadsData ?? []) as Lead[]
@@ -985,8 +999,32 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
     : { data: [] }
   const installments = (installmentsData ?? []) as PaymentInstallment[]
 
+  // Build live current-month snapshot for the KPI Dashboard
+  const monthClients = clients.filter(c => c.started_at >= monthStart)
+  const cashFromNewClients = monthClients.filter(c => c.payment_type !== 'plan').reduce((s, c) => s + c.total_amount, 0)
+  const cashFromInst = (monthInstallments ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0)
+  const bookedThisMonth = (bookedLeadsThisMonth ?? []).filter((l: { call_booked_at: string | null }) => l.call_booked_at && l.call_booked_at >= monthStart)
+  const outcomesThisMonth = (bookedLeadsThisMonth ?? []).filter((l: { call_outcome: string | null }) => l.call_outcome)
+  const showed = outcomesThisMonth.filter((l: { call_outcome: string }) => l.call_outcome === 'showed').length
+  const totalOut = outcomesThisMonth.length
+
+  const liveSnap: MonthlySnapshot = {
+    id: 'live', user_id: userId, month: currentMonth,
+    cash_collected: cashFromNewClients + cashFromInst,
+    revenue_contracted: monthClients.reduce((s, c) => s + c.total_amount, 0),
+    new_followers: (newLeadsThisMonth ?? []).length,
+    meetings_booked: bookedThisMonth.length,
+    calls_held: showed,
+    clients_signed: monthClients.length,
+    close_rate: bookedThisMonth.length > 0 ? (monthClients.length / bookedThisMonth.length) * 100 : 0,
+    show_up_rate: totalOut > 0 ? (showed / totalOut) * 100 : 0,
+    no_show_rate: totalOut > 0 ? (outcomesThisMonth.filter((l: { call_outcome: string }) => l.call_outcome === 'no_show').length / totalOut) * 100 : 0,
+    cancellation_rate: totalOut > 0 ? (outcomesThisMonth.filter((l: { call_outcome: string }) => l.call_outcome === 'canceled').length / totalOut) * 100 : 0,
+    created_at: new Date().toISOString(),
+  }
+
   // Build sheets sequentially to avoid rate limits
-  await buildKpiDashboard(sheets, spreadsheetId, snapshots, clients, installments)
+  await buildKpiDashboard(sheets, spreadsheetId, snapshots, clients, installments, currency, liveSnap)
   await buildPipelineSheet(sheets, spreadsheetId, leads, setters)
   await buildClientsSheet(sheets, spreadsheetId, clients, installments, setters)
   await buildFreebiesSheet(sheets, spreadsheetId, leads)
