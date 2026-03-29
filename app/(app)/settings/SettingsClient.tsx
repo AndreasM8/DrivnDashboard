@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
 import { CURRENCIES, TIMEZONES } from '@/types'
+import { useDarkMode } from '@/components/providers/DarkModeProvider'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ interface Props {
   initialSection?: Section
 }
 
-type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account'
+type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance'
 
 // ─── Section: KPI Targets ─────────────────────────────────────────────────────
 
@@ -850,6 +851,56 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
   )
 }
 
+// ─── Section: Appearance ──────────────────────────────────────────────────────
+
+function AppearanceSection() {
+  const { dark, toggle } = useDarkMode()
+
+  return (
+    <div className="space-y-4">
+      {/* Dark mode toggle */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Appearance</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-300">Dark mode</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Switch between light and dark theme</p>
+          </div>
+          <button
+            onClick={toggle}
+            aria-pressed={dark}
+            className={`relative w-12 h-6 rounded-full transition-colors ${dark ? 'bg-blue-600' : 'bg-gray-200'}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${dark ? 'translate-x-7' : 'translate-x-1'}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* PWA install instructions */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Add to home screen</h3>
+        <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">Install Drivn on your device for the best experience.</p>
+        <div className="space-y-3">
+          {/* iOS */}
+          <div className="rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 p-4">
+            <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">iPhone / iPad (Safari)</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Tap the <strong>Share</strong> button (square with arrow) at the bottom of the screen, then tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+            </p>
+          </div>
+          {/* Android */}
+          <div className="rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 p-4">
+            <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Android (Chrome)</p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              Tap the menu button (<strong>&#8942;</strong>) in the top-right corner, then tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { key: Section; label: string }[] = [
@@ -858,6 +909,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'integrations', label: 'Integrations' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'account', label: 'Account' },
+  { key: 'appearance', label: 'Appearance' },
 ]
 
 export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection }: Props) {
@@ -903,6 +955,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
         {section === 'integrations' && <IntegrationsSection />}
         {section === 'notifications' && <NotificationsSection />}
         {section === 'account' && <AccountSection userId={userId} profile={profile} />}
+        {section === 'appearance' && <AppearanceSection />}
       </div>
     </div>
   )

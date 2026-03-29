@@ -20,8 +20,8 @@ function NavLink({ href, label, icon, badge }: NavItem) {
       href={href}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
         active
-          ? 'bg-blue-50 text-blue-700'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
       }`}
     >
       <span className="w-5 h-5 flex-shrink-0">{icon}</span>
@@ -50,22 +50,22 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-56 bg-white border-r border-gray-100 h-full flex-shrink-0">
+    <aside className="hidden md:flex flex-col w-56 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-700 h-full flex-shrink-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
-        <span className="text-xl font-bold text-gray-900">Drivn</span>
+      <div className="px-5 py-5 border-b border-gray-100 dark:border-slate-700">
+        <span className="text-xl font-bold text-gray-900 dark:text-slate-100">Drivn</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <NavLink href="/dashboard" label="Home" icon={<HomeIcon />} />
         <NavLink href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
 
-        <div className="my-2 border-t border-gray-100" />
+        <div className="my-2 border-t border-gray-100 dark:border-slate-700" />
 
         <NavLink href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
         <NavLink href="/clients" label="Clients" icon={<ClientsIcon />} />
 
-        <div className="my-2 border-t border-gray-100" />
+        <div className="my-2 border-t border-gray-100 dark:border-slate-700" />
 
         <NavLink href="/numbers" label="Numbers" icon={<NumbersIcon />} />
 
@@ -77,13 +77,13 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
       </nav>
 
       {/* Bottom: Settings + Logout */}
-      <div className="px-3 py-4 border-t border-gray-100 space-y-0.5">
+      <div className="px-3 py-4 border-t border-gray-100 dark:border-slate-700 space-y-0.5">
         {isOwner && (
           <NavLink href="/settings" label="Settings" icon={<SettingsIcon />} />
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <span className="w-5 h-5 flex-shrink-0"><LogoutIcon /></span>
           <span>Log out</span>

@@ -59,7 +59,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Add lead</h2>
+          <h2 className="text-lg font-bold text-gray-900">Add follower to pipeline</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -108,7 +108,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="Age, goal, where they came from…"
+              placeholder="Their vibe, goal, what content they reacted to…"
               rows={3}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
@@ -129,7 +129,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
               disabled={loading || !igUsername}
               className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Adding…' : 'Add lead'}
+              {loading ? 'Adding…' : 'Add to pipeline'}
             </button>
           </div>
         </form>

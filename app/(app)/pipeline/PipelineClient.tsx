@@ -289,10 +289,10 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
             Labels
           </button>
           <button
-            onClick={() => { setAddLeadStage('freebie_sent'); setAddLeadOpen(true) }}
+            onClick={() => { setAddLeadStage('follower'); setAddLeadOpen(true) }}
             className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
-            + Add lead
+            + Add follower
           </button>
         </div>
       </div>
@@ -332,7 +332,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search leads…"
+            placeholder="Search followers…"
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
           />
         </div>
@@ -387,6 +387,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           onClose={() => setCallBookedLead(null)}
           onSaved={updated => {
             setLeads(ls => ls.map(l => l.id === updated.id ? updated : l))
+            if (drawerLead?.id === updated.id) setDrawerLead(updated)
             setCallBookedLead(null)
           }}
         />
@@ -399,6 +400,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           onClose={() => setCallOutcomeLead(null)}
           onSaved={(updated, newClient) => {
             setLeads(ls => ls.map(l => l.id === updated.id ? updated : l))
+            if (drawerLead?.id === updated.id) setDrawerLead(updated)
             setCallOutcomeLead(null)
             if (newClient) {
               // Client was created — could toast here

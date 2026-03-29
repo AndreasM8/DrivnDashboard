@@ -151,7 +151,7 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={4}
-              placeholder="Age, goal, source, anything useful…"
+              placeholder="Their goal, what they replied to, age, anything useful…"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
             <button
