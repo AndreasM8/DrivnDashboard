@@ -401,6 +401,74 @@ function SetupBox({ title, steps, url, urlLabel }: { title: string; steps: strin
   )
 }
 
+function StripeSetupBox({ stripeUrl }: { stripeUrl: string }) {
+  const [secret, setSecret] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyUrl() {
+    navigator.clipboard.writeText(stripeUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleSave() {
+    if (!secret.trim()) return
+    setSaving(true)
+    await fetch('/api/settings/stripe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secret.trim() }),
+    })
+    setSaved(true)
+    setSaving(false)
+  }
+
+  return (
+    <div className="bg-blue-50 rounded-xl p-4 mb-4">
+      <p className="text-sm font-semibold text-gray-900 mb-3">💳 Connect Stripe</p>
+
+      <ol className="space-y-3 list-decimal list-inside text-xs text-gray-600 mb-3">
+        <li>Go to <strong>Stripe Dashboard → Developers → Webhooks</strong></li>
+        <li>Click <strong>"Add destination"</strong> → My account → Endpoint</li>
+        <li>
+          Give it a name and paste this URL:
+          <div className="flex items-center gap-2 mt-1.5">
+            <code className="flex-1 bg-white border border-blue-100 rounded px-2 py-1.5 text-gray-700 truncate">{stripeUrl}</code>
+            <button onClick={copyUrl} className="px-2 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 flex-shrink-0">
+              {copied ? '✓' : 'Copy'}
+            </button>
+          </div>
+        </li>
+        <li>Add events: <span className="font-mono text-gray-800">payment_intent.succeeded</span> + <span className="font-mono text-gray-800">payment_intent.payment_failed</span> → Save</li>
+        <li>Stripe will show a <strong>signing secret</strong> (starts with <span className="font-mono">whsec_</span>) — paste it here:</li>
+      </ol>
+
+      {saved ? (
+        <p className="text-xs text-green-600 font-medium">✓ Stripe connected — payments will sync automatically</p>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={secret}
+            onChange={e => setSecret(e.target.value)}
+            placeholder="whsec_..."
+            className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving || !secret.trim()}
+            className="px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Step6({ data, onChange, onNext, onBack }: StepProps) {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://yourapp.com'
   const webhookUrl = `${origin}/api/webhooks/zapier`
@@ -476,17 +544,7 @@ function Step6({ data, onChange, onNext, onBack }: StepProps) {
 
       {/* Has Stripe — show Stripe webhook */}
       {data.uses_stripe && !data.uses_zapier && (
-        <SetupBox
-          title="✅ Connect Stripe"
-          url={stripeUrl}
-          urlLabel="Copy this URL, then in Stripe:"
-          steps={[
-            'Go to Stripe Dashboard → Developers → Webhooks',
-            'Click "Add destination" → choose "My account" → confirm "Endpoint"',
-            'Give it a name, paste the URL above',
-            'Add events: payment_intent.succeeded + payment_intent.payment_failed → Save',
-          ]}
-        />
+        <StripeSetupBox stripeUrl={stripeUrl} />
       )}
 
       <StepNav onBack={onBack} onNext={onNext} nextLabel="Almost done →" />
