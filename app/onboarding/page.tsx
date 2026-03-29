@@ -447,15 +447,14 @@ function Step6({ data, onChange, onNext, onBack }: StepProps) {
       {/* Has Zapier — one URL covers everything */}
       {data.uses_zapier && (
         <SetupBox
-          title={data.uses_manychat ? "Zapier covers ManyChat + Stripe — one URL" : "Zapier — one URL for everything"}
+          title={data.uses_manychat ? '✅ One URL connects ManyChat + Stripe' : '✅ One URL connects everything'}
           url={webhookUrl}
-          urlLabel="Paste this into any Zap as a Webhooks by Zapier → POST action"
+          urlLabel="Copy this URL, then in Zapier:"
           steps={[
-            'In Zapier, open a Zap (ManyChat, Stripe, or any trigger)',
+            'Open Zapier and create a new Zap',
+            'Set your trigger (ManyChat, Stripe, or anything else)',
             'Add action: Webhooks by Zapier → POST',
-            'Paste the URL above',
-            'Add header: x-zapier-secret → set a secret phrase, save it in Settings',
-            data.uses_stripe ? 'Stripe payments can also route through this same Zap' : 'Done — leads will appear in your pipeline automatically',
+            'Paste the URL above → Save → Done',
           ]}
         />
       )}
@@ -463,31 +462,29 @@ function Step6({ data, onChange, onNext, onBack }: StepProps) {
       {/* Has ManyChat but NOT Zapier — direct connection */}
       {data.uses_manychat && !data.uses_zapier && (
         <SetupBox
-          title="Connect ManyChat directly — no Zapier needed"
+          title="✅ Connect ManyChat — no Zapier needed"
           url={webhookUrl}
-          urlLabel="Paste this into ManyChat's External Request action"
+          urlLabel="Copy this URL, then in ManyChat:"
           steps={[
-            'In ManyChat, open your DM flow',
-            'Add a step: Actions → External Request',
-            'Method: POST, paste the URL above',
-            'Add header: x-zapier-secret → set a secret phrase, save it in Settings',
-            'Body: { "type": "new_lead", "data": { "ig_username": "{{user_instagram_handle}}" } }',
-            'Save and publish — new subscribers appear in your pipeline instantly',
+            'Open your DM flow in ManyChat',
+            'Add a step → Actions → External Request',
+            'Set method to POST and paste the URL above',
+            'Save and publish — new leads appear in your pipeline instantly',
           ]}
         />
       )}
 
-      {/* Has Stripe — show Stripe webhook (only if not using Zapier for it) */}
+      {/* Has Stripe — show Stripe webhook */}
       {data.uses_stripe && !data.uses_zapier && (
         <SetupBox
-          title="Connect Stripe directly"
+          title="✅ Connect Stripe"
           url={stripeUrl}
-          urlLabel="Paste this into your Stripe Webhook settings"
+          urlLabel="Copy this URL, then in Stripe:"
           steps={[
-            'Stripe Dashboard → Developers → Webhooks → Add endpoint',
-            'Paste the URL above',
-            'Select events: payment_intent.succeeded + payment_intent.payment_failed',
-            'Copy the Signing secret and paste it into STRIPE_WEBHOOK_SECRET in .env.local',
+            'Go to Stripe Dashboard → Developers → Webhooks',
+            'Click "Add endpoint" and paste the URL above',
+            'Click "Add events" → select payment_intent.succeeded → Save',
+            'Done — payments will sync automatically',
           ]}
         />
       )}
