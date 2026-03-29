@@ -36,9 +36,10 @@ function Tab({ href, label, icon, badge }: TabItem) {
 
 interface BottomNavProps {
   taskBadge?: number
+  isOwner?: boolean
 }
 
-export default function BottomNav({ taskBadge = 0 }: BottomNavProps) {
+export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavProps) {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-50 safe-area-bottom">
       <Tab href="/dashboard" label="Home" icon={<HomeIcon />} />
