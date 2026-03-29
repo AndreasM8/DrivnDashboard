@@ -19,14 +19,16 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
   const [setterId, setSetterId] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!igUsername) return
     setLoading(true)
+    setError('')
 
     const supabase = createClient()
-    const { data, error } = await supabase
+    const { data, error: err } = await supabase
       .from('leads')
       .insert({
         user_id: userId,
@@ -40,7 +42,8 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
       .select()
       .single()
 
-    if (!error && data) {
+    if (err) { setError('Something went wrong. Please try again.'); setLoading(false); return }
+    if (data) {
       await supabase.from('lead_history').insert({
         lead_id: data.id,
         action: 'Lead added manually',
@@ -110,6 +113,8 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
 
           <div className="flex gap-3 pt-1">
             <button

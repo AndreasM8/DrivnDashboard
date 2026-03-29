@@ -110,8 +110,8 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
             <h2 className="font-bold text-gray-900">{client.full_name || client.ig_username}</h2>
             <p className="text-xs text-gray-400">
               @{client.ig_username}
-              {(client as Client & { program_type?: string }).program_type && (
-                <span className="ml-2 text-blue-500">· {(client as Client & { program_type?: string }).program_type}</span>
+              {client.program_type && (
+                <span className="ml-2 text-blue-500">· {client.program_type}</span>
               )}
             </p>
           </div>
@@ -185,15 +185,9 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                   client.payment_type === 'split' ? 'Split pay' : 'Payment plan'
                 } />
                 {client.monthly_amount ? <InfoRow label="Monthly" value={fmt(client.monthly_amount, baseCurrency)} /> : null}
-                {(client as Client & { email?: string }).email && (
-                  <InfoRow label="Email" value={(client as Client & { email?: string }).email!} />
-                )}
-                {(client as Client & { phone?: string }).phone && (
-                  <InfoRow label="Phone" value={(client as Client & { phone?: string }).phone!} />
-                )}
-                {(client as Client & { referred_by?: string }).referred_by && (
-                  <InfoRow label="Referred by" value={(client as Client & { referred_by?: string }).referred_by!} />
-                )}
+                {client.email && <InfoRow label="Email" value={client.email} />}
+                {client.phone && <InfoRow label="Phone" value={client.phone} />}
+                {client.referred_by && <InfoRow label="Referred by" value={client.referred_by} />}
               </div>
 
               {/* Upsell reminder */}

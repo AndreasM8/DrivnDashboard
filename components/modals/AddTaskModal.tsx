@@ -15,16 +15,18 @@ export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
   const [description, setDescription] = useState('')
   const [type, setType] = useState<TaskType>('manual')
   const [priority, setPriority] = useState<TaskPriority>('today')
-  const [dueAt, setDueAt] = useState(new Date().toISOString().slice(0, 16))
+  const [dueAt, setDueAt] = useState(new Date().toISOString().slice(0, 10))
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title) return
     setLoading(true)
+    setError('')
 
     const supabase = createClient()
-    const { data } = await supabase.from('tasks').insert({
+    const { data, error: err } = await supabase.from('tasks').insert({
       user_id: userId,
       type,
       priority,
@@ -34,6 +36,7 @@ export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
       auto_generated: false,
     }).select().single()
 
+    if (err) { setError('Something went wrong. Please try again.'); setLoading(false); return }
     if (data) onAdded(data as Task)
     setLoading(false)
   }
@@ -103,14 +106,16 @@ export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Due</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Due date</label>
             <input
-              type="datetime-local"
-              value={dueAt}
+              type="date"
+              value={dueAt.slice(0, 10)}
               onChange={e => setDueAt(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>

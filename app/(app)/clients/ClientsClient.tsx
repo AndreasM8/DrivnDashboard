@@ -161,14 +161,23 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         {filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-3xl mb-3">👥</p>
-            <p className="text-lg font-semibold text-gray-900 mb-1">No clients yet</p>
-            <p className="text-sm text-gray-500 mb-4">Clients appear here automatically when you close a deal in Pipeline.</p>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
-            >
-              Add client manually
-            </button>
+            {clients.length === 0 ? (
+              <>
+                <p className="text-lg font-semibold text-gray-900 mb-1">No clients yet</p>
+                <p className="text-sm text-gray-500 mb-4">Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.</p>
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+                >
+                  Add client
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-semibold text-gray-900 mb-1">No clients match this filter</p>
+                <button onClick={() => setFilter('all')} className="text-sm text-blue-600 hover:underline">Clear filter</button>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -233,7 +242,10 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                           {client.upsell_reminder_set ? (
                             <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 font-medium rounded-lg">Upsell set</span>
                           ) : (
-                            <button className="text-xs px-2 py-1 bg-gray-100 text-gray-600 font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors">
+                            <button
+                              onClick={e => { e.stopPropagation(); setDrawerClient(client) }}
+                              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors"
+                            >
                               Set upsell
                             </button>
                           )}

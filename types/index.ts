@@ -137,16 +137,23 @@ export interface Client {
   lead_id: string | null
   ig_username: string
   full_name: string
+  email: string
+  phone: string
+  program_type: string
+  referred_by: string
   payment_type: PaymentType
   plan_months: number | null
   monthly_amount: number | null
   total_amount: number
+  total_paid: number
   currency: string
   started_at: string
+  contract_end_date: string | null
   closer_id: string | null
   upsell_reminder_month: number | null
   upsell_reminder_set: boolean
   notes: string
+  churn_reason: string
   active: boolean
   created_at: string
 }
@@ -307,6 +314,18 @@ export const CURRENCIES = [
   { code: 'DKK', label: 'Danish Krone',     flag: '🇩🇰' },
   { code: 'AUD', label: 'Australian Dollar',flag: '🇦🇺' },
 ]
+
+// ─── Calendly ─────────────────────────────────────────────────────────────────
+
+export interface CalendlyIntegration {
+  id: string
+  user_id: string
+  access_token: string
+  organization_uri: string
+  user_uri: string
+  webhook_signing_key: string | null
+  connected_at: string
+}
 
 export const TIMEZONES = [
   'Europe/Oslo',
