@@ -482,9 +482,9 @@ function Step6({ data, onChange, onNext, onBack }: StepProps) {
           urlLabel="Copy this URL, then in Stripe:"
           steps={[
             'Go to Stripe Dashboard → Developers → Webhooks',
-            'Click "Add endpoint" and paste the URL above',
-            'Click "Add events" → select payment_intent.succeeded → Save',
-            'Done — payments will sync automatically',
+            'Click "Add destination" → choose "My account" → confirm "Endpoint"',
+            'Give it a name, paste the URL above',
+            'Add events: payment_intent.succeeded + payment_intent.payment_failed → Save',
           ]}
         />
       )}
