@@ -20,13 +20,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const badge = taskCount ?? 0
 
-  // Check if owner
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  const isOwner = profile?.role === 'owner'
+  // Determine if this user is a workspace owner vs a team member.
+  // Team members have a record in team_members where workspace_id != their own user.id.
+  // For now all coaches who sign up directly are owners.
+  const { data: teamMembership } = await supabase
+    .from('team_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .neq('workspace_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  const isOwner = !teamMembership  // if no external membership, they're the owner
 
   return (
     <div className="flex h-full">
