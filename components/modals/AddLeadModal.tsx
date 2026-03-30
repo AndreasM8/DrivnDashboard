@@ -9,17 +9,21 @@ interface Props {
   userId: string
   defaultStage: LeadStage
   setters: Setter[]
+  existingLeads: Lead[]
   onClose: () => void
   onAdded: (lead: Lead) => void
 }
 
-export default function AddLeadModal({ userId, defaultStage, setters, onClose, onAdded }: Props) {
+export default function AddLeadModal({ userId, defaultStage, setters, existingLeads, onClose, onAdded }: Props) {
   const [igUsername, setIgUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [setterId, setSetterId] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const isDuplicate = igUsername.length > 0 &&
+    existingLeads.some(l => l.ig_username.toLowerCase() === igUsername.replace('@', '').toLowerCase())
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -77,6 +81,14 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
               required
               className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {isDuplicate && (
+              <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                A lead with this username already exists. You can still add them.
+              </p>
+            )}
           </div>
 
           <div>

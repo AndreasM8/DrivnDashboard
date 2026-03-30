@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
+import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter } from '@/types'
 import { STAGE_LABELS } from '@/types'
 import AddLeadModal from '@/components/modals/AddLeadModal'
@@ -277,7 +278,7 @@ function StageColumn({
   onAddClick: () => void
 }) {
   return (
-    <div className={`flex-shrink-0 w-64 rounded-xl p-3 ${bg} border border-gray-100 dark:border-slate-700 flex flex-col gap-2`}>
+    <div className={`flex-shrink-0 w-64 min-w-[260px] rounded-xl p-3 ${bg} border border-gray-100 dark:border-slate-700 flex flex-col gap-2`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
@@ -370,7 +371,11 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       }
       if (search) {
         const q = search.toLowerCase()
-        if (!l.ig_username.toLowerCase().includes(q) && !l.full_name.toLowerCase().includes(q)) return false
+        if (
+          !l.ig_username.toLowerCase().includes(q) &&
+          !l.full_name.toLowerCase().includes(q) &&
+          !l.setter_notes.toLowerCase().includes(q)
+        ) return false
       }
       return true
     })
@@ -395,10 +400,16 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     }
 
     setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, stage } : l))
-    await supabase.from('leads').update({ stage, updated_at: new Date().toISOString() }).eq('id', lead.id)
-    await supabase.from('lead_history').insert({
-      lead_id: lead.id, action: `Stage moved to ${STAGE_LABELS[stage]}`, actor: 'You',
-    })
+    const { error } = await supabase.from('leads').update({ stage, updated_at: new Date().toISOString() }).eq('id', lead.id)
+    if (!error) {
+      await supabase.from('lead_history').insert({
+        lead_id: lead.id, action: `Stage moved to ${STAGE_LABELS[stage]}`, actor: 'You',
+      })
+      triggerSheetsSync()
+    } else {
+      // Revert optimistic update
+      setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
+    }
   }
 
   function onLeadAdded(lead: Lead) {
@@ -516,6 +527,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           userId={userId}
           defaultStage={addLeadStage}
           setters={setters}
+          existingLeads={leads}
           onClose={() => setAddLeadOpen(false)}
           onAdded={onLeadAdded}
         />

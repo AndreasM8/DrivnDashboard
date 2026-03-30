@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Client, PaymentInstallment } from '@/types'
 
 interface Props {
@@ -91,12 +92,21 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
 
   async function togglePayment(instId: string, currentPaid: boolean) {
     const newPaid = !currentPaid
-    await supabase.from('payment_installments').update({
+    // Optimistic update
+    setInsts(is => is.map(i => i.id === instId ? { ...i, paid: newPaid, paid_at: newPaid ? new Date().toISOString() : null, manually_confirmed: newPaid } : i))
+    const { error } = await supabase.from('payment_installments').update({
       paid: newPaid,
       paid_at: newPaid ? new Date().toISOString() : null,
       manually_confirmed: newPaid,
     }).eq('id', instId)
-    setInsts(is => is.map(i => i.id === instId ? { ...i, paid: newPaid, manually_confirmed: newPaid } : i))
+    if (error) {
+      // Revert optimistic update on failure
+      setInsts(is => is.map(i => i.id === instId ? { ...i, paid: currentPaid, manually_confirmed: currentPaid } : i))
+      console.error('Failed to update payment:', error.message)
+      return
+    }
+    // Sync sheets after any payment confirmation
+    triggerSheetsSync()
   }
 
   return (

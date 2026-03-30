@@ -1,6 +1,6 @@
 import { google, sheets_v4 } from 'googleapis'
 import { createServerSupabaseClient } from './supabase-server'
-import type { Lead, Client, Setter, AdSpendLog, MonthlySnapshot, PaymentInstallment } from '@/types'
+import type { Lead, Client, Setter, AdSpendLog, MonthlySnapshot, PaymentInstallment, Expense } from '@/types'
 
 // ─── OAuth client ─────────────────────────────────────────────────────────────
 
@@ -528,7 +528,8 @@ async function buildKpiDashboard(
   clients: Client[],
   installments: PaymentInstallment[],
   currency: string,
-  liveSnap: MonthlySnapshot | null
+  liveSnap: MonthlySnapshot | null,
+  expenses: Expense[]
 ) {
   const title = 'KPI Dashboard'
   const sheetId = await getOrCreateSheet(sheets, spreadsheetId, title, C.darkBlue)
@@ -560,6 +561,22 @@ async function buildKpiDashboard(
   const offerSentRate = meetings > 0 ? (closedDeals / meetings) * 100 : 0
   const bookingRate = (latest?.new_followers ?? 0) > 0
     ? (meetings / (latest?.new_followers ?? 1)) * 100 : 0
+
+  // ── Expenses summary for current month ───────────────────────────────────
+  const EXPENSE_CATEGORIES: { key: Expense['category']; label: string }[] = [
+    { key: 'team',       label: 'Team' },
+    { key: 'software',   label: 'Software' },
+    { key: 'ads',        label: 'Ads' },
+    { key: 'withdrawal', label: 'Withdrawals' },
+    { key: 'other',      label: 'Other' },
+  ]
+  const currentMonthExpenses = expenses.filter(e => e.month === currentMonth)
+  const expenseByCategory = EXPENSE_CATEGORIES.map(c => ({
+    label: c.label,
+    total: currentMonthExpenses.filter(e => e.category === c.key).reduce((s, e) => s + e.amount, 0),
+  }))
+  const totalExpenses = expenseByCategory.reduce((s, c) => s + c.total, 0)
+  const netProfit = totalCashCollected - totalExpenses
 
   // Build rows
   const rows: (string | number | null)[][] = [
@@ -598,6 +615,16 @@ async function buildKpiDashboard(
     ['SHOW UP RATE', pct(showUpRate)],
     ['CASH COLLECTED', fmt(totalCashCollected)],
     ['REVENUE', fmt(totalRevenue)],
+    // Spacer before expenses
+    [null],
+    // Monthly Expenses section header
+    ['MONTHLY EXPENSES', null, null, null, null, null, null, null, null, null, null, null, null],
+    // Expenses sub-header
+    ['CATEGORY', 'AMOUNT', null, null, null, null, null, null, null, null, null, null, null],
+    // Per-category rows
+    ...expenseByCategory.map(c => [c.label, fmt(c.total)]),
+    // Net Profit row
+    ['NET PROFIT', fmt(netProfit)],
   ]
 
   await write(sheets, spreadsheetId, title, rows)
@@ -652,9 +679,33 @@ async function buildKpiDashboard(
     rangeBg(sheetId, 12, 1, 13, 2, C.midBlue),
     cellFmt(sheetId, 12, 0, 13, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 10 }, horizontalAlignment: 'CENTER' }),
 
-    // ADS data rows text
-    cellFmt(sheetId, 13, 0, rows.length, 1, { textFormat: { foregroundColor: C.white, fontSize: 10 } }),
-    cellFmt(sheetId, 13, 1, rows.length, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 10 }, horizontalAlignment: 'RIGHT' }),
+    // ADS data rows text (rows 13–20, 8 rows)
+    cellFmt(sheetId, 13, 0, 21, 1, { textFormat: { foregroundColor: C.white, fontSize: 10 } }),
+    cellFmt(sheetId, 13, 1, 21, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 10 }, horizontalAlignment: 'RIGHT' }),
+
+    // ── Monthly Expenses section (rows 22+) ───────────────────────────────
+    // Section header (row 22)
+    rangeBg(sheetId, 22, 0, 23, 2, C.darkRed),
+    cellFmt(sheetId, 22, 0, 23, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 12 }, horizontalAlignment: 'CENTER' }),
+    merge(sheetId, 22, 0, 23, 2),
+    rowH(sheetId, 22, 44),
+
+    // Sub-header (row 23)
+    rangeBg(sheetId, 23, 0, 24, 1, C.midRed),
+    rangeBg(sheetId, 23, 1, 24, 2, C.midRed),
+    cellFmt(sheetId, 23, 0, 24, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 10 }, horizontalAlignment: 'CENTER' }),
+
+    // Category rows text (rows 24–28)
+    cellFmt(sheetId, 24, 0, 29, 1, { textFormat: { foregroundColor: C.white, fontSize: 10 } }),
+    cellFmt(sheetId, 24, 1, 29, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 10 }, horizontalAlignment: 'RIGHT' }),
+
+    // Net Profit row (row 29) — highlight green if positive, red if negative
+    rangeBg(sheetId, 29, 0, 30, 2, netProfit >= 0 ? C.midGreen : C.midRed),
+    cellFmt(sheetId, 29, 0, 30, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 11 }, horizontalAlignment: 'LEFT' }),
+    cellFmt(sheetId, 29, 1, 30, 2, { textFormat: { bold: true, foregroundColor: C.white, fontSize: 11 }, horizontalAlignment: 'RIGHT' }),
+
+    // Borders for expenses section
+    borders(sheetId, 22, 0, 30, 2),
 
     // Merges for section titles
     merge(sheetId, 1, 0, 2, 4),
@@ -677,7 +728,7 @@ async function buildKpiDashboard(
     borders(sheetId, 1, 0, 10, 4),
     borders(sheetId, 1, 4, 10, 8),
     borders(sheetId, 1, 8, 10, 13),
-    borders(sheetId, 11, 0, rows.length, 2),
+    borders(sheetId, 11, 0, 21, 2),
   ]
 
   await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } })
@@ -974,6 +1025,7 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
     { data: leadsData }, { data: clientsData }, { data: settersData },
     { data: adSpendData }, { data: snapshotsData },
     { data: newLeadsThisMonth }, { data: bookedLeadsThisMonth }, { data: monthInstallments },
+    { data: expensesData },
   ] = await Promise.all([
     supabase.from('leads').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
     supabase.from('clients').select('*').eq('user_id', userId).order('started_at', { ascending: false }),
@@ -984,6 +1036,7 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
     supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', userId)
       .or(`call_booked_at.gte.${monthStart},and(call_outcome.not.is.null,updated_at.gte.${monthStart})`),
     supabase.from('payment_installments').select('amount').eq('paid', true).gte('paid_at', monthStart),
+    supabase.from('expenses').select('*').eq('user_id', userId).eq('month', currentMonth),
   ])
 
   const leads = (leadsData ?? []) as Lead[]
@@ -991,6 +1044,7 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
   const setters = (settersData ?? []) as Setter[]
   const adSpend = (adSpendData ?? []) as AdSpendLog[]
   const snapshots = (snapshotsData ?? []) as MonthlySnapshot[]
+  const expenses = (expensesData ?? []) as Expense[]
 
   // Fetch installments now that we have client IDs
   const clientIds = clients.map(c => c.id)
@@ -1024,7 +1078,7 @@ export async function syncToSheets(userId: string): Promise<{ spreadsheetId: str
   }
 
   // Build sheets sequentially to avoid rate limits
-  await buildKpiDashboard(sheets, spreadsheetId, snapshots, clients, installments, currency, liveSnap)
+  await buildKpiDashboard(sheets, spreadsheetId, snapshots, clients, installments, currency, liveSnap, expenses)
   await buildPipelineSheet(sheets, spreadsheetId, leads, setters)
   await buildClientsSheet(sheets, spreadsheetId, clients, installments, setters)
   await buildFreebiesSheet(sheets, spreadsheetId, leads)

@@ -189,13 +189,21 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
   const [activeTab, setActiveTab] = useState<'info' | 'timeline'>('info')
   const [notes, setNotes] = useState(lead.setter_notes)
   const [history, setHistory] = useState<LeadHistory[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState(false)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
+    setHistoryLoading(true)
+    setHistoryError(false)
     supabase.from('lead_history').select('*').eq('lead_id', lead.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => setHistory((data as LeadHistory[]) ?? []))
+      .then(({ data, error }) => {
+        setHistoryLoading(false)
+        if (error) { setHistoryError(true); return }
+        setHistory((data as LeadHistory[]) ?? [])
+      })
   }, [lead.id])
 
   // Keep notes in sync if lead changes externally
@@ -417,7 +425,17 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
           {/* Timeline tab */}
           {activeTab === 'timeline' && (
             <div className="p-5">
-              {history.length === 0 ? (
+              {historyLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Loading timeline…</p>
+                </div>
+              ) : historyError ? (
+                <div className="text-center py-12">
+                  <p className="text-3xl mb-3">⚠️</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Couldn&apos;t load history</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Check your connection and try again.</p>
+                </div>
+              ) : history.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-3xl mb-3">📋</p>
                   <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">No activity yet</p>
