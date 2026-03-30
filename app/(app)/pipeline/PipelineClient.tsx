@@ -141,17 +141,29 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
         ))}
       </svg>
 
-      {/* ── Labels + counts + conversion rates ── */}
+      {/* ── Counts + labels row ── */}
       <div className="flex mt-2.5">
         {segs.map((seg, i) => (
           <div key={i} className="flex-1 text-center min-w-0 px-0.5">
             <p className="text-sm font-bold text-gray-800 dark:text-slate-100 tabular-nums">{seg.count}</p>
             <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate leading-tight">{seg.label}</p>
-            {seg.convRate !== null && (
-              <p className="text-[9px] text-gray-300 dark:text-slate-600 mt-0.5 tabular-nums">{seg.convRate}% →</p>
-            )}
           </div>
         ))}
+      </div>
+
+      {/* ── Conversion rates pinned to each junction point ── */}
+      <div className="relative h-3.5 mt-0.5">
+        {segs.slice(0, -1).map((seg, i) =>
+          seg.convRate !== null ? (
+            <span
+              key={i}
+              className="absolute -translate-x-1/2 text-[9px] tabular-nums text-gray-300 dark:text-slate-600"
+              style={{ left: `${((i + 1) / n) * 100}%` }}
+            >
+              {seg.convRate}%
+            </span>
+          ) : null
+        )}
       </div>
 
     </div>
