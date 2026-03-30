@@ -128,7 +128,8 @@ export default async function DashboardPage() {
   const [
     { data: profile },
     { data: tasks },
-    { data: clients },
+    { data: allActiveClients },
+    { data: clientsForTable },
     { data: leads },
     { data: targets },
     { data: snapshot },
@@ -145,6 +146,13 @@ export default async function DashboardPage() {
       .in('priority', ['overdue', 'today'])
       .order('priority')
       .limit(5),
+    // All active clients — needed for accurate stats (count + revenue)
+    supabase
+      .from('clients')
+      .select('id, started_at, payment_type, total_amount')
+      .eq('user_id', user.id)
+      .eq('active', true),
+    // Only 5 most recent clients for the display table
     supabase
       .from('clients')
       .select('*')
@@ -173,7 +181,7 @@ export default async function DashboardPage() {
 
   // Use stored snapshot if it exists, otherwise compute live
   const liveStats = computeLiveStats(
-    (clients as Client[]) ?? [],
+    (allActiveClients as Client[]) ?? [],
     monthStart,
     (newLeadsThisMonth ?? []).length,
     (paidInstallmentsThisMonth ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0),
@@ -185,7 +193,8 @@ export default async function DashboardPage() {
   const callsHeld = snapshot?.calls_held ?? liveStats.calls_held
 
   const cashTarget = targets?.cash_target ?? 0
-  const activeClientCount = clients?.length ?? 0
+  const activeClientCount = allActiveClients?.length ?? 0
+  const clients = clientsForTable
 
   // Group leads by stage
   const stageGroups = (leads ?? []).reduce<Record<string, string[]>>((acc, l) => {
