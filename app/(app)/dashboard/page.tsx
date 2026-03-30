@@ -165,7 +165,8 @@ export default async function DashboardPage() {
       .eq('month', new Date().toISOString().slice(0, 7))
       .single(),
     supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
-    supabase.from('payment_installments').select('amount').eq('paid', true).gte('paid_at', monthStart),
+    supabase.from('payment_installments').select('amount, clients!inner(user_id)')
+      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
     supabase.from('leads').select('id').eq('user_id', user.id).eq('call_outcome', 'showed')
       .gte('updated_at', monthStart),
   ])

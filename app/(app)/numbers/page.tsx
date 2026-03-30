@@ -27,14 +27,16 @@ export default async function NumbersPage() {
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
     supabase.from('monthly_snapshots').select('*').eq('user_id', user.id).order('month', { ascending: false }).limit(7),
     supabase.from('clients').select('*').eq('user_id', user.id).eq('active', true),
-    supabase.from('payment_installments').select('*'),
+    // Join through clients so RLS + explicit user filter both apply
+    supabase.from('payment_installments').select('*, clients!inner(user_id)').eq('clients.user_id', user.id),
     // All leads created this month = new followers
     supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
     // All leads with a call booked OR outcome this month (regardless of when lead was created)
     supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', user.id)
       .or(`call_booked_at.gte.${monthStart},and(call_outcome.not.is.null,updated_at.gte.${monthStart})`),
-    // Installments paid this month — filtered through client_id for security
-    supabase.from('payment_installments').select('amount, paid_at').eq('paid', true).gte('paid_at', monthStart),
+    // Installments paid this month — joined through clients for explicit user scoping
+    supabase.from('payment_installments').select('amount, paid_at, clients!inner(user_id)')
+      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────

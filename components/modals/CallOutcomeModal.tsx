@@ -327,7 +327,12 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
               <button onClick={() => setStep('closed')} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 dark:bg-slate-700 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-600">Back</button>
               <button
                 onClick={saveDeal}
-                disabled={loading || (!totalAmount && !monthlyAmount)}
+                disabled={
+                  loading ||
+                  (paymentType === 'pif'   && !totalAmount) ||
+                  (paymentType === 'split' && !totalAmount) ||
+                  (paymentType === 'plan'  && (!monthlyAmount || planMonths < 1))
+                }
                 className="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
               >
                 {loading ? 'Saving…' : 'Save deal 🎉'}

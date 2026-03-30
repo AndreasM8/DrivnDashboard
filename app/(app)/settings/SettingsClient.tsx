@@ -312,6 +312,7 @@ function GoogleSheetsCard() {
   const [status, setStatus] = useState<GoogleStatus>({ connected: false })
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
@@ -319,10 +320,19 @@ function GoogleSheetsCard() {
       .then(r => r.json())
       .then(d => setStatus(d))
       .finally(() => setLoading(false))
+    // Surface any background-sync error from localStorage
+    try {
+      const raw = localStorage.getItem('drivn_sheets_last_sync')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (!parsed.ok) setSyncError(parsed.error ?? 'Unknown error')
+      }
+    } catch { /* ignore */ }
   }, [])
 
   async function handleSync() {
     setSyncing(true)
+    setSyncError(null)
     const res = await fetch('/api/google/sync', { method: 'POST' })
     if (res.ok) {
       const data = await res.json()
@@ -332,6 +342,12 @@ function GoogleSheetsCard() {
         spreadsheet_url: data.spreadsheetUrl ?? s.spreadsheet_url,
         last_synced_at: new Date().toISOString(),
       }))
+      localStorage.setItem('drivn_sheets_last_sync', JSON.stringify({ ok: true, at: new Date().toISOString() }))
+    } else {
+      const body = await res.json().catch(() => ({}))
+      const msg = body?.error ?? `Sync failed (HTTP ${res.status})`
+      setSyncError(msg)
+      localStorage.setItem('drivn_sheets_last_sync', JSON.stringify({ ok: false, at: new Date().toISOString(), error: msg }))
     }
     setSyncing(false)
   }
@@ -382,8 +398,11 @@ function GoogleSheetsCard() {
                   Open spreadsheet →
                 </a>
               )}
-              {status.last_synced_at && (
+              {status.last_synced_at && !syncError && (
                 <p className="text-xs text-gray-400 dark:text-slate-500">Last synced {formatSynced(status.last_synced_at)}</p>
+              )}
+              {syncError && (
+                <p className="text-xs text-rose-500 dark:text-rose-400">⚠ Last sync failed: {syncError}</p>
               )}
             </div>
           )}
@@ -676,13 +695,13 @@ function IntegrationsSection() {
       <WebhookCard
         emoji="⚡"
         name="ManyChat / Zapier"
-        desc="Automatically adds new followers + replies to your pipeline. Skip this and add them manually instead."
+        desc="Automatically pushes ManyChat DMs and other triggers into your pipeline. ManyChat connects through Zapier — no direct ManyChat URL needed. Skip this and add followers manually instead."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         instructions={[
-          'In Zapier, open any Zap (ManyChat, Stripe, or any trigger)',
+          'In Zapier, create a new Zap with ManyChat as the trigger',
           'Add action: Webhooks by Zapier → POST',
-          'Paste the URL above → Save → Done',
+          'Paste the URL above as the webhook endpoint → Save → Done',
         ]}
         docsUrl="https://zapier.com"
       />
