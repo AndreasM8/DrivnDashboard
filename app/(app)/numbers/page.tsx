@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import NumbersClient from './NumbersClient'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
 
 export default async function NumbersPage() {
   const supabase = await createServerSupabaseClient()
@@ -22,6 +22,8 @@ export default async function NumbersPage() {
     { data: newLeads },
     { data: bookedLeads },
     { data: allMonthInstallments },
+    { data: expenses },
+    { data: adSpend },
   ] = await Promise.all([
     supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
@@ -37,6 +39,10 @@ export default async function NumbersPage() {
     // Installments paid this month — joined through clients for explicit user scoping
     supabase.from('payment_installments').select('amount, paid_at, clients!inner(user_id)')
       .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
+    // Expenses for current month
+    supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
+    // Ad spend log for current month
+    supabase.from('ad_spend_log').select('actual_amount').eq('user_id', user.id).eq('month', currentMonth),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────
@@ -90,6 +96,8 @@ export default async function NumbersPage() {
   const storedCurrentSnapshot = snapshots?.find(s => s.month === currentMonth)
   const lastMonthSnapshot = snapshots?.find(s => s.month === lastMonth)
 
+  const adSpendTotal = (adSpend ?? []).reduce((sum, row) => sum + ((row as { actual_amount: number }).actual_amount ?? 0), 0)
+
   return (
     <NumbersClient
       baseCurrency={profile?.base_currency ?? 'NOK'}
@@ -100,6 +108,8 @@ export default async function NumbersPage() {
       clients={(clients as Client[]) ?? []}
       installments={(installments as PaymentInstallment[]) ?? []}
       currentMonth={currentMonth}
+      expenses={(expenses as Expense[]) ?? []}
+      adSpendTotal={adSpendTotal}
     />
   )
 }

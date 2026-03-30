@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
 import RevenueChart from '@/components/numbers/RevenueChart'
+import ExpensesSection from './ExpensesSection'
 
 // ─── Lock icon ────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,8 @@ interface Props {
   clients: Client[]
   installments: PaymentInstallment[]
   currentMonth: string
+  expenses: Expense[]
+  adSpendTotal: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -219,7 +222,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function NumbersClient({ baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history, clients, installments, currentMonth }: Props) {
+export default function NumbersClient({ baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history, clients, installments, currentMonth, expenses, adSpendTotal }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
     if (lastMonthSnapshot !== null) return false
@@ -437,6 +440,14 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
 
         {/* Payment tracker */}
         <PaymentTracker clients={clients} installments={installments} baseCurrency={baseCurrency} />
+
+        {/* Expenses & profit */}
+        <ExpensesSection
+          expenses={expenses}
+          adSpendTotal={adSpendTotal}
+          currency={baseCurrency}
+          currentMonth={currentMonth}
+        />
       </div>
     </div>
   )

@@ -315,6 +315,19 @@ export const CURRENCIES = [
   { code: 'AUD', label: 'Australian Dollar',flag: '🇦🇺' },
 ]
 
+// ─── Expenses ─────────────────────────────────────────────────────────────────
+
+export interface Expense {
+  id: string
+  user_id: string
+  month: string
+  category: 'team' | 'software' | 'ads' | 'withdrawal' | 'other'
+  label: string
+  amount: number
+  currency: string
+  created_at: string
+}
+
 // ─── Calendly ─────────────────────────────────────────────────────────────────
 
 export interface CalendlyIntegration {
