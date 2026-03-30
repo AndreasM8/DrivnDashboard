@@ -76,21 +76,21 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
   return (
     <div className="space-y-6">
       {groups.map(g => (
-        <div key={g.title} className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">{g.title}</h3>
+        <div key={g.title} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">{g.title}</h3>
           <div className="space-y-4">
             {g.fields.map(f => (
               <div key={f.key} className="flex items-center gap-4">
-                <label className="flex-1 text-sm text-gray-700">{f.label}</label>
+                <label className="flex-1 text-sm text-gray-700 dark:text-slate-300">{f.label}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     value={values[f.key]}
                     onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
                     placeholder="—"
-                    className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-28 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <span className="text-xs text-gray-400 w-16">{f.unit}</span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500 w-16">{f.unit}</span>
                 </div>
               </div>
             ))}
@@ -147,8 +147,8 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
-      <h3 className="font-semibold text-gray-900 mb-4">Your team</h3>
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+      <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Your team</h3>
 
       <div className="space-y-3 mb-5">
         {setters.map(s => (
@@ -157,12 +157,12 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
               {s.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{s.name}{s.is_self && <span className="ml-1 text-xs text-gray-400">(you)</span>}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{s.name}{s.is_self && <span className="ml-1 text-xs text-gray-400 dark:text-slate-500">(you)</span>}</p>
             </div>
             <select
               value={s.role}
               onChange={e => updateRole(s.id, e.target.value as SetterRole)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="setter">Setter</option>
               <option value="closer">Closer</option>
@@ -171,7 +171,7 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
             {!s.is_self && (
               <button
                 onClick={() => removeSetters(s.id)}
-                className="text-gray-300 hover:text-red-500 transition-colors"
+                className="text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                   <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -182,20 +182,20 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
         ))}
       </div>
 
-      <div className="border-t border-gray-50 pt-4">
-        <p className="text-xs font-semibold text-gray-500 mb-3">Add person</p>
+      <div className="border-t border-gray-50 dark:border-slate-700 pt-4">
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-3">Add person</p>
         <div className="flex gap-2">
           <input
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="Name"
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             onKeyDown={e => e.key === 'Enter' && addSetter()}
           />
           <select
             value={newRole}
             onChange={e => setNewRole(e.target.value as SetterRole)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="setter">Setter</option>
             <option value="closer">Closer</option>
@@ -226,7 +226,7 @@ function CopyButton({ value }: { value: string }) {
   return (
     <button
       onClick={copy}
-      className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0"
+      className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex-shrink-0"
     >
       {copied ? '✓ Copied' : 'Copy'}
     </button>
@@ -247,23 +247,23 @@ function WebhookCard({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className={`bg-white rounded-xl border p-4 transition-all ${configured ? 'border-green-200' : 'border-gray-100'}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${configured ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">{emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <p className="font-medium text-gray-900 text-sm">{name}</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${configured ? 'bg-green-500' : 'bg-gray-300'}`} />
-            <span className={`text-xs ${configured ? 'text-green-600' : 'text-gray-400'}`}>
+            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">{name}</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${configured ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
+            <span className={`text-xs ${configured ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-slate-500'}`}>
               {configured ? 'Configured' : 'Not set up'}
             </span>
           </div>
-          <p className="text-xs text-gray-500">{desc}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">{desc}</p>
 
           {/* Webhook URL */}
           <div className="mt-3 flex items-center gap-2">
-            <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-gray-700 truncate">
+            <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 text-gray-700 dark:text-slate-300 truncate">
               {webhookUrl}
             </code>
             <CopyButton value={webhookUrl} />
@@ -272,7 +272,7 @@ function WebhookCard({
           {/* Setup instructions */}
           <button
             onClick={() => setOpen(o => !o)}
-            className="mt-2 text-xs text-blue-600 hover:underline"
+            className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
             {open ? 'Hide setup steps ↑' : 'How to set up ↓'}
           </button>
@@ -280,7 +280,7 @@ function WebhookCard({
           {open && (
             <ol className="mt-2 space-y-1 pl-4 list-decimal">
               {instructions.map((step, i) => (
-                <li key={i} className="text-xs text-gray-600">{step}</li>
+                <li key={i} className="text-xs text-gray-600 dark:text-slate-400">{step}</li>
               ))}
               {docsUrl && (
                 <li className="text-xs">
@@ -355,18 +355,18 @@ function GoogleSheetsCard() {
   }
 
   return (
-    <div className={`bg-white rounded-xl border p-4 transition-all ${status.connected ? 'border-green-200' : 'border-gray-100'}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${status.connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">📊</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 text-sm">Google Sheets</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
+            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Google Sheets</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
             {!loading && (
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status.connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status.connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
             )}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Syncs your data to a Google Sheet for reporting. Totally optional.
           </p>
 
@@ -377,13 +377,13 @@ function GoogleSheetsCard() {
                   href={status.spreadsheet_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline block truncate"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline block truncate"
                 >
                   Open spreadsheet →
                 </a>
               )}
               {status.last_synced_at && (
-                <p className="text-xs text-gray-400">Last synced {formatSynced(status.last_synced_at)}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">Last synced {formatSynced(status.last_synced_at)}</p>
               )}
             </div>
           )}
@@ -391,7 +391,7 @@ function GoogleSheetsCard() {
 
         <div className="flex flex-col gap-2 flex-shrink-0">
           {loading ? (
-            <span className="text-xs text-gray-400 py-2">Loading…</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500 py-2">Loading…</span>
           ) : status.connected ? (
             <>
               <button
@@ -404,7 +404,7 @@ function GoogleSheetsCard() {
               <button
                 onClick={handleDisconnect}
                 disabled={disconnecting}
-                className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50"
               >
                 {disconnecting ? 'Removing…' : 'Disconnect'}
               </button>
@@ -412,7 +412,7 @@ function GoogleSheetsCard() {
           ) : (
             <a
               href="/api/google/auth"
-              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 text-center"
+              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center"
             >
               Connect
             </a>
@@ -464,32 +464,32 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border p-4 transition-all ${connected ? 'border-green-200' : 'border-gray-100'}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">💳</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 text-sm">Stripe</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
+            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Stripe</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
             {!loading && (
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
             )}
           </div>
-          <p className="text-xs text-gray-500">Auto-marks payments when clients pay. Skip this and mark payments manually in the client profile.</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">Auto-marks payments when clients pay. Skip this and mark payments manually in the client profile.</p>
 
           {!connected && !showInput && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs font-medium text-gray-700">To connect:</p>
-              <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">To connect:</p>
+              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
                 <li>Go to Stripe → Developers → Webhooks</li>
                 <li>Click "Add destination" → My account → Endpoint</li>
                 <li>Give it a name and paste the URL below</li>
-                <li>Add events: <span className="font-mono text-gray-700">payment_intent.succeeded</span> + <span className="font-mono text-gray-700">payment_intent.payment_failed</span></li>
+                <li>Add events: <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.succeeded</span> + <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.payment_failed</span></li>
                 <li>Save — Stripe shows you a signing secret. Paste it below.</li>
               </ol>
               <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1.5 truncate text-gray-600">{webhookUrl}</code>
-                <button onClick={copyUrl} className="px-2 py-1.5 text-xs bg-gray-100 rounded hover:bg-gray-200 flex-shrink-0">
+                <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 truncate text-gray-600 dark:text-slate-300">{webhookUrl}</code>
+                <button onClick={copyUrl} className="px-2 py-1.5 text-xs bg-gray-100 dark:bg-slate-700 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-600 flex-shrink-0">
                   {copied ? '✓' : 'Copy'}
                 </button>
               </div>
@@ -498,14 +498,14 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
 
           {showInput && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs text-gray-600">Paste your Stripe signing secret (starts with <span className="font-mono">whsec_</span>):</p>
+              <p className="text-xs text-gray-600 dark:text-slate-400">Paste your Stripe signing secret (starts with <span className="font-mono">whsec_</span>):</p>
               <div className="flex gap-2">
                 <input
                   type="password"
                   value={secret}
                   onChange={e => setSecret(e.target.value)}
                   placeholder="whsec_..."
-                  className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={handleSave}
@@ -514,7 +514,7 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
                 >
                   {saving ? 'Saving…' : 'Save'}
                 </button>
-                <button onClick={() => setShowInput(false)} className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700">
+                <button onClick={() => setShowInput(false)} className="px-3 py-2 text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
                   Cancel
                 </button>
               </div>
@@ -522,19 +522,19 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
           )}
 
           {connected && (
-            <p className="text-xs text-green-600 mt-2 font-medium">✓ Connected — payments sync automatically</p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">✓ Connected — payments sync automatically</p>
           )}
         </div>
 
         <div className="flex-shrink-0">
           {loading ? (
-            <span className="text-xs text-gray-400">Loading…</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
           ) : connected ? (
-            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200">
+            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">
               Disconnect
             </button>
           ) : !showInput ? (
-            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
+            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">
               Connect
             </button>
           ) : null}
@@ -584,34 +584,34 @@ function CalendlyCard() {
   }
 
   return (
-    <div className={`bg-white rounded-xl border p-4 transition-all ${connected ? 'border-green-200' : 'border-gray-100'}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">📅</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 text-sm">Calendly</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
-            {!loading && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />}
+            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Calendly</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
+            {!loading && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
             Auto-moves followers to &apos;Call booked&apos; when they book. Skip this and move them manually in the pipeline.
           </p>
 
           {connected && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs text-green-600 font-medium">✓ Connected — bookings sync automatically</p>
-              <p className="text-xs text-gray-500">Paste this URL in Calendly → Integrations → Webhooks:</p>
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Connected — bookings sync automatically</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">Paste this URL in Calendly → Integrations → Webhooks:</p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1.5 truncate text-gray-600">{webhookUrl}</code>
-                <button onClick={() => { navigator.clipboard.writeText(webhookUrl) }} className="px-2 py-1.5 text-xs bg-gray-100 rounded hover:bg-gray-200 flex-shrink-0">Copy</button>
+                <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 truncate text-gray-600 dark:text-slate-300">{webhookUrl}</code>
+                <button onClick={() => { navigator.clipboard.writeText(webhookUrl) }} className="px-2 py-1.5 text-xs bg-gray-100 dark:bg-slate-700 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-600 flex-shrink-0">Copy</button>
               </div>
             </div>
           )}
 
           {!connected && !showInput && (
             <div className="mt-3 space-y-1">
-              <p className="text-xs font-medium text-gray-700">To connect:</p>
-              <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
+              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">To connect:</p>
+              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
                 <li>Go to <strong>calendly.com/integrations/api_webhooks</strong></li>
                 <li>Click <strong>API & Webhooks → Personal Access Tokens → Create new token</strong></li>
                 <li>Copy the token and paste it below</li>
@@ -621,19 +621,19 @@ function CalendlyCard() {
 
           {showInput && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs text-gray-600">Paste your Calendly Personal Access Token:</p>
+              <p className="text-xs text-gray-600 dark:text-slate-400">Paste your Calendly Personal Access Token:</p>
               <div className="flex gap-2">
                 <input
                   type="password"
                   value={token}
                   onChange={e => setToken(e.target.value)}
                   placeholder="eyJhbGci..."
-                  className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button onClick={handleConnect} disabled={saving || !token.trim()} className="px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
                   {saving ? 'Connecting…' : 'Connect'}
                 </button>
-                <button onClick={() => { setShowInput(false); setError('') }} className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                <button onClick={() => { setShowInput(false); setError('') }} className="px-3 py-2 text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Cancel</button>
               </div>
               {error && <p className="text-xs text-red-500">{error}</p>}
             </div>
@@ -642,11 +642,11 @@ function CalendlyCard() {
 
         <div className="flex-shrink-0">
           {loading ? (
-            <span className="text-xs text-gray-400">Loading…</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
           ) : connected ? (
-            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-200">Disconnect</button>
+            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Disconnect</button>
           ) : !showInput ? (
-            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">Connect</button>
+            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Connect</button>
           ) : null}
         </div>
       </div>
@@ -669,7 +669,7 @@ function IntegrationsSection() {
 
   return (
     <div className="space-y-3">
-      <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-700 dark:text-amber-400">
         All integrations are <strong>optional</strong>. You can skip them and add leads, mark payments, and move pipeline stages manually at any time.
       </div>
 
@@ -743,15 +743,15 @@ function NotificationsSection() {
   return (
     <div className="space-y-4">
       {groups.map(g => (
-        <div key={g.title} className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">{g.title}</h3>
+        <div key={g.title} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+          <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">{g.title}</h3>
           <div className="space-y-3">
             {g.items.map(item => (
               <div key={item.key} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">{item.label}</span>
+                <span className="text-sm text-gray-700 dark:text-slate-300">{item.label}</span>
                 <button
                   onClick={() => toggle(item.key)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${settings[item.key] ? 'bg-blue-600' : 'bg-gray-200'}`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${settings[item.key] ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'}`}
                 >
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${settings[item.key] ? 'translate-x-7' : 'translate-x-1'}`} />
                 </button>
@@ -797,8 +797,8 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
   return (
     <div className="space-y-4">
       {/* Profile */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">Profile</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Profile</h3>
         <div className="space-y-3">
           {[
             { key: 'name', label: 'Your name', placeholder: 'Alex' },
@@ -806,12 +806,12 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
             { key: 'ig_handle', label: 'Instagram handle', placeholder: '@alexcoach' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{f.label}</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{f.label}</label>
               <input
                 value={profileData[f.key as keyof typeof profileData]}
                 onChange={e => setProfileData(d => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           ))}
@@ -824,18 +824,18 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
       </div>
 
       {/* Currency & region */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">Currency & region</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Currency & region</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Base currency</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Base currency</label>
             <div className="grid grid-cols-4 gap-2">
               {CURRENCIES.map(c => (
                 <button
                   key={c.code}
                   onClick={() => setCurrency(c.code)}
                   className={`flex flex-col items-center p-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                    currency === c.code ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-100 bg-white text-gray-700 hover:border-gray-200'
+                    currency === c.code ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'border-gray-100 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-200 dark:hover:border-slate-500'
                   }`}
                 >
                   <span className="text-base mb-0.5">{c.flag}</span>
@@ -845,11 +845,11 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Timezone</label>
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
             </select>
@@ -932,15 +932,15 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
   return (
     <div className="flex h-full">
       {/* Left nav */}
-      <div className="hidden md:flex flex-col w-48 border-r border-gray-100 bg-white py-6 px-3 flex-shrink-0">
-        <h1 className="text-lg font-bold text-gray-900 px-3 mb-4">Settings</h1>
+      <div className="hidden md:flex flex-col w-48 border-r border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 py-6 px-3 flex-shrink-0">
+        <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100 px-3 mb-4">Settings</h1>
         <nav className="space-y-0.5">
           {NAV_ITEMS.map(item => (
             <button
               key={item.key}
               onClick={() => setSection(item.key)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                section === item.key ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+                section === item.key ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
               }`}
             >
               {item.label}
@@ -950,12 +950,12 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       </div>
 
       {/* Mobile section nav */}
-      <div className="md:hidden border-b border-gray-100 bg-white px-4 py-3 overflow-x-auto flex gap-2">
+      <div className="md:hidden border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 overflow-x-auto flex gap-2">
         {NAV_ITEMS.map(item => (
           <button
             key={item.key}
             onClick={() => setSection(item.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${section === item.key ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${section === item.key ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
           >
             {item.label}
           </button>
