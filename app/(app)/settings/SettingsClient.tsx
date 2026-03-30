@@ -251,8 +251,9 @@ function WebhookCard({
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">{emoji}</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <p className="font-medium text-gray-900 text-sm">{name}</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${configured ? 'bg-green-500' : 'bg-gray-300'}`} />
             <span className={`text-xs ${configured ? 'text-green-600' : 'text-gray-400'}`}>
               {configured ? 'Configured' : 'Not set up'}
@@ -343,8 +344,14 @@ function GoogleSheetsCard() {
   }
 
   function formatSynced(iso: string) {
-    const d = new Date(iso)
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const diffMs = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diffMs / 60000)
+    const hours = Math.floor(mins / 60)
+    const days = Math.floor(hours / 24)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    return `${days} day${days === 1 ? '' : 's'} ago`
   }
 
   return (
@@ -352,14 +359,15 @@ function GoogleSheetsCard() {
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">📊</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <p className="font-medium text-gray-900 text-sm">Google Sheets</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
             {!loading && (
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status.connected ? 'bg-green-500' : 'bg-gray-300'}`} />
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Syncs your leads, clients, and tasks to a Google Sheet you own.
+          <p className="text-xs text-gray-500">
+            Syncs your data to a Google Sheet for reporting. Totally optional.
           </p>
 
           {status.connected && (
@@ -460,13 +468,14 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">💳</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <p className="font-medium text-gray-900 text-sm">Stripe</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
             {!loading && (
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">Automatically log payments and failed charges from Stripe.</p>
+          <p className="text-xs text-gray-500">Auto-marks payments when clients pay. Skip this and mark payments manually in the client profile.</p>
 
           {!connected && !showInput && (
             <div className="mt-3 space-y-2">
@@ -579,12 +588,13 @@ function CalendlyCard() {
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">📅</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <p className="font-medium text-gray-900 text-sm">Calendly</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Optional</span>
             {!loading && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
-            When someone books a call via Calendly, they move to "Call booked" in your pipeline automatically.
+          <p className="text-xs text-gray-500">
+            Auto-moves followers to &apos;Call booked&apos; when they book. Skip this and move them manually in the pipeline.
           </p>
 
           {connected && (
@@ -659,10 +669,14 @@ function IntegrationsSection() {
 
   return (
     <div className="space-y-3">
+      <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-700">
+        All integrations are <strong>optional</strong>. You can skip them and add leads, mark payments, and move pipeline stages manually at any time.
+      </div>
+
       <WebhookCard
         emoji="⚡"
-        name="Zapier"
-        desc="One webhook URL connects everything — ManyChat leads, Stripe payments, and any other tool you use in Zapier."
+        name="ManyChat / Zapier"
+        desc="Automatically adds new followers + replies to your pipeline. Skip this and add them manually instead."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         instructions={[

@@ -173,7 +173,13 @@ function StageColumn({
           )
         })}
         {leads.length === 0 && (
-          <div className="text-center py-6 text-xs text-gray-400">No leads here</div>
+          <div className="text-center py-6 text-xs text-gray-400 px-2">
+            {stage === 'follower' && 'Add one with + Add above'}
+            {stage === 'replied' && 'Add one with + Add above'}
+            {stage === 'freebie_sent' && 'Move leads here after sending a freebie'}
+            {stage === 'call_booked' && 'Move leads here when a call is booked'}
+            {stage === 'closed' && 'Move leads here when you close a deal'}
+          </div>
         )}
       </div>
     </div>

@@ -208,8 +208,8 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
         {totalOpen === 0 ? (
           <div className="text-center py-20">
             <p className="text-4xl mb-3">🎉</p>
-            <p className="text-lg font-semibold text-gray-900 mb-1">All caught up!</p>
-            <p className="text-sm text-gray-500">New tasks will appear here automatically.</p>
+            <p className="text-lg font-semibold text-gray-900 mb-1">Nothing due today — you&apos;re on top of it!</p>
+            <p className="text-sm text-gray-500">New tasks appear here automatically. Or hit + Add task to create one manually.</p>
           </div>
         ) : (
           <div className="space-y-8 max-w-2xl">
