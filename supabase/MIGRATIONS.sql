@@ -138,3 +138,23 @@ create policy "Users manage own monthly snapshots" on monthly_snapshots for all 
 
 drop policy if exists "Anyone can read exchange rate cache" on exchange_rate_cache;
 create policy "Anyone can read exchange rate cache" on exchange_rate_cache for select using (true);
+
+
+-- ── 6. Expenses table ────────────────────────────────────────────────────────
+
+create table if not exists expenses (
+  id         uuid primary key default uuid_generate_v4(),
+  user_id    uuid not null references users on delete cascade,
+  month      text not null,
+  category   text not null check (category in ('team','software','ads','withdrawal','other')),
+  label      text not null default '',
+  amount     numeric not null default 0,
+  currency   text not null default 'NOK',
+  created_at timestamp with time zone default now()
+);
+
+alter table expenses enable row level security;
+
+drop policy if exists "Users manage own expenses" on expenses;
+create policy "Users manage own expenses"
+  on expenses for all using (auth.uid() = user_id);

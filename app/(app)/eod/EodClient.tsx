@@ -317,13 +317,25 @@ export default function EodClient({ userId, setters, todayReport, reports }: Pro
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 max-w-3xl space-y-8 bg-gray-50 dark:bg-slate-900">
-        {/* Today's form */}
+        {/* Guard: need at least one setter to submit */}
+        {setters.length === 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-8 text-center">
+            <p className="text-3xl mb-3">👋</p>
+            <p className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Set up your team first</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">
+              EOD reports are submitted per team member. Go to{' '}
+              <a href="/settings" className="text-blue-600 hover:underline">Settings → Team</a>{' '}
+              to add yourself or your setters.
+            </p>
+          </div>
+        ) : (
         <EodForm
           userId={userId}
           setters={setters}
           existingReport={currentTodayReport}
           onSubmitted={onSubmitted}
         />
+        )}
 
         {/* This week summary */}
         {weekReports.length > 0 && (
