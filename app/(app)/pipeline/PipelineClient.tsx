@@ -36,6 +36,87 @@ function contactColor(days: number | null) {
   return 'text-green-600'
 }
 
+// ─── Pipeline Funnel ──────────────────────────────────────────────────────────
+
+function PipelineFunnel({ leads }: { leads: Lead[] }) {
+  if (leads.length === 0) return null
+
+  const total = leads.length
+
+  const repliedStages: LeadStage[] = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const freebieStages: LeadStage[] = ['freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const closedStages: LeadStage[] = ['closed']
+
+  const steps = [
+    { label: 'Followers', count: total, color: 'bg-gray-400' },
+    { label: 'Replied',   count: leads.filter(l => repliedStages.includes(l.stage)).length,     color: 'bg-blue-400' },
+    { label: 'Freebie',   count: leads.filter(l => freebieStages.includes(l.stage)).length,     color: 'bg-purple-400' },
+    { label: 'Call booked', count: leads.filter(l => callBookedStages.includes(l.stage)).length, color: 'bg-orange-400' },
+    { label: 'Closed',    count: leads.filter(l => closedStages.includes(l.stage)).length,      color: 'bg-green-500' },
+  ]
+
+  const MAX_BAR_HEIGHT = 72 // px
+
+  return (
+    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-6 py-4 mx-6 mt-4 mb-2">
+      {/* Desktop: full visual funnel */}
+      <div className="hidden sm:flex items-end gap-0 w-full">
+        {steps.map((step, i) => {
+          const barH = total > 0 ? Math.max(12, Math.round((step.count / total) * MAX_BAR_HEIGHT)) : 12
+          const nextCount = steps[i + 1]?.count ?? null
+          const rate = nextCount !== null && step.count > 0
+            ? Math.round((nextCount / step.count) * 100)
+            : null
+
+          return (
+            <div key={step.label} className="flex items-end flex-1">
+              {/* Step bar + labels */}
+              <div className="flex flex-col items-center flex-1 gap-1">
+                <span className="text-sm font-bold text-gray-900 dark:text-slate-100">{step.count}</span>
+                <div
+                  className={`w-full rounded-t-md ${step.color} opacity-80 transition-all`}
+                  style={{ height: `${barH}px` }}
+                />
+                <span className="text-xs text-gray-500 dark:text-slate-400 text-center leading-tight mt-0.5">{step.label}</span>
+              </div>
+              {/* Arrow + conversion rate between steps */}
+              {rate !== null && (
+                <div className="flex flex-col items-center px-1 pb-6 flex-shrink-0">
+                  <span className="text-[11px] font-semibold text-gray-400 dark:text-slate-500 whitespace-nowrap">{rate}%</span>
+                  <span className="text-gray-300 dark:text-slate-600 text-xs">→</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Mobile: compact horizontal scroll row */}
+      <div className="flex sm:hidden items-center gap-3 overflow-x-auto pb-1">
+        {steps.map((step, i) => {
+          const nextCount = steps[i + 1]?.count ?? null
+          const rate = nextCount !== null && step.count > 0
+            ? Math.round((nextCount / step.count) * 100)
+            : null
+
+          return (
+            <div key={step.label} className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-bold text-gray-900 dark:text-slate-100">{step.count}</span>
+                <span className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">{step.label}</span>
+              </div>
+              {rate !== null && (
+                <span className="text-[10px] text-gray-400 dark:text-slate-500 whitespace-nowrap">→ {rate}%</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Stage column config ──────────────────────────────────────────────────────
 
 const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: string }[] = [
@@ -341,6 +422,9 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           />
         </div>
       </div>
+
+      {/* Conversion funnel */}
+      <PipelineFunnel leads={leads} />
 
       {/* Kanban columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
