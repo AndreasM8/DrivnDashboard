@@ -43,76 +43,117 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
 
   const total = leads.length
 
-  const repliedStages: LeadStage[] = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const freebieStages: LeadStage[] = ['freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const freebieStages: LeadStage[]    = ['freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
   const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const closedStages: LeadStage[] = ['closed']
 
   const steps = [
-    { label: 'Followers', count: total, color: 'bg-gray-400' },
-    { label: 'Replied',   count: leads.filter(l => repliedStages.includes(l.stage)).length,     color: 'bg-blue-400' },
-    { label: 'Freebie',   count: leads.filter(l => freebieStages.includes(l.stage)).length,     color: 'bg-purple-400' },
-    { label: 'Call booked', count: leads.filter(l => callBookedStages.includes(l.stage)).length, color: 'bg-orange-400' },
-    { label: 'Closed',    count: leads.filter(l => closedStages.includes(l.stage)).length,      color: 'bg-green-500' },
+    { label: 'Followers',    count: total },
+    { label: 'Replied',      count: leads.filter(l => repliedStages.includes(l.stage)).length },
+    { label: 'Freebie sent', count: leads.filter(l => freebieStages.includes(l.stage)).length },
+    { label: 'Call booked',  count: leads.filter(l => callBookedStages.includes(l.stage)).length },
+    { label: 'Closed',       count: leads.filter(l => l.stage === 'closed').length },
   ]
 
-  const MAX_BAR_HEIGHT = 72 // px
+  // SVG coordinate space
+  const W = 500
+  const H = 68
+  const cy = H / 2
+  const n = steps.length
+  const segW = W / n
+  const MIN_H = H * 0.08   // never thinner than 8% — keeps it visible even at 0 count
+  const MAX_H = H * 0.94
+
+  function barH(count: number): number {
+    if (total === 0) return MIN_H
+    return Math.max(MIN_H, (count / total) * MAX_H)
+  }
+
+  // Build segments — each trapezoid's right edge = next segment's left edge (seamless)
+  const segs = steps.map((s, i) => {
+    const lh = barH(s.count)
+    const rh = i < n - 1 ? barH(steps[i + 1].count) : barH(s.count)  // last = rect
+    const x0 = i * segW
+    const x1 = (i + 1) * segW
+    return {
+      ...s,
+      lh, rh, x0, x1,
+      cx: x0 + segW / 2,
+      points: `${x0},${cy - lh / 2} ${x1},${cy - rh / 2} ${x1},${cy + rh / 2} ${x0},${cy + lh / 2}`,
+      convRate: i < n - 1 && s.count > 0
+        ? Math.round((steps[i + 1].count / s.count) * 100)
+        : null,
+    }
+  })
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-6 py-4 mx-6 mt-4 mb-2">
-      {/* Desktop: full visual funnel */}
-      <div className="hidden sm:flex items-end gap-0 w-full">
-        {steps.map((step, i) => {
-          const barH = total > 0 ? Math.max(12, Math.round((step.count / total) * MAX_BAR_HEIGHT)) : 12
-          const nextCount = steps[i + 1]?.count ?? null
-          const rate = nextCount !== null && step.count > 0
-            ? Math.round((nextCount / step.count) * 100)
-            : null
+    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-5 pt-4 pb-3 mx-6 mt-4 mb-2">
 
-          return (
-            <div key={step.label} className="flex items-end flex-1">
-              {/* Step bar + labels */}
-              <div className="flex flex-col items-center flex-1 gap-1">
-                <span className="text-sm font-bold text-gray-900 dark:text-slate-100">{step.count}</span>
-                <div
-                  className={`w-full rounded-t-md ${step.color} opacity-80 transition-all`}
-                  style={{ height: `${barH}px` }}
-                />
-                <span className="text-xs text-gray-500 dark:text-slate-400 text-center leading-tight mt-0.5">{step.label}</span>
-              </div>
-              {/* Arrow + conversion rate between steps */}
-              {rate !== null && (
-                <div className="flex flex-col items-center px-1 pb-6 flex-shrink-0">
-                  <span className="text-[11px] font-semibold text-gray-400 dark:text-slate-500 whitespace-nowrap">{rate}%</span>
-                  <span className="text-gray-300 dark:text-slate-600 text-xs">→</span>
-                </div>
-              )}
-            </div>
-          )
-        })}
+      {/* ── SVG funnel shape ── */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        className="w-full rounded-lg"
+        style={{ height: 68, display: 'block' }}
+      >
+        <defs>
+          {/* Light-mode gradient */}
+          <linearGradient id="fgLight" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#a5b4fc" stopOpacity="0.95" />
+            <stop offset="30%"  stopColor="#60a5fa" stopOpacity="0.90" />
+            <stop offset="68%"  stopColor="#fb923c" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#34d399" stopOpacity="0.95" />
+          </linearGradient>
+          {/* Dark-mode gradient — deeper, richer tones */}
+          <linearGradient id="fgDark" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#818cf8" stopOpacity="0.85" />
+            <stop offset="30%"  stopColor="#3b82f6" stopOpacity="0.80" />
+            <stop offset="68%"  stopColor="#f97316" stopOpacity="0.75" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.85" />
+          </linearGradient>
+          <filter id="fShadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#00000018" />
+          </filter>
+        </defs>
+
+        {/* Trapezoid segments — light mode */}
+        <g filter="url(#fShadow)" className="dark:opacity-0 transition-opacity">
+          {segs.map((seg, i) => (
+            <polygon key={i} points={seg.points} fill="url(#fgLight)" />
+          ))}
+        </g>
+
+        {/* Trapezoid segments — dark mode */}
+        <g filter="url(#fShadow)" className="opacity-0 dark:opacity-100 transition-opacity">
+          {segs.map((seg, i) => (
+            <polygon key={i} points={seg.points} fill="url(#fgDark)" />
+          ))}
+        </g>
+
+        {/* Thin white dividers between segments */}
+        {segs.slice(0, -1).map((seg, i) => (
+          <line
+            key={i}
+            x1={seg.x1} y1={cy - seg.rh / 2}
+            x2={seg.x1} y2={cy + seg.rh / 2}
+            stroke="white" strokeOpacity="0.45" strokeWidth="1"
+          />
+        ))}
+      </svg>
+
+      {/* ── Labels + counts + conversion rates ── */}
+      <div className="flex mt-2.5">
+        {segs.map((seg, i) => (
+          <div key={i} className="flex-1 text-center min-w-0 px-0.5">
+            <p className="text-sm font-bold text-gray-800 dark:text-slate-100 tabular-nums">{seg.count}</p>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate leading-tight">{seg.label}</p>
+            {seg.convRate !== null && (
+              <p className="text-[9px] text-gray-300 dark:text-slate-600 mt-0.5 tabular-nums">{seg.convRate}% →</p>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Mobile: compact horizontal scroll row */}
-      <div className="flex sm:hidden items-center gap-3 overflow-x-auto pb-1">
-        {steps.map((step, i) => {
-          const nextCount = steps[i + 1]?.count ?? null
-          const rate = nextCount !== null && step.count > 0
-            ? Math.round((nextCount / step.count) * 100)
-            : null
-
-          return (
-            <div key={step.label} className="flex items-center gap-2 flex-shrink-0">
-              <div className="flex flex-col items-center">
-                <span className="text-sm font-bold text-gray-900 dark:text-slate-100">{step.count}</span>
-                <span className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">{step.label}</span>
-              </div>
-              {rate !== null && (
-                <span className="text-[10px] text-gray-400 dark:text-slate-500 whitespace-nowrap">→ {rate}%</span>
-              )}
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }
