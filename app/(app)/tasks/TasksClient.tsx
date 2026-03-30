@@ -72,7 +72,7 @@ function TaskRow({
 
   return (
     <div
-      className={`flex items-start gap-3 py-3 px-4 bg-white rounded-xl border border-gray-100 transition-all ${fading ? 'task-fade-out pointer-events-none' : ''}`}
+      className={`flex items-start gap-3 py-3 px-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 transition-all ${fading ? 'task-fade-out pointer-events-none' : ''}`}
     >
       {/* Dot */}
       <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${dotColor}`} />
@@ -80,7 +80,7 @@ function TaskRow({
       {/* Checkbox */}
       <button
         onClick={handleCheck}
-        className="w-5 h-5 rounded-md border-2 border-gray-200 flex-shrink-0 mt-0.5 hover:border-green-400 transition-colors flex items-center justify-center"
+        className="w-5 h-5 rounded-md border-2 border-gray-200 dark:border-slate-600 flex-shrink-0 mt-0.5 hover:border-green-400 transition-colors flex items-center justify-center"
       >
         {fading && (
           <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
@@ -92,7 +92,7 @@ function TaskRow({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <p className="text-sm font-semibold text-gray-900 truncate">{task.title}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{task.title}</p>
           <span
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
             style={{ background: style.bg, color: style.text }}
@@ -100,11 +100,11 @@ function TaskRow({
             {style.label}
           </span>
         </div>
-        <p className="text-xs text-gray-500 line-clamp-2">{task.description}</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2">{task.description}</p>
       </div>
 
       {/* Date */}
-      <span className="text-xs text-gray-400 flex-shrink-0 mt-0.5">{formatDueDate(task.due_at)}</span>
+      <span className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0 mt-0.5">{formatDueDate(task.due_at)}</span>
     </div>
   )
 }
@@ -123,7 +123,7 @@ function TaskSection({
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-900">{PRIORITY_LABELS[priority]}</h2>
+        <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">{PRIORITY_LABELS[priority]}</h2>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PRIORITY_BADGE_COLORS[priority]}`}>
           {tasks.length}
         </span>
@@ -173,9 +173,9 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-gray-900">Tasks</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Tasks</h1>
           {totalOpen > 0 && (
             <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{totalOpen}</span>
           )}
@@ -189,13 +189,13 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 bg-white overflow-x-auto">
+      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-x-auto">
         {FILTER_TYPES.map(f => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              filter === f.key ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+              filter === f.key ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
             }`}
           >
             {f.label}
@@ -208,8 +208,8 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
         {totalOpen === 0 ? (
           <div className="text-center py-20">
             <p className="text-4xl mb-3">🎉</p>
-            <p className="text-lg font-semibold text-gray-900 mb-1">Nothing due today — you&apos;re on top of it!</p>
-            <p className="text-sm text-gray-500">New tasks appear here automatically. Or hit + Add task to create one manually.</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">Nothing due today — you&apos;re on top of it!</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">New tasks appear here automatically. Or hit + Add task to create one manually.</p>
           </div>
         ) : (
           <div className="space-y-8 max-w-2xl">

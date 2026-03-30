@@ -103,8 +103,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-        <h1 className="text-xl font-bold text-gray-900">Clients</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Clients</h1>
         <button
           onClick={() => setAddOpen(true)}
           className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -114,22 +114,22 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-4 bg-white border-b border-gray-50">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-50 dark:border-slate-700">
         {[
           { label: 'Active clients', value: String(activeCount) },
           { label: 'Total LTV collected', value: formatCurrency(totalLtv, baseCurrency) },
           { label: 'Invoices due soon', value: String(invoicesDueSoon) },
           { label: 'Upsell ready', value: String(upsellReady) },
         ].map(s => (
-          <div key={s.label} className="bg-gray-50 rounded-xl p-3">
-            <p className="text-xs text-gray-500 mb-1">{s.label}</p>
-            <p className="text-xl font-bold text-gray-900">{s.value}</p>
+          <div key={s.label} className="bg-gray-50 dark:bg-slate-900 rounded-xl p-3">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">{s.label}</p>
+            <p className="text-xl font-bold text-gray-900 dark:text-slate-100">{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 bg-white overflow-x-auto">
+      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-x-auto">
         {([
           { key: 'all', label: 'All clients' },
           { key: 'invoice_due', label: 'Invoice due' },
@@ -140,7 +140,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              filter === f.key ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+              filter === f.key ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
             }`}
           >
             {f.label}
@@ -151,7 +151,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search clients…"
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
+            className="px-3 py-1.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-40"
           />
         </div>
       </div>
@@ -163,8 +163,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             <p className="text-3xl mb-3">👥</p>
             {clients.length === 0 ? (
               <>
-                <p className="text-lg font-semibold text-gray-900 mb-1">No clients yet</p>
-                <p className="text-sm text-gray-500 mb-4">Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">No clients yet</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.</p>
                 <button
                   onClick={() => setAddOpen(true)}
                   className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
@@ -174,7 +174,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
               </>
             ) : (
               <>
-                <p className="text-lg font-semibold text-gray-900 mb-1">No clients match this filter</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">No clients match this filter</p>
                 <button onClick={() => setFilter('all')} className="text-sm text-blue-600 hover:underline">Clear filter</button>
               </>
             )}
@@ -183,7 +183,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="text-xs text-gray-400 text-left border-b border-gray-100">
+                <tr className="text-xs text-gray-400 dark:text-slate-500 text-left border-b border-gray-100 dark:border-slate-700">
                   <th className="pb-3 font-medium">Client</th>
                   <th className="pb-3 font-medium">Payment</th>
                   <th className="pb-3 font-medium text-right">Monthly</th>
@@ -203,7 +203,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                     <tr
                       key={client.id}
                       onClick={() => setDrawerClient(client)}
-                      className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="border-b border-gray-50 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors"
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
@@ -211,26 +211,26 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             {(client.full_name || client.ig_username).charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{client.full_name || client.ig_username}</p>
-                            <p className="text-xs text-gray-400">@{client.ig_username}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{client.full_name || client.ig_username}</p>
+                            <p className="text-xs text-gray-400 dark:text-slate-500">@{client.ig_username}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 pr-4">
-                        <span className="text-xs font-medium text-gray-600 capitalize">
+                        <span className="text-xs font-medium text-gray-600 dark:text-slate-400 capitalize">
                           {client.payment_type === 'pif' ? 'Paid in full' : client.payment_type === 'split' ? 'Split pay' : `Plan (${client.plan_months}mo)`}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-right text-sm font-medium text-gray-900">
+                      <td className="py-3 pr-4 text-right text-sm font-medium text-gray-900 dark:text-slate-100">
                         {client.monthly_amount ? formatCurrency(client.monthly_amount, baseCurrency) : '—'}
                       </td>
-                      <td className="py-3 pr-4 text-right text-sm font-semibold text-gray-900">
+                      <td className="py-3 pr-4 text-right text-sm font-semibold text-gray-900 dark:text-slate-100">
                         {formatCurrency(client.total_amount, baseCurrency)}
                       </td>
                       <td className="py-3 pr-4">
                         <PaymentDots installments={insts} />
                       </td>
-                      <td className="py-3 pr-4 text-sm text-gray-500">
+                      <td className="py-3 pr-4 text-sm text-gray-500 dark:text-slate-400">
                         {nextDate ? (
                           <span className={daysUntil(nextDate) <= 3 ? 'text-amber-600 font-medium' : ''}>
                             {new Date(nextDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
@@ -244,7 +244,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                           ) : (
                             <button
                               onClick={e => { e.stopPropagation(); setDrawerClient(client) }}
-                              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors"
+                              className="text-xs px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-colors"
                             >
                               Set upsell
                             </button>

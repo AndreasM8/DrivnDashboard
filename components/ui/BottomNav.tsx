@@ -18,7 +18,7 @@ function Tab({ href, label, icon, badge }: TabItem) {
     <Link
       href={href}
       className={`flex flex-col items-center gap-1 px-3 py-2 flex-1 min-w-0 transition-colors ${
-        active ? 'text-blue-600' : 'text-gray-400'
+        active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500'
       }`}
     >
       <span className="relative w-6 h-6">
@@ -41,7 +41,7 @@ interface BottomNavProps {
 
 export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavProps) {
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-50 safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 flex z-50 safe-area-bottom">
       <Tab href="/dashboard" label="Home" icon={<HomeIcon />} />
       <Tab href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
       <Tab href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />

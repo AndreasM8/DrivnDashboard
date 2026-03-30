@@ -57,10 +57,10 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Add follower to pipeline</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Add follower to pipeline</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -69,33 +69,33 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Instagram username *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Instagram username *</label>
             <input
               value={igUsername}
               onChange={e => setIgUsername(e.target.value)}
               placeholder="@username"
               required
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Full name</label>
             <input
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               placeholder="Jane Smith"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {setters.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned setter</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Assigned setter</label>
               <select
                 value={setterId}
                 onChange={e => setSetterId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Unassigned</option>
                 {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -104,13 +104,13 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Their vibe, goal, what content they reacted to…"
               rows={3}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
@@ -120,7 +120,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, onClose, o
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>

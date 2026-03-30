@@ -42,9 +42,9 @@ function PaymentDot({ installment, onToggle }: { installment: PaymentInstallment
 function InfoRow({ label, value }: { label: string; value: string }) {
   if (!value) return null
   return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className="text-xs font-medium text-gray-900 text-right max-w-[60%]">{value}</span>
+    <div className="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0">
+      <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
+      <span className="text-xs font-medium text-gray-900 dark:text-slate-100 text-right max-w-[60%]">{value}</span>
     </div>
   )
 }
@@ -102,20 +102,20 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
           <div>
-            <h2 className="font-bold text-gray-900">{client.full_name || client.ig_username}</h2>
-            <p className="text-xs text-gray-400">
+            <h2 className="font-bold text-gray-900 dark:text-slate-100">{client.full_name || client.ig_username}</h2>
+            <p className="text-xs text-gray-400 dark:text-slate-500">
               @{client.ig_username}
               {client.program_type && (
                 <span className="ml-2 text-blue-500">· {client.program_type}</span>
               )}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -123,18 +123,18 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
         </div>
 
         {/* LTV Summary bar */}
-        <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
+        <div className="px-5 py-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div className="text-center">
-              <p className="text-xs text-gray-400 mb-0.5">Contract value</p>
-              <p className="text-sm font-bold text-gray-900">{fmt(totalContracted, baseCurrency)}</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">Contract value</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-slate-100">{fmt(totalContracted, baseCurrency)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-400 mb-0.5">Collected</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">Collected</p>
               <p className="text-sm font-bold text-green-600">{fmt(totalPaid || (client.payment_type === 'pif' ? totalContracted : 0), baseCurrency)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-400 mb-0.5">Outstanding</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mb-0.5">Outstanding</p>
               <p className={`text-sm font-bold ${totalOutstanding > 0 ? 'text-red-500' : 'text-gray-400'}`}>
                 {fmt(client.payment_type === 'pif' ? 0 : totalOutstanding, baseCurrency)}
               </p>
@@ -142,11 +142,11 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
           </div>
           {insts.length > 0 && (
             <div>
-              <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mb-1">
                 <span>{paidPercent}% collected</span>
                 <span>{insts.filter(i => i.paid).length}/{insts.length} payments</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5">
                 <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{ width: `${paidPercent}%` }} />
               </div>
             </div>
@@ -154,13 +154,13 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100">
+        <div className="flex border-b border-gray-100 dark:border-slate-700">
           {(['overview', 'payments', 'notes'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 py-2.5 text-xs font-medium capitalize transition-colors ${
-                tab === t ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'
+                tab === t ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
               }`}
             >
               {t}
@@ -173,7 +173,7 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
           {/* Overview tab */}
           {tab === 'overview' && (
             <div className="p-5 space-y-4">
-              <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 divide-y divide-gray-50 dark:divide-slate-700">
                 <InfoRow label="Start date" value={fmtDate(client.started_at)} />
                 {endDate && <InfoRow label="Contract ends" value={fmtDate(endDate.toISOString())} />}
                 {client.plan_months && <InfoRow label="Duration" value={`${client.plan_months} months`} />}
@@ -192,11 +192,11 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
 
               {/* Upsell reminder */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Upsell reminder</p>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">Upsell reminder</p>
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-xl">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Remind me to upsell</p>
-                    <p className="text-xs text-gray-400">Creates a task at the selected month</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Remind me to upsell</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500">Creates a task at the selected month</p>
                   </div>
                   <button
                     onClick={toggleUpsell}
@@ -207,13 +207,13 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                 </div>
                 {upsellOn && (
                   <div className="mt-3">
-                    <p className="text-xs text-gray-500 mb-2">Alert at month:</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Alert at month:</p>
                     <div className="flex gap-2">
                       {[2, 3, 4, 5, 6].map(m => (
                         <button
                           key={m}
                           onClick={() => setUpsellMonth(m)}
-                          className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${upsellMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                          className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${upsellMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}
                         >
                           {m}
                         </button>
@@ -230,7 +230,7 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
             <div className="p-5 space-y-4">
               {insts.length > 0 ? (
                 <>
-                  <p className="text-xs text-gray-400">Tap a dot to mark as paid or unpaid</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Tap a dot to mark as paid or unpaid</p>
                   <div className="flex flex-wrap gap-2">
                     {[...insts].sort((a, b) => a.month_number - b.month_number).map(inst => (
                       <PaymentDot
@@ -245,11 +245,11 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                       <div
                         key={inst.id}
                         className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
-                          inst.paid ? 'bg-green-50' : new Date(inst.due_date) < new Date() ? 'bg-red-50' : 'bg-gray-50'
+                          inst.paid ? 'bg-green-50 dark:bg-green-900/20' : new Date(inst.due_date) < new Date() ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-slate-700'
                         }`}
                       >
-                        <span className="font-medium text-gray-700">Month {inst.month_number}</span>
-                        <span className="text-gray-500">{fmtDate(inst.due_date)}</span>
+                        <span className="font-medium text-gray-700 dark:text-slate-300">Month {inst.month_number}</span>
+                        <span className="text-gray-500 dark:text-slate-400">{fmtDate(inst.due_date)}</span>
                         <span className={`font-semibold ${inst.paid ? 'text-green-600' : 'text-gray-400'}`}>
                           {inst.paid ? '✓ Paid' : fmt(inst.amount, baseCurrency)}
                         </span>
@@ -258,7 +258,7 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8 text-gray-400">
+                <div className="text-center py-8 text-gray-400 dark:text-slate-500">
                   <p className="text-sm">No payment installments</p>
                   <p className="text-xs mt-1">This client paid in full or split</p>
                 </div>
@@ -274,7 +274,7 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                 onChange={e => setNotes(e.target.value)}
                 rows={10}
                 placeholder="Anything useful about this client — goals, objections handled, what they respond to…"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
               <button
                 onClick={saveNotes}

@@ -78,20 +78,20 @@ function KpiCard({
     : compareValue != null ? (value > compareValue ? `+${(value - compareValue).toFixed(1)}${unit} vs last month` : `${(value - compareValue).toFixed(1)}${unit} vs last month`) : null
 
   return (
-    <div className={`bg-white rounded-xl border border-l-4 border-gray-100 ${c.border} p-4`}>
-      <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{displayValue}</p>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border border-l-4 border-gray-100 dark:border-slate-700 ${c.border} p-4`}>
+      <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-1">{displayValue}</p>
 
       {showComparison && (
         <>
           {diff && <p className={`text-xs font-medium mb-2 ${c.text}`}>{diff}</p>}
           {target && (
-            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1">
+            <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden mb-1">
               <div className={`h-full rounded-full ${c.bg} transition-all`} style={{ width: `${pct}%` }} />
             </div>
           )}
           {targetDisplay && (
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-gray-400 dark:text-slate-500">
               {compareMode === 'targets' ? `Target: ${targetDisplay}` : `Last month: ${targetDisplay}`}
             </p>
           )}
@@ -110,9 +110,9 @@ function PaymentTracker({ clients, installments, baseCurrency }: { clients: Clie
   if (planClients.length === 0) return null
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900">Payment plan tracker</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-slate-100">Payment plan tracker</h2>
         {hasOverdue && (
           <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">Overdue payments</span>
         )}
@@ -128,12 +128,12 @@ function PaymentTracker({ clients, installments, baseCurrency }: { clients: Clie
           return (
             <div key={client.id} className="flex items-center gap-4">
               <div className="w-32 flex-shrink-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{client.full_name || client.ig_username}</p>
-                <p className="text-xs text-gray-400">{formatCurrency(collected, baseCurrency)} collected</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{client.full_name || client.ig_username}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">{formatCurrency(collected, baseCurrency)} collected</p>
               </div>
               <div className="flex gap-1.5 flex-wrap flex-1">
                 {clientInsts.map(inst => {
-                  const color = inst.paid ? 'bg-green-400' : new Date(inst.due_date) < new Date() ? 'bg-red-400' : 'bg-gray-200'
+                  const color = inst.paid ? 'bg-green-400' : new Date(inst.due_date) < new Date() ? 'bg-red-400' : 'bg-gray-200 dark:bg-slate-600'
                   return (
                     <span key={inst.id} title={`Month ${inst.month_number}`} className={`w-4 h-4 rounded-full ${color}`} />
                   )
@@ -144,10 +144,10 @@ function PaymentTracker({ clients, installments, baseCurrency }: { clients: Clie
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-50">
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-400" /><span className="text-xs text-gray-500">Paid</span></div>
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-400" /><span className="text-xs text-gray-500">Missed</span></div>
-        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200" /><span className="text-xs text-gray-500">Upcoming</span></div>
+      <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-50 dark:border-slate-700">
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-400" /><span className="text-xs text-gray-500 dark:text-slate-400">Paid</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-400" /><span className="text-xs text-gray-500 dark:text-slate-400">Missed</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-gray-200 dark:bg-slate-600" /><span className="text-xs text-gray-500 dark:text-slate-400">Upcoming</span></div>
       </div>
     </div>
   )
@@ -162,12 +162,12 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
-      <h2 className="font-semibold text-gray-900 mb-4">Monthly history</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+      <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Monthly history</h2>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[700px] text-sm">
           <thead>
-            <tr className="text-xs text-gray-400 border-b border-gray-50 text-left">
+            <tr className="text-xs text-gray-400 dark:text-slate-500 border-b border-gray-50 dark:border-slate-700 text-left">
               <th className="pb-2 font-medium">Month</th>
               <th className="pb-2 font-medium text-right">Cash in</th>
               <th className="pb-2 font-medium text-right">Contracted</th>
@@ -182,9 +182,9 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
             {history.map(s => (
               <tr
                 key={s.month}
-                className={`border-b border-gray-50 ${s.month === currentMonth ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                className={`border-b border-gray-50 dark:border-slate-700 ${s.month === currentMonth ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-700'}`}
               >
-                <td className="py-2.5 font-medium text-gray-900">
+                <td className="py-2.5 font-medium text-gray-900 dark:text-slate-100">
                   {formatMonth(s.month)}
                   {s.month === currentMonth && <span className="ml-1 text-[10px] text-blue-600 font-bold">NOW</span>}
                 </td>
@@ -198,7 +198,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
               </tr>
             ))}
             {history.length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-sm text-gray-400">No history yet. Data will appear at the end of each month.</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-sm text-gray-400 dark:text-slate-500">No history yet. Data will appear at the end of each month.</td></tr>
             )}
           </tbody>
         </table>
@@ -234,19 +234,19 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-        <h1 className="text-xl font-bold text-gray-900">Numbers — {formatMonth(currentMonth)}</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Numbers — {formatMonth(currentMonth)}</h1>
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
             <button
               onClick={() => setCompareMode('targets')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'targets' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'targets' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
             >
               vs my targets
             </button>
             <button
               onClick={() => setCompareMode('last_month')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'last_month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'last_month' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
             >
               vs last month
             </button>
@@ -351,8 +351,8 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
         </div>
 
         {/* Chart */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Performance over time</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+          <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Performance over time</h2>
           <RevenueChart history={history} baseCurrency={baseCurrency} />
         </div>
 

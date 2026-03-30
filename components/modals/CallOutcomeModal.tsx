@@ -141,10 +141,10 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Log call outcome</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Log call outcome</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -154,7 +154,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
         {/* Step 1 */}
         {step === 'showed_up' && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-4">Did @{lead.ig_username} show up?</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-4">Did @{lead.ig_username} show up?</p>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Showed up ✓', outcome: 'showed' as CallOutcome, showed: true },
@@ -165,7 +165,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                 <button
                   key={opt.outcome}
                   onClick={() => handleShowedUp(opt.showed, opt.outcome)}
-                  className="py-3 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-blue-300 hover:bg-blue-50 transition-all"
+                  className="py-3 px-4 rounded-xl border border-gray-200 dark:border-slate-600 text-sm font-medium text-gray-700 dark:text-slate-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all dark:bg-slate-700"
                 >
                   {opt.label}
                 </button>
@@ -178,8 +178,8 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
         {step === 'no_show_done' && (
           <div className="text-center py-4">
             <p className="text-2xl mb-3">📝</p>
-            <p className="font-semibold text-gray-900 mb-1">Logged</p>
-            <p className="text-sm text-gray-500 mb-5">Lead stays in pipeline. Follow up when you&apos;re ready.</p>
+            <p className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Logged</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">Lead stays in pipeline. Follow up when you&apos;re ready.</p>
             <button onClick={onClose} className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">
               Done
             </button>
@@ -189,7 +189,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
         {/* Step 2 */}
         {step === 'closed' && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-4">Did it close?</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-4">Did it close?</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleClosed(true)}
@@ -199,7 +199,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
               </button>
               <button
                 onClick={() => handleClosed(false)}
-                className="py-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                className="py-4 rounded-xl border border-gray-200 dark:border-slate-600 dark:bg-slate-700 text-sm font-medium text-gray-700 dark:text-slate-300 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all"
               >
                 Not yet
               </button>
@@ -210,7 +210,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
         {/* Step 3a — Objection */}
         {step === 'objection' && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-4">What was the main objection?</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-4">What was the main objection?</p>
             <div className="grid grid-cols-2 gap-2 mb-4">
               {[
                 { value: 'money', label: 'Money' },
@@ -224,8 +224,8 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                   onClick={() => setObjection(o.value as CallObjection)}
                   className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-all text-left ${
                     objection === o.value
-                      ? 'border-blue-400 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700'
+                      : 'border-gray-200 dark:border-slate-600 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-300'
                   }`}
                 >
                   {o.label}
@@ -237,10 +237,10 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
               onChange={e => setObjectionNotes(e.target.value)}
               placeholder="Any notes about the call…"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4"
             />
             <div className="flex gap-3">
-              <button onClick={() => setStep('closed')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium">Back</button>
+              <button onClick={() => setStep('closed')} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 dark:bg-slate-700 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-600">Back</button>
               <button
                 onClick={saveNotClosed}
                 disabled={loading}
@@ -255,7 +255,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
         {/* Step 3b — Deal details */}
         {step === 'deal_details' && (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-4">🎉 How are they paying?</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-4">🎉 How are they paying?</p>
 
             {/* Payment type */}
             <div className="flex gap-2 mb-4">
@@ -265,8 +265,8 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                   onClick={() => setPaymentType(t)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     paymentType === t
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 text-gray-600'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700'
+                      : 'border-gray-200 dark:border-slate-600 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
                   }`}
                 >
                   {t === 'pif' ? 'Paid in full' : t === 'split' ? 'Split pay' : 'Payment plan'}
@@ -276,13 +276,13 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
 
             {(paymentType === 'pif' || paymentType === 'split') && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Total amount</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount</label>
                 <input
                   type="number"
                   value={totalAmount}
                   onChange={e => setTotalAmount(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
@@ -290,24 +290,24 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
             {paymentType === 'plan' && (
               <div className="space-y-3 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly amount</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Monthly amount</label>
                   <input
                     type="number"
                     value={monthlyAmount}
                     onChange={e => setMonthlyAmount(e.target.value)}
                     placeholder="0"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of months</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Number of months</label>
                   <div className="flex gap-1.5 flex-wrap">
                     {PLAN_MONTHS.map(m => (
                       <button
                         key={m}
                         onClick={() => setPlanMonths(m)}
                         className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${
-                          planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                         }`}
                       >
                         {m}
@@ -316,7 +316,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                   </div>
                 </div>
                 {monthlyAmount && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-slate-500">
                     Total: {Number(monthlyAmount) * planMonths} ({planMonths} months)
                   </p>
                 )}
@@ -324,7 +324,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
             )}
 
             <div className="flex gap-3">
-              <button onClick={() => setStep('closed')} className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium">Back</button>
+              <button onClick={() => setStep('closed')} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 dark:bg-slate-700 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-600">Back</button>
               <button
                 onClick={saveDeal}
                 disabled={loading || (!totalAmount && !monthlyAmount)}

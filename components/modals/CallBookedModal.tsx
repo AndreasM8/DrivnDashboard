@@ -47,39 +47,39 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Book the call</h2>
-        <p className="text-sm text-gray-500 mb-5">When is @{lead.ig_username}&apos;s call?</p>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">Book the call</h2>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">When is @{lead.ig_username}&apos;s call?</p>
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Date</label>
               <input
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Time</label>
               <input
                 type="time"
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
           {setters.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Who&apos;s closing?</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Who&apos;s closing?</label>
               <select
                 value={closerId}
                 onChange={e => setCloserId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -90,7 +90,7 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>

@@ -71,11 +71,11 @@ function EodForm({ userId, setters, existingReport, onSubmitted }: {
 
   if (existingReport && !editing) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="font-bold text-gray-900">Today&apos;s report submitted ✓</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{new Date(existingReport.submitted_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</p>
+            <h2 className="font-bold text-gray-900 dark:text-slate-100">Today&apos;s report submitted ✓</h2>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mt-0.5">{new Date(existingReport.submitted_at).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
           <button onClick={() => setEditing(true)} className="text-sm text-blue-600 font-medium hover:text-blue-700">Edit</button>
         </div>
@@ -89,23 +89,23 @@ function EodForm({ userId, setters, existingReport, onSubmitted }: {
             { label: 'Calls held', value: existingReport.calls_held },
             { label: 'Closed', value: existingReport.calls_closed },
           ].map(s => (
-            <div key={s.label} className="bg-gray-50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+            <div key={s.label} className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{s.value}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
 
         {existingReport.biggest_win && (
-          <div className="bg-green-50 rounded-xl px-4 py-3 mb-3">
-            <p className="text-xs font-semibold text-green-700 mb-1">Biggest win</p>
-            <p className="text-sm text-green-800">{existingReport.biggest_win}</p>
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl px-4 py-3 mb-3">
+            <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">Biggest win</p>
+            <p className="text-sm text-green-800 dark:text-green-300">{existingReport.biggest_win}</p>
           </div>
         )}
         {existingReport.biggest_challenge && (
-          <div className="bg-amber-50 rounded-xl px-4 py-3">
-            <p className="text-xs font-semibold text-amber-700 mb-1">Biggest challenge</p>
-            <p className="text-sm text-amber-800">{existingReport.biggest_challenge}</p>
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1">Biggest challenge</p>
+            <p className="text-sm text-amber-800 dark:text-amber-300">{existingReport.biggest_challenge}</p>
           </div>
         )}
       </div>
@@ -113,17 +113,17 @@ function EodForm({ userId, setters, existingReport, onSubmitted }: {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-6">
-      <h2 className="text-lg font-bold text-gray-900 mb-1">How did today go?</h2>
-      <p className="text-sm text-gray-400 mb-6">{new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-6">
+      <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">How did today go?</h2>
+      <p className="text-sm text-gray-400 dark:text-slate-500 mb-6">{new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
 
       {setters.length > 1 && (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Submitting as</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Submitting as</label>
           <select
             value={setterId}
             onChange={e => setSetterId(e.target.value)}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
@@ -141,60 +141,60 @@ function EodForm({ userId, setters, existingReport, onSubmitted }: {
             { key: 'calls_closed', label: 'Calls closed' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{f.label}</label>
               <input
                 type="number"
                 min="0"
                 value={fields[f.key as keyof typeof fields]}
                 onChange={e => setFields(fs => ({ ...fs, [f.key]: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           ))}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cash collected today</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Cash collected today</label>
           <input
             type="number"
             min="0"
             value={fields.total_cash_collected}
             onChange={e => setFields(fs => ({ ...fs, total_cash_collected: e.target.value }))}
             placeholder="0"
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Biggest win today</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Biggest win today</label>
           <textarea
             value={fields.biggest_win}
             onChange={e => setFields(fs => ({ ...fs, biggest_win: e.target.value }))}
             placeholder="e.g. booked 3 calls, great conversation with…"
             rows={2}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Biggest challenge</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Biggest challenge</label>
           <textarea
             value={fields.biggest_challenge}
             onChange={e => setFields(fs => ({ ...fs, biggest_challenge: e.target.value }))}
             placeholder="e.g. lots of no-replies, money objection on 2 calls"
             rows={2}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Anything else <span className="text-gray-400 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Anything else <span className="text-gray-400 dark:text-slate-500 font-normal">(optional)</span></label>
           <textarea
             value={fields.notes}
             onChange={e => setFields(fs => ({ ...fs, notes: e.target.value }))}
             placeholder="Any other notes for your coach…"
             rows={2}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 
@@ -217,10 +217,10 @@ function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Sette
 
   if (reports.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+      <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
         <p className="text-2xl mb-3">📋</p>
-        <p className="text-lg font-semibold text-gray-900 mb-1">No reports yet</p>
-        <p className="text-sm text-gray-500">EOD reports from your team will appear here.</p>
+        <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">No reports yet</p>
+        <p className="text-sm text-gray-500 dark:text-slate-400">EOD reports from your team will appear here.</p>
       </div>
     )
   }
@@ -231,36 +231,36 @@ function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Sette
         const setter = setters.find(s => s.id === r.setter_id)
         const isExpanded = expanded === r.id
         return (
-          <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-4">
+          <div key={r.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-4">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-sm flex items-center justify-center flex-shrink-0">
                 {(setter?.name ?? 'U').charAt(0)}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900 text-sm">{setter?.name ?? 'Unknown'}</p>
-                <p className="text-xs text-gray-400">{new Date(r.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{setter?.name ?? 'Unknown'}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">{new Date(r.date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 text-sm mb-3 flex-wrap">
-              <span className="text-gray-600">{r.leads_contacted} leads</span>
-              <span className="text-gray-600">{r.calls_booked} booked</span>
-              <span className="text-gray-600">{r.calls_closed} closed</span>
+              <span className="text-gray-600 dark:text-slate-400">{r.leads_contacted} leads</span>
+              <span className="text-gray-600 dark:text-slate-400">{r.calls_booked} booked</span>
+              <span className="text-gray-600 dark:text-slate-400">{r.calls_closed} closed</span>
               {r.total_cash_collected > 0 && (
-                <span className="font-semibold text-green-700">{r.total_cash_collected.toLocaleString()}</span>
+                <span className="font-semibold text-green-700 dark:text-green-400">{r.total_cash_collected.toLocaleString()}</span>
               )}
             </div>
 
             {r.biggest_win && (
-              <div className="bg-green-50 rounded-lg px-3 py-2 mb-2">
-                <p className="text-xs font-semibold text-green-700 mb-0.5">Win</p>
-                <p className="text-xs text-green-800 line-clamp-2">{r.biggest_win}</p>
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2 mb-2">
+                <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-0.5">Win</p>
+                <p className="text-xs text-green-800 dark:text-green-300 line-clamp-2">{r.biggest_win}</p>
               </div>
             )}
             {r.biggest_challenge && (
-              <div className="bg-amber-50 rounded-lg px-3 py-2 mb-2">
-                <p className="text-xs font-semibold text-amber-700 mb-0.5">Challenge</p>
-                <p className="text-xs text-amber-800 line-clamp-2">{r.biggest_challenge}</p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 mb-2">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Challenge</p>
+                <p className="text-xs text-amber-800 dark:text-amber-300 line-clamp-2">{r.biggest_challenge}</p>
               </div>
             )}
 
@@ -274,10 +274,10 @@ function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Sette
             )}
 
             {isExpanded && (
-              <div className="mt-3 pt-3 border-t border-gray-50 text-xs text-gray-600 space-y-1">
+              <div className="mt-3 pt-3 border-t border-gray-50 dark:border-slate-700 text-xs text-gray-600 dark:text-slate-400 space-y-1">
                 <p>Calls held: {r.calls_held}</p>
                 <p>Freebies sent: {r.freebies_sent}</p>
-                {r.notes && <p className="text-gray-500 mt-2">{r.notes}</p>}
+                {r.notes && <p className="text-gray-500 dark:text-slate-500 mt-2">{r.notes}</p>}
               </div>
             )}
           </div>
@@ -312,11 +312,11 @@ export default function EodClient({ userId, setters, todayReport, reports }: Pro
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center px-6 py-4 border-b border-gray-100 bg-white">
-        <h1 className="text-xl font-bold text-gray-900">EOD Reports</h1>
+      <div className="flex items-center px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">EOD Reports</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 max-w-3xl space-y-8">
+      <div className="flex-1 overflow-y-auto p-6 max-w-3xl space-y-8 bg-gray-50 dark:bg-slate-900">
         {/* Today's form */}
         <EodForm
           userId={userId}
@@ -328,7 +328,7 @@ export default function EodClient({ userId, setters, todayReport, reports }: Pro
         {/* This week summary */}
         {weekReports.length > 0 && (
           <div>
-            <h2 className="font-semibold text-gray-900 mb-3">This week</h2>
+            <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-3">This week</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: 'Leads contacted', value: weekTotals.leads },
@@ -336,9 +336,9 @@ export default function EodClient({ userId, setters, todayReport, reports }: Pro
                 { label: 'Calls closed', value: weekTotals.closed },
                 { label: 'Cash collected', value: weekTotals.cash.toLocaleString() },
               ].map(s => (
-                <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+                <div key={s.label} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-4 text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{s.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -347,7 +347,7 @@ export default function EodClient({ userId, setters, todayReport, reports }: Pro
 
         {/* Report feed */}
         <div>
-          <h2 className="font-semibold text-gray-900 mb-3">Report history</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-3">Report history</h2>
           <ReportFeed reports={allReports} setters={setters} />
         </div>
       </div>

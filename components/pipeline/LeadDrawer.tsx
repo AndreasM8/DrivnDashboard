@@ -71,14 +71,14 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-sm bg-white dark:bg-slate-800 shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
           <div>
-            <h2 className="font-bold text-gray-900">@{lead.ig_username}</h2>
-            {lead.full_name && <p className="text-xs text-gray-400">{lead.full_name}</p>}
+            <h2 className="font-bold text-gray-900 dark:text-slate-100">@{lead.ig_username}</h2>
+            {lead.full_name && <p className="text-xs text-gray-400 dark:text-slate-500">{lead.full_name}</p>}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
@@ -88,14 +88,14 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {/* Tier */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tier</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Tier</p>
             <div className="flex gap-2">
               {([1, 2, 3] as const).map(t => (
                 <button
                   key={t}
                   onClick={() => setTier(t)}
                   className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
-                    lead.tier === t ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    lead.tier === t ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   {t}
@@ -107,7 +107,7 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
           {/* Labels */}
           {labels.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Labels</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Labels</p>
               <div className="flex flex-wrap gap-2">
                 {labels.map(l => {
                   const active = assignments.some(a => a.label_id === l.id)
@@ -132,11 +132,11 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
 
           {/* Move stage */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Move to stage</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Move to stage</p>
             <select
               value={lead.stage}
               onChange={e => onStageChange(e.target.value as LeadStage)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {MOVEABLE_STAGES.map(s => (
                 <option key={s} value={s}>{STAGE_LABELS[s]}</option>
@@ -146,13 +146,13 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
 
           {/* Notes */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Notes</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Notes</p>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={4}
               placeholder="Their goal, what they replied to, age, anything useful…"
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
             <button
               onClick={saveNotes}
@@ -165,17 +165,17 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
 
           {/* History */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">History</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">History</p>
             {history.length === 0 ? (
-              <p className="text-xs text-gray-400">No activity yet.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">No activity yet.</p>
             ) : (
               <div className="space-y-2">
                 {history.map(h => (
                   <div key={h.id} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 flex-shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-600 mt-1.5 flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-gray-700">{h.action}</p>
-                      <p className="text-[10px] text-gray-400">{h.actor} · {timeAgo(h.created_at)}</p>
+                      <p className="text-xs text-gray-700 dark:text-slate-300">{h.action}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500">{h.actor} · {timeAgo(h.created_at)}</p>
                     </div>
                   </div>
                 ))}
