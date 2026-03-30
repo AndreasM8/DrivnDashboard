@@ -151,19 +151,32 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
         ))}
       </div>
 
-      {/* ── Conversion rates pinned to each junction point ── */}
-      <div className="relative h-3.5 mt-0.5">
-        {segs.slice(0, -1).map((seg, i) =>
-          seg.convRate !== null ? (
-            <span
+      {/* ── Conversion rate KPIs pinned to each junction point ── */}
+      <div className="relative h-9 mt-1">
+        {segs.slice(0, -1).map((seg, i) => {
+          if (seg.convRate === null) return null
+          const r = seg.convRate
+          const color =
+            r >= 60 ? 'text-emerald-500 dark:text-emerald-400' :
+            r >= 35 ? 'text-amber-500 dark:text-amber-400' :
+                      'text-rose-500 dark:text-rose-400'
+          const dot =
+            r >= 60 ? 'bg-emerald-400' :
+            r >= 35 ? 'bg-amber-400' :
+                      'bg-rose-400'
+          return (
+            <div
               key={i}
-              className="absolute -translate-x-1/2 text-[9px] tabular-nums text-gray-300 dark:text-slate-600"
+              className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
               style={{ left: `${((i + 1) / n) * 100}%` }}
             >
-              {seg.convRate}%
-            </span>
-          ) : null
-        )}
+              <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
+              <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>
+                {r}%
+              </span>
+            </div>
+          )
+        })}
       </div>
 
     </div>
