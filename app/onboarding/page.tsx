@@ -54,7 +54,7 @@ const DEFAULTS: OnboardingData = {
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
   return (
-    <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+    <div className="w-full h-1 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
       <div
         className="h-full bg-blue-500 rounded-full transition-all duration-500"
         style={{ width: `${(step / total) * 100}%` }}
@@ -71,8 +71,8 @@ function Step1({ onNext }: { onNext: () => void }) {
       <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
         <span className="text-white text-2xl font-bold">D</span>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-3">Your business, finally in one place</h1>
-      <p className="text-gray-500 mb-8">Drivn replaces your Google Sheets, sticky notes, and scattered DMs with one simple system.</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-3">Your business, finally in one place</h1>
+      <p className="text-gray-500 dark:text-slate-400 mb-8">Drivn replaces your Google Sheets, sticky notes, and scattered DMs with one simple system.</p>
 
       <div className="space-y-3 text-left mb-10">
         {[
@@ -80,11 +80,11 @@ function Step1({ onNext }: { onNext: () => void }) {
           { icon: '✅', title: 'Tasks', desc: 'Know exactly what to do every single day' },
           { icon: '💰', title: 'Numbers', desc: 'See your revenue, close rate, and KPIs at a glance' },
         ].map(f => (
-          <div key={f.title} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+          <div key={f.title} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
             <span className="text-xl">{f.icon}</span>
             <div>
-              <p className="font-medium text-gray-900 text-sm">{f.title}</p>
-              <p className="text-xs text-gray-500">{f.desc}</p>
+              <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">{f.title}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400">{f.desc}</p>
             </div>
           </div>
         ))}
@@ -102,19 +102,19 @@ function Step1({ onNext }: { onNext: () => void }) {
 function Step2({ data, onChange, onNext, onBack }: StepProps) {
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Tell us about you</h2>
-      <p className="text-gray-500 text-sm mb-6">This appears in your dashboard and reports.</p>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">Tell us about you</h2>
+      <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">This appears in your dashboard and reports.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <Field label="Your name" value={data.name} onChange={v => onChange({ name: v })} placeholder="Alex" />
         <Field label="Business name" value={data.business_name} onChange={v => onChange({ business_name: v })} placeholder="Alex Coaching" />
         <Field label="Instagram handle" value={data.ig_handle} onChange={v => onChange({ ig_handle: v })} placeholder="@alexcoach" />
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Timezone</label>
           <select
             value={data.timezone}
             onChange={e => onChange({ timezone: e.target.value })}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
           </select>
@@ -160,11 +160,11 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Currency & region</h2>
-      <p className="text-gray-500 text-sm mb-6">All revenue will be shown in your base currency.</p>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">Currency & region</h2>
+      <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">All revenue will be shown in your base currency.</p>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Base currency</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Base currency</label>
         <div className="grid grid-cols-4 gap-2">
           {CURRENCIES.map(c => (
             <button
@@ -172,8 +172,8 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
               onClick={() => onChange({ base_currency: c.code })}
               className={`flex flex-col items-center p-2.5 rounded-xl border-2 text-sm font-medium transition-all ${
                 data.base_currency === c.code
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-100 bg-white text-gray-700 hover:border-gray-200'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'border-gray-100 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-200 dark:hover:border-slate-500'
               }`}
             >
               <span className="text-lg mb-0.5">{c.flag}</span>
@@ -184,17 +184,17 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Secondary currencies <span className="text-gray-400 font-normal">(optional — e.g. if you spend on Meta ads in AED)</span>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+          Secondary currencies <span className="text-gray-400 dark:text-slate-500 font-normal">(optional — e.g. if you spend on Meta ads in AED)</span>
         </label>
 
         {data.secondary_currencies.map(sc => (
-          <div key={sc.currency_code} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2">
+          <div key={sc.currency_code} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl mb-2">
             <span className="text-lg">{CURRENCIES.find(c => c.code === sc.currency_code)?.flag ?? '💱'}</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{sc.currency_code} — {sc.label}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{sc.currency_code} — {sc.label}</p>
               {sc.rate && (
-                <p className="text-xs text-gray-400">1 {sc.currency_code} ≈ {sc.rate.toFixed(2)} {data.base_currency}</p>
+                <p className="text-xs text-gray-400 dark:text-slate-500">1 {sc.currency_code} ≈ {sc.rate.toFixed(2)} {data.base_currency}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
                 value={sc.estimated_monthly || ''}
                 onChange={e => updateEstimate(sc.currency_code, Number(e.target.value))}
                 placeholder="Monthly spend"
-                className="w-28 px-2 py-1.5 border border-gray-200 rounded-lg text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-28 px-2 py-1.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-xs text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button onClick={() => removeCurrency(sc.currency_code)} className="text-gray-400 hover:text-red-500 transition-colors">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -218,7 +218,7 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
           <select
             value={addCode}
             onChange={e => setAddCode(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {CURRENCIES.filter(c => c.code !== data.base_currency).map(c => (
               <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
@@ -228,11 +228,11 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
             value={addLabel}
             onChange={e => setAddLabel(e.target.value)}
             placeholder="Label (e.g. Meta ads)"
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             onClick={addCurrency}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
           >
             Add
           </button>
@@ -251,23 +251,23 @@ function Step5({ data, onChange, onNext, onBack }: StepProps) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">What&apos;s your monthly cash goal?</h2>
-      <p className="text-gray-500 text-sm mb-6">This is how much cash you want to collect each month. You can change it anytime in Settings.</p>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">What&apos;s your monthly cash goal?</h2>
+      <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">This is how much cash you want to collect each month. You can change it anytime in Settings.</p>
 
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Monthly cash target ({currency})</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Monthly cash target ({currency})</label>
         <input
           type="number"
           value={data.cash_target}
           onChange={e => onChange({ cash_target: e.target.value })}
           placeholder="e.g. 75000"
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <p className="text-xs text-gray-400 mt-2">This shows up as your target on the dashboard so you always know where you stand.</p>
+        <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">This shows up as your target on the dashboard so you always know where you stand.</p>
       </div>
 
       <StepNav onBack={onBack} onNext={onNext} />
-      <button onClick={onNext} className="w-full text-center text-sm text-gray-400 hover:text-gray-600 mt-3 transition-colors">
+      <button onClick={onNext} className="w-full text-center text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-400 mt-3 transition-colors">
         Skip — I&apos;ll set this later
       </button>
     </div>
@@ -284,28 +284,28 @@ function Step6Done({ data, onFinish, loading }: { data: OnboardingData; onFinish
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re all set!</h2>
-      <p className="text-gray-500 mb-8">Your dashboard is ready. You can connect tools like Stripe or Calendly later in Settings — no rush.</p>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">You&apos;re all set!</h2>
+      <p className="text-gray-500 dark:text-slate-400 mb-8">Your dashboard is ready. You can connect tools like Stripe or Calendly later in Settings — no rush.</p>
 
-      <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left space-y-3">
+      <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 mb-8 text-left space-y-3">
         <div className="flex items-center gap-3">
           <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
           </span>
-          <span className="text-sm text-gray-700">Profile: <strong>{data.name || 'set up'}</strong></span>
+          <span className="text-sm text-gray-700 dark:text-slate-300">Profile: <strong>{data.name || 'set up'}</strong></span>
         </div>
         <div className="flex items-center gap-3">
           <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
           </span>
-          <span className="text-sm text-gray-700">Currency: <strong>{data.base_currency}</strong></span>
+          <span className="text-sm text-gray-700 dark:text-slate-300">Currency: <strong>{data.base_currency}</strong></span>
         </div>
         {data.cash_target && (
           <div className="flex items-center gap-3">
             <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
             </span>
-            <span className="text-sm text-gray-700">Monthly target: <strong>{data.cash_target} {data.base_currency}</strong></span>
+            <span className="text-sm text-gray-700 dark:text-slate-300">Monthly target: <strong>{data.cash_target} {data.base_currency}</strong></span>
           </div>
         )}
       </div>
@@ -337,13 +337,13 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
       <input
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
   )
@@ -358,7 +358,7 @@ function StepNav({
     <div className="flex gap-3">
       <button
         onClick={onBack}
-        className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+        className="px-5 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
       >
         Back
       </button>
@@ -455,17 +455,17 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400 font-medium">Step {step} of {TOTAL_STEPS}</span>
-            <span className="text-xs text-gray-400">{Math.round((step / TOTAL_STEPS) * 100)}%</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">Step {step} of {TOTAL_STEPS}</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500">{Math.round((step / TOTAL_STEPS) * 100)}%</span>
           </div>
           <ProgressBar step={step} total={TOTAL_STEPS} />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-8">
           {step === 1 && <Step1 onNext={next} />}
           {step === 2 && <Step2 data={data} onChange={update} onNext={next} onBack={back} />}
           {step === 3 && <Step3 data={data} onChange={update} onNext={next} onBack={back} />}

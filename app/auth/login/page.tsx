@@ -31,27 +31,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Drivn</h1>
-          <p className="text-sm text-gray-500 mt-1">Your coaching business, in one place</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Drivn</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Your coaching business, in one place</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-8">
           {sent ? (
             <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Check your inbox</h2>
-              <p className="text-sm text-gray-500">
-                We sent a login link to <span className="font-medium text-gray-700">{email}</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Check your inbox</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                We sent a login link to <span className="font-medium text-gray-700 dark:text-slate-300">{email}</span>
               </p>
-              <p className="text-xs text-gray-400 mt-3">No email? Check your spam folder.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">No email? Check your spam folder.</p>
               <button
                 onClick={() => { setSent(false); setEmail('') }}
                 className="mt-6 text-sm text-blue-600 hover:text-blue-700 font-medium"
@@ -61,12 +61,12 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">Sign in</h2>
-              <p className="text-sm text-gray-500 mb-6">We'll send you a magic link — no password needed.</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">Sign in</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">We'll send you a magic link — no password needed.</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Email address
                   </label>
                   <input
@@ -76,12 +76,12 @@ export default function LoginPage() {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {error && (
-                  <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+                  <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>
                 )}
 
                 <button
@@ -96,7 +96,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-6">
           Built for online fitness coaches
         </p>
       </div>
