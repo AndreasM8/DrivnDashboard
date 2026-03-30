@@ -4,6 +4,16 @@ import { useState } from 'react'
 import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment } from '@/types'
 import RevenueChart from '@/components/numbers/RevenueChart'
 
+// ─── Lock icon ────────────────────────────────────────────────────────────────
+
+function LockIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 inline-block ml-1">
+      <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1Zm2 5V4.5a2 2 0 1 0-4 0V6h4Z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -211,6 +221,13 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
 
 export default function NumbersClient({ baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history, clients, installments, currentMonth }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
+  const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
+    if (lastMonthSnapshot !== null) return false
+    if (typeof window !== 'undefined' && localStorage.getItem('drivn_lastmonth_unlocked') === '1') return false
+    return true
+  })
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
+
   const snap = currentSnapshot
   const last = lastMonthSnapshot
 
@@ -244,17 +261,76 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
             >
               vs my targets
             </button>
-            <button
-              onClick={() => setCompareMode('last_month')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'last_month' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
-            >
-              vs last month
-            </button>
+            {lastMonthLocked ? (
+              <div className="relative group">
+                <button
+                  onClick={() => setShowUnlockModal(true)}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all text-gray-400 dark:text-slate-500 opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                  type="button"
+                >
+                  vs last month
+                  <LockIcon />
+                </button>
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg bg-gray-900 text-white text-xs px-3 py-2 text-center opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                  Available after your first full month — or confirm your previous data to unlock now
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setCompareMode('last_month')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${compareMode === 'last_month' ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
+              >
+                vs last month
+              </button>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Unlock modal */}
+      {showUnlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-2">
+              Unlock month-on-month comparison
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
+              Have you already tracked your numbers from last month manually? If so, tap Confirm and we&apos;ll let you compare.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem('drivn_lastmonth_unlocked', '1')
+                  setLastMonthLocked(false)
+                  setShowUnlockModal(false)
+                }}
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors"
+              >
+                Confirm — I have last month&apos;s data
+              </button>
+              <button
+                onClick={() => setShowUnlockModal(false)}
+                className="w-full py-2.5 rounded-xl bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 text-sm font-medium transition-colors"
+              >
+                Not yet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-6 space-y-8 max-w-5xl">
+        {/* No last month data banner */}
+        {compareMode === 'last_month' && last === null && (
+          <div className="flex items-start gap-3 rounded-xl border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mt-0.5 flex-shrink-0">
+              <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
+            </svg>
+            No last month data yet. Numbers will appear once you have a full month recorded.
+          </div>
+        )}
+
         {/* KPI cards — row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <KpiCard
