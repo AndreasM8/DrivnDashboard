@@ -140,20 +140,18 @@ function StageColumn({
           )}
           <span className="text-xs text-gray-400 font-medium">{leads.length}</span>
         </div>
-        {!auto && (
-          <button
-            onClick={onAddClick}
-            className="text-xs text-gray-400 hover:text-blue-600 transition-colors font-medium"
-          >
-            + Add
-          </button>
-        )}
+        <button
+          onClick={onAddClick}
+          className="text-xs text-gray-400 hover:text-blue-600 transition-colors font-medium"
+        >
+          + Add
+        </button>
       </div>
 
       {/* Auto note */}
       {auto && (
-        <div className="text-[11px] text-blue-600 bg-blue-100 rounded-lg px-2.5 py-1.5 leading-tight">
-          ManyChat adds leads here automatically.
+        <div className="text-[11px] text-blue-500 bg-blue-50 rounded-lg px-2.5 py-1.5 leading-tight">
+          ManyChat auto-fills this — or tap + Add to add manually.
         </div>
       )}
 

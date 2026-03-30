@@ -4,6 +4,25 @@ import { TASK_TYPE_STYLES } from '@/types'
 import type { Task, Lead, Client } from '@/types'
 import Link from 'next/link'
 
+// ─── Live stats helper ────────────────────────────────────────────────────────
+
+function computeLiveStats(
+  allClients: Client[],
+  monthStart: string,
+  newLeadsCount: number,
+  paidInstallmentsAmount: number,
+  callsHeldCount: number,
+) {
+  const monthClients = allClients.filter(c => c.started_at >= monthStart)
+  const cashFromNew = monthClients.filter(c => c.payment_type !== 'plan').reduce((s, c) => s + c.total_amount, 0)
+  return {
+    cash_collected: cashFromNew + paidInstallmentsAmount,
+    revenue_contracted: monthClients.reduce((s, c) => s + c.total_amount, 0),
+    new_followers: newLeadsCount,
+    calls_held: callsHeldCount,
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number, currency: string) {
@@ -104,13 +123,18 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const monthStart = `${new Date().toISOString().slice(0, 7)}-01`
+
   const [
     { data: profile },
     { data: tasks },
     { data: clients },
     { data: leads },
     { data: targets },
-    { data: snapshots },
+    { data: snapshot },
+    { data: newLeadsThisMonth },
+    { data: paidInstallmentsThisMonth },
+    { data: callsHeldThisMonth },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase
@@ -140,10 +164,25 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .eq('month', new Date().toISOString().slice(0, 7))
       .single(),
+    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
+    supabase.from('payment_installments').select('amount').eq('paid', true).gte('paid_at', monthStart),
+    supabase.from('leads').select('id').eq('user_id', user.id).eq('call_outcome', 'showed')
+      .gte('updated_at', monthStart),
   ])
 
-  const snapshot = snapshots
-  const cashCollected = snapshot?.cash_collected ?? 0
+  // Use stored snapshot if it exists, otherwise compute live
+  const liveStats = computeLiveStats(
+    (clients as Client[]) ?? [],
+    monthStart,
+    (newLeadsThisMonth ?? []).length,
+    (paidInstallmentsThisMonth ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0),
+    (callsHeldThisMonth ?? []).length,
+  )
+  const cashCollected = snapshot?.cash_collected ?? liveStats.cash_collected
+  const revenueContracted = snapshot?.revenue_contracted ?? liveStats.revenue_contracted
+  const newFollowers = snapshot?.new_followers ?? liveStats.new_followers
+  const callsHeld = snapshot?.calls_held ?? liveStats.calls_held
+
   const cashTarget = targets?.cash_target ?? 0
   const activeClientCount = clients?.length ?? 0
 
@@ -180,8 +219,8 @@ export default async function DashboardPage() {
           sub={cashTarget ? `Target: ${formatCurrency(cashTarget, profile?.base_currency ?? 'NOK')}` : undefined}
         />
         <StatCard label="Active clients" value={String(activeClientCount)} />
-        <StatCard label="Calls this week" value={String(snapshot?.calls_held ?? 0)} />
-        <StatCard label="New followers" value={String(snapshot?.new_followers ?? 0)} sub="this month" />
+        <StatCard label="Calls this month" value={String(callsHeld)} />
+        <StatCard label="New followers" value={String(newFollowers)} sub="this month" />
       </div>
 
       {/* Tasks + Revenue side by side */}
@@ -213,7 +252,7 @@ export default async function DashboardPage() {
           <div className="space-y-4">
             {[
               { label: 'Cash collected', value: cashCollected, target: cashTarget, color: 'bg-green-500' },
-              { label: 'Revenue contracted', value: snapshot?.revenue_contracted ?? 0, target: targets?.revenue_target ?? 0, color: 'bg-blue-500' },
+              { label: 'Revenue contracted', value: revenueContracted, target: targets?.revenue_target ?? 0, color: 'bg-blue-500' },
             ].map(row => (
               <div key={row.label}>
                 <div className="flex justify-between text-sm mb-1">
