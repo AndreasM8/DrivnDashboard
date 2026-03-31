@@ -10,6 +10,7 @@ interface Props {
   adSpendTotal: number
   currency: string
   currentMonth: string
+  cashCollected: number
 }
 
 type ExpenseCategory = 'team' | 'software' | 'ads' | 'withdrawal' | 'other'
@@ -41,6 +42,7 @@ export default function ExpensesSection({
   adSpendTotal,
   currency,
   currentMonth,
+  cashCollected,
 }: Props) {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -274,15 +276,49 @@ export default function ExpensesSection({
         </p>
       )}
 
-      {/* Divider */}
-      {totalExpenses > 0 && (
-        <div className="border-t border-gray-100 dark:border-slate-700 pt-3 mt-1">
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
-            <span>Total expenses</span>
-            <span className="font-semibold text-gray-900 dark:text-slate-100">
-              {formatCurrency(totalExpenses, currency)}
+      {/* P&L summary */}
+      {(totalExpenses > 0 || cashCollected > 0) && (
+        <div className="border-t border-gray-100 dark:border-slate-700 pt-3 mt-1 space-y-2">
+
+          {/* Revenue row */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500 dark:text-slate-400">Cash collected</span>
+            <span className="font-medium text-gray-700 dark:text-slate-300">
+              {formatCurrency(cashCollected, currency)}
             </span>
           </div>
+
+          {/* Total expenses row */}
+          {totalExpenses > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500 dark:text-slate-400">Total expenses</span>
+              <span className="font-medium text-rose-500 dark:text-rose-400">
+                − {formatCurrency(totalExpenses, currency)}
+              </span>
+            </div>
+          )}
+
+          {/* Net profit */}
+          {totalExpenses > 0 && (() => {
+            const net    = cashCollected - totalExpenses
+            const margin = cashCollected > 0 ? Math.round((net / cashCollected) * 100) : 0
+            const positive = net >= 0
+            return (
+              <div className={`flex items-center justify-between rounded-xl px-3 py-2.5 mt-1 ${positive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    Net profit
+                  </p>
+                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">
+                    {positive ? `${margin}% margin` : 'Operating at a loss'}
+                  </p>
+                </div>
+                <p className={`text-lg font-bold tabular-nums ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                  {positive ? '' : '−'}{formatCurrency(Math.abs(net), currency)}
+                </p>
+              </div>
+            )
+          })()}
         </div>
       )}
     </div>

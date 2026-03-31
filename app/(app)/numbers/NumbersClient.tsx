@@ -447,6 +447,7 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
           adSpendTotal={adSpendTotal}
           currency={baseCurrency}
           currentMonth={currentMonth}
+          cashCollected={snap?.cash_collected ?? 0}
         />
       </div>
     </div>
