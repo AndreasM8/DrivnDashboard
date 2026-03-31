@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
 import { CURRENCIES, TIMEZONES } from '@/types'
 import { useDarkMode } from '@/components/providers/DarkModeProvider'
+import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -450,6 +451,126 @@ function GoogleSheetsCard() {
   )
 }
 
+const stripeSteps: GuideStep[] = [
+  {
+    title: 'Go to Developers',
+    description: 'Log into dashboard.stripe.com and click "Developers" in the left sidebar.',
+    visual: (
+      <div className="flex h-full w-full">
+        {/* Sidebar */}
+        <div className="w-36 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col py-3 px-2 gap-0.5">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 mb-2">
+            <div className="w-5 h-5 rounded bg-indigo-600 flex items-center justify-center">
+              <span className="text-white font-bold" style={{ fontSize: 9 }}>S</span>
+            </div>
+            <span className="text-xs font-bold text-gray-800 dark:text-slate-100">Stripe</span>
+          </div>
+          {['Home', 'Payments', 'Customers'].map(item => (
+            <div key={item} className="px-2 py-1 rounded text-xs text-gray-500 dark:text-slate-400">{item}</div>
+          ))}
+          <div className="px-2 py-1 rounded text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 flex items-center gap-1.5">
+            Developers
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+          </div>
+        </div>
+        {/* Main area placeholder */}
+        <div className="flex-1 bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+          <span className="text-xs text-gray-300 dark:text-slate-600">Select Developers →</span>
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: 'Click Webhooks → Add endpoint',
+    description: 'Inside Developers, click "Webhooks" in the sub-menu, then hit "Add endpoint" in the top right.',
+    visual: (
+      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 p-3">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-bold text-gray-800 dark:text-slate-100">Webhooks</span>
+          <div className="relative px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 ring-offset-1 dark:ring-offset-slate-800 animate-pulse">
+            + Add endpoint
+          </div>
+        </div>
+        <div className="border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700">
+          {['https://example.com/webhook', 'https://old-hook.io/stripe'].map(u => (
+            <div key={u} className="px-3 py-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+              <span className="text-xs text-gray-500 dark:text-slate-400 truncate">{u}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: 'Paste your endpoint URL',
+    description: 'Paste the webhook URL from above into the "Endpoint URL" field, then continue.',
+    visual: (
+      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Endpoint URL</label>
+          <div className="flex items-center gap-1.5 px-3 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+            <span className="text-xs text-gray-700 dark:text-slate-300 truncate flex-1 font-mono">
+              https://yourdomain.com/api/webhooks/stripe
+            </span>
+            <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-gray-400 flex-shrink-0">
+              <rect x="1" y="4" width="9" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M5 4V3a1 1 0 011-1h7a1 1 0 011 1v9a1 1 0 01-1 1h-1" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-xs text-indigo-600 dark:text-indigo-400">Paste the URL copied from Drivn above</p>
+      </div>
+    ),
+  },
+  {
+    title: 'Select payment events',
+    description: 'Under "Select events", search and check both payment events shown below.',
+    visual: (
+      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-2">
+        <label className="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Select events to listen to</label>
+        <div className="flex items-center gap-2 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded-lg mb-1">
+          <svg viewBox="0 0 16 16" className="w-3 h-3 text-gray-400 flex-shrink-0">
+            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <span className="text-xs text-gray-400 dark:text-slate-500">Search events…</span>
+        </div>
+        {[
+          'payment_intent.succeeded',
+          'payment_intent.payment_failed',
+        ].map(ev => (
+          <div key={ev} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-green-600 dark:text-green-400 flex-shrink-0">
+              <rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor" opacity="0.15" />
+              <path d="M4 8l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-xs font-mono text-green-800 dark:text-green-300">{ev}</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  {
+    title: 'Copy the signing secret',
+    description: 'After saving the endpoint, click "Reveal" next to Signing secret and copy the whsec_… value.',
+    visual: (
+      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-2">
+        <label className="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Signing secret</label>
+        <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
+          <span className="flex-1 text-xs font-mono text-gray-400 dark:text-slate-500 tracking-widest select-none blur-[3px]">
+            whsec_••••••••••••••••••
+          </span>
+          <div className="px-2 py-1 rounded bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 dark:ring-indigo-700 animate-pulse flex-shrink-0">
+            Reveal
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 dark:text-slate-500">Copy the revealed secret → paste it into Drivn below</p>
+      </div>
+    ),
+  },
+]
+
 function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -457,6 +578,7 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   const [saving, setSaving] = useState(false)
   const [showInput, setShowInput] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
 
   useEffect(() => {
     fetch('/api/settings/stripe')
@@ -520,6 +642,17 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
                   {copied ? '✓' : 'Copy'}
                 </button>
               </div>
+              {!showGuide && (
+                <button
+                  onClick={() => setShowGuide(true)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1"
+                >
+                  Show me how →
+                </button>
+              )}
+              {showGuide && (
+                <IntegrationGuide steps={stripeSteps} onClose={() => setShowGuide(false)} />
+              )}
             </div>
           )}
 
@@ -574,40 +707,26 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
 function CalendlyCard() {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [token, setToken] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [showInput, setShowInput] = useState(false)
-  const [error, setError] = useState('')
-  const [webhookUrl, setWebhookUrl] = useState('')
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    setWebhookUrl(`${window.location.origin}/api/webhooks/calendly`)
     fetch('/api/calendly/status')
       .then(r => r.json())
-      .then(d => { setConnected(d.connected); setLoading(false) })
+      .then(d => {
+        setConnected(d.connected)
+        setUserName(d.userName ?? null)
+        setUserEmail(d.userEmail ?? null)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
-
-  async function handleConnect() {
-    if (!token.trim()) return
-    setSaving(true)
-    setError('')
-    const res = await fetch('/api/calendly/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: token.trim() }),
-    })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error ?? 'Connection failed'); setSaving(false); return }
-    setConnected(true)
-    setShowInput(false)
-    setToken('')
-    setSaving(false)
-  }
 
   async function handleDisconnect() {
     await fetch('/api/calendly/status', { method: 'DELETE' })
     setConnected(false)
+    setUserName(null)
+    setUserEmail(null)
   }
 
   return (
@@ -625,45 +744,25 @@ function CalendlyCard() {
           </p>
 
           {connected && (
-            <div className="mt-3 space-y-2">
-              <p className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Connected — bookings sync automatically</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Paste this URL in Calendly → Integrations → Webhooks:</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 truncate text-gray-600 dark:text-slate-300">{webhookUrl}</code>
-                <button onClick={() => { navigator.clipboard.writeText(webhookUrl) }} className="px-2 py-1.5 text-xs bg-gray-100 dark:bg-slate-700 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-600 flex-shrink-0">Copy</button>
-              </div>
-            </div>
-          )}
-
-          {!connected && !showInput && (
             <div className="mt-3 space-y-1">
-              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
-                <li>Log into <span className="font-medium text-gray-700 dark:text-slate-300">app.calendly.com</span> → click your profile picture (top right) → <span className="font-medium text-gray-700 dark:text-slate-300">Integrations &amp; apps</span></li>
-                <li>Scroll down to <span className="font-medium text-gray-700 dark:text-slate-300">API &amp; Webhooks</span> → click <span className="font-medium text-gray-700 dark:text-slate-300">Personal Access Tokens</span></li>
-                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Create new token</span> → name it "Drivn" → click <span className="font-medium text-gray-700 dark:text-slate-300">Create token</span></li>
-                <li>Copy the token shown (it won&apos;t be visible again) → paste it below and click Connect</li>
-                <li>Done — Drivn automatically sets up the webhook. When someone books, they move to Call booked in your pipeline.</li>
-              </ol>
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">Connected — bookings sync automatically</p>
+              {(userName || userEmail) && (
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  {userName && <span className="font-medium text-gray-700 dark:text-slate-300">{userName}</span>}
+                  {userName && userEmail && ' · '}
+                  {userEmail && <span>{userEmail}</span>}
+                </p>
+              )}
             </div>
           )}
 
-          {showInput && (
+          {!connected && !loading && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs text-gray-600 dark:text-slate-400">Paste your Calendly Personal Access Token:</p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="eyJhbGci..."
-                  className="flex-1 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button onClick={handleConnect} disabled={saving || !token.trim()} className="px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  {saving ? 'Connecting…' : 'Connect'}
-                </button>
-                <button onClick={() => { setShowInput(false); setError('') }} className="px-3 py-2 text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Cancel</button>
-              </div>
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
+                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Connect Calendly</span> → you&apos;ll be taken to Calendly to sign in</li>
+                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Allow</span> when Calendly asks for permission</li>
+                <li>Done — bookings will automatically move leads to <span className="font-medium text-gray-700 dark:text-slate-300">Call booked</span></li>
+              </ol>
             </div>
           )}
         </div>
@@ -673,9 +772,14 @@ function CalendlyCard() {
             <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
           ) : connected ? (
             <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Disconnect</button>
-          ) : !showInput ? (
-            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Connect</button>
-          ) : null}
+          ) : (
+            <a
+              href="/api/calendly/oauth/start"
+              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center whitespace-nowrap"
+            >
+              Connect Calendly
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -703,19 +807,16 @@ function IntegrationsSection() {
 
       <WebhookCard
         emoji="⚡"
-        name="ManyChat / Zapier"
-        desc="Automatically adds new followers and DM replies to your pipeline. Uses Zapier as the bridge — no direct ManyChat webhook needed. Skip this and add followers manually instead."
+        name="ManyChat"
+        desc="Automatically adds new followers to your pipeline when they DM you. Uses ManyChat's built-in HTTP action — no Zapier needed. Skip this and add followers manually instead."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         instructions={[
-          'Go to zapier.com → click Create → Zaps',
-          'Trigger: search for ManyChat → connect your account → choose "New Subscriber" or "Tag Added"',
-          'Action: search for "Webhooks by Zapier" → select POST',
-          'Paste the URL above into the URL field',
-          'Set Payload Type to JSON → in Data, map: ig_username → Instagram Username, full_name → Full Name',
-          'Click Test → then Publish Zap — new ManyChat subscribers will now appear in your pipeline automatically',
+          'In ManyChat, open the flow you use for new DMs → click the + button to add a step → choose Actions → Send Request',
+          'Set Method to POST, paste the URL above into the URL field, set Content Type to JSON',
+          'In the Request Body, add: { "ig_username": "{{last name}}", "full_name": "{{full name}}", "source": "manychat" } → Save and publish the flow',
         ]}
-        docsUrl="https://zapier.com/apps/manychat/integrations/webhooks"
+        docsUrl="https://manychat.com"
       />
 
       <StripeCard webhookUrl={stripeUrl} />
