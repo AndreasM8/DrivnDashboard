@@ -158,3 +158,11 @@ alter table expenses enable row level security;
 drop policy if exists "Users manage own expenses" on expenses;
 create policy "Users manage own expenses"
   on expenses for all using (auth.uid() = user_id);
+
+
+-- ── 7. Calendly OAuth fields ──────────────────────────────────────────────────
+alter table calendly_integrations
+  add column if not exists refresh_token text,
+  add column if not exists token_expiry timestamp with time zone,
+  add column if not exists user_name text,
+  add column if not exists user_email text;

@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from('calendly_integrations')
-    .select('connected_at, user_uri')
+    .select('connected_at, user_uri, user_name, user_email')
     .eq('user_id', user.id)
     .single()
 
@@ -16,6 +16,8 @@ export async function GET() {
     connected: !!data,
     connectedAt: data?.connected_at ?? null,
     userUri: data?.user_uri ?? null,
+    userName: (data as { user_name?: string } | null)?.user_name ?? null,
+    userEmail: (data as { user_email?: string } | null)?.user_email ?? null,
   })
 }
 
