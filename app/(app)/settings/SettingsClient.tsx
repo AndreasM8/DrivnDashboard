@@ -383,8 +383,16 @@ function GoogleSheetsCard() {
             )}
           </div>
           <p className="text-xs text-gray-500 dark:text-slate-400">
-            Syncs your data to a Google Sheet for reporting. Totally optional.
+            Syncs your pipeline, revenue, and KPIs to a Google Sheet automatically. Skip this and track manually instead.
           </p>
+
+          {!status.connected && !loading && (
+            <ol className="mt-2 text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
+              <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Connect Google</span> → sign in with the Google account where you want the sheet</li>
+              <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Allow</span> when Google asks for spreadsheet access</li>
+              <li>Done — Drivn creates a spreadsheet in your Drive and starts syncing automatically</li>
+            </ol>
+          )}
 
           {status.connected && (
             <div className="mt-2 space-y-1">
@@ -431,9 +439,9 @@ function GoogleSheetsCard() {
           ) : (
             <a
               href="/api/google/auth"
-              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center"
+              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center whitespace-nowrap"
             >
-              Connect
+              Connect Google
             </a>
           )}
         </div>
@@ -498,13 +506,13 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
 
           {!connected && !showInput && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">To connect:</p>
-              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
-                <li>Go to Stripe → Developers → Webhooks</li>
-                <li>Click "Add destination" → My account → Endpoint</li>
-                <li>Give it a name and paste the URL below</li>
-                <li>Add events: <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.succeeded</span> + <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.payment_failed</span></li>
-                <li>Save — Stripe shows you a signing secret. Paste it below.</li>
+              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
+                <li>Log into <span className="font-medium text-gray-700 dark:text-slate-300">dashboard.stripe.com</span> → click <span className="font-medium text-gray-700 dark:text-slate-300">Developers</span> in the left sidebar</li>
+                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Webhooks</span> → then <span className="font-medium text-gray-700 dark:text-slate-300">Add endpoint</span> (top right)</li>
+                <li>Paste the URL below into the <span className="font-medium text-gray-700 dark:text-slate-300">Endpoint URL</span> field</li>
+                <li>Under <span className="font-medium text-gray-700 dark:text-slate-300">Select events</span>, search and add: <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.succeeded</span> and <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.payment_failed</span></li>
+                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Add endpoint</span> → on the next screen, click <span className="font-medium text-gray-700 dark:text-slate-300">Reveal</span> next to Signing secret</li>
+                <li>Copy the <span className="font-mono text-gray-700 dark:text-slate-300">whsec_…</span> value → paste it below and click Connect</li>
               </ol>
               <div className="flex items-center gap-2 mt-2">
                 <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 truncate text-gray-600 dark:text-slate-300">{webhookUrl}</code>
@@ -629,11 +637,12 @@ function CalendlyCard() {
 
           {!connected && !showInput && (
             <div className="mt-3 space-y-1">
-              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">To connect:</p>
-              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
-                <li>Go to <strong>calendly.com/integrations/api_webhooks</strong></li>
-                <li>Click <strong>API & Webhooks → Personal Access Tokens → Create new token</strong></li>
-                <li>Copy the token and paste it below</li>
+              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
+                <li>Log into <span className="font-medium text-gray-700 dark:text-slate-300">app.calendly.com</span> → click your profile picture (top right) → <span className="font-medium text-gray-700 dark:text-slate-300">Integrations &amp; apps</span></li>
+                <li>Scroll down to <span className="font-medium text-gray-700 dark:text-slate-300">API &amp; Webhooks</span> → click <span className="font-medium text-gray-700 dark:text-slate-300">Personal Access Tokens</span></li>
+                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Create new token</span> → name it "Drivn" → click <span className="font-medium text-gray-700 dark:text-slate-300">Create token</span></li>
+                <li>Copy the token shown (it won&apos;t be visible again) → paste it below and click Connect</li>
+                <li>Done — Drivn automatically sets up the webhook. When someone books, they move to Call booked in your pipeline.</li>
               </ol>
             </div>
           )}
@@ -695,15 +704,18 @@ function IntegrationsSection() {
       <WebhookCard
         emoji="⚡"
         name="ManyChat / Zapier"
-        desc="Automatically pushes ManyChat DMs and other triggers into your pipeline. ManyChat connects through Zapier — no direct ManyChat URL needed. Skip this and add followers manually instead."
+        desc="Automatically adds new followers and DM replies to your pipeline. Uses Zapier as the bridge — no direct ManyChat webhook needed. Skip this and add followers manually instead."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         instructions={[
-          'In Zapier, create a new Zap with ManyChat as the trigger',
-          'Add action: Webhooks by Zapier → POST',
-          'Paste the URL above as the webhook endpoint → Save → Done',
+          'Go to zapier.com → click Create → Zaps',
+          'Trigger: search for ManyChat → connect your account → choose "New Subscriber" or "Tag Added"',
+          'Action: search for "Webhooks by Zapier" → select POST',
+          'Paste the URL above into the URL field',
+          'Set Payload Type to JSON → in Data, map: ig_username → Instagram Username, full_name → Full Name',
+          'Click Test → then Publish Zap — new ManyChat subscribers will now appear in your pipeline automatically',
         ]}
-        docsUrl="https://zapier.com"
+        docsUrl="https://zapier.com/apps/manychat/integrations/webhooks"
       />
 
       <StripeCard webhookUrl={stripeUrl} />
