@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { routeZapierWebhook } from '@/lib/zapier'
 import type { ZapierPayload } from '@/lib/zapier'
+
+// Use service role client — webhooks arrive without a session
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   // Validate secret
@@ -23,8 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing fields: user_id, type, data' }, { status: 400 })
   }
 
-  // Verify user exists
-  const supabase = await createServerSupabaseClient()
+  // Verify user exists (service role bypasses RLS — safe since secret was already validated)
   const { data: user } = await supabase.from('users').select('id').eq('id', user_id).single()
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
