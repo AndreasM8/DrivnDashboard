@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { resolveNotifPrefs } from '@/types'
 import type { TaskPriority } from '@/types'
 
 export async function POST() {
@@ -7,62 +8,59 @@ export async function POST() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const now = new Date()
-  const threeDaysAgo = new Date(now.getTime() - 3 * 86400000).toISOString()
+  // Load user's notification preferences
+  const { data: profile } = await supabase
+    .from('users')
+    .select('notification_prefs')
+    .eq('id', user.id)
+    .single()
 
-  // Fetch leads in follower or replied (incl. freebie_sent) that need follow-up
+  const prefs = resolveNotifPrefs(profile?.notification_prefs)
+
+  // Respect the user's follow-up toggle
+  if (!prefs.followup_enabled) {
+    return NextResponse.json({ created: 0 })
+  }
+
+  const now = new Date()
+  const followupCutoff = new Date(now.getTime() - prefs.followup_days * 86400000).toISOString()
+  const overdueCutoff  = new Date(now.getTime() - prefs.overdue_days  * 86400000).toISOString()
+
+  // Fetch leads in follower / replied / freebie_sent
   const { data: leads, error: leadsError } = await supabase
     .from('leads')
     .select('id, ig_username, last_contact_at, stage')
     .eq('user_id', user.id)
     .in('stage', ['follower', 'replied', 'freebie_sent'])
 
-  if (leadsError) {
-    return NextResponse.json({ error: leadsError.message }, { status: 500 })
-  }
+  if (leadsError) return NextResponse.json({ error: leadsError.message }, { status: 500 })
+  if (!leads?.length) return NextResponse.json({ created: 0 })
 
-  if (!leads || leads.length === 0) {
-    return NextResponse.json({ created: 0 })
-  }
-
-  // Filter leads that haven't been contacted in 3+ days
+  // Filter leads that haven't been contacted since the user's threshold
   const staleLeads = leads.filter(l => {
     if (!l.last_contact_at) return true
-    return new Date(l.last_contact_at) < new Date(threeDaysAgo)
+    return new Date(l.last_contact_at) < new Date(followupCutoff)
   })
 
-  if (staleLeads.length === 0) {
-    return NextResponse.json({ created: 0 })
-  }
+  if (!staleLeads.length) return NextResponse.json({ created: 0 })
 
-  const staleLeadIds = staleLeads.map(l => l.id)
-
-  // Find leads that already have an open follow-up task
+  // Skip leads that already have an open follow-up task
   const { data: existingTasks } = await supabase
     .from('tasks')
     .select('lead_id')
     .eq('user_id', user.id)
     .eq('type', 'follow_up')
     .eq('completed', false)
-    .in('lead_id', staleLeadIds)
+    .in('lead_id', staleLeads.map(l => l.id))
 
-  const alreadyTaskedLeadIds = new Set(
-    (existingTasks ?? []).map(t => t.lead_id as string)
-  )
+  const alreadyTasked = new Set((existingTasks ?? []).map(t => t.lead_id as string))
+  const leadsNeedingTasks = staleLeads.filter(l => !alreadyTasked.has(l.id))
 
-  const leadsNeedingTasks = staleLeads.filter(l => !alreadyTaskedLeadIds.has(l.id))
-
-  if (leadsNeedingTasks.length === 0) {
-    return NextResponse.json({ created: 0 })
-  }
+  if (!leadsNeedingTasks.length) return NextResponse.json({ created: 0 })
 
   function getPriority(lastContactAt: string | null): TaskPriority {
     if (!lastContactAt) return 'today'
-    const lastContact = new Date(lastContactAt)
-    const diffDays = (now.getTime() - lastContact.getTime()) / 86400000
-    if (diffDays > 7) return 'overdue'
-    if (diffDays > 3) return 'today'
-    return 'this_week'
+    return new Date(lastContactAt) < new Date(overdueCutoff) ? 'overdue' : 'today'
   }
 
   const tasksToInsert = leadsNeedingTasks.map(l => ({
@@ -70,7 +68,7 @@ export async function POST() {
     type: 'follow_up' as const,
     priority: getPriority(l.last_contact_at),
     title: `Follow up — @${l.ig_username}`,
-    description: `This lead has been in the ${l.stage} stage without contact for over 3 days.`,
+    description: `No contact for ${prefs.followup_days}+ days (${l.stage}).`,
     lead_id: l.id,
     client_id: null,
     due_at: now.toISOString(),
@@ -84,9 +82,7 @@ export async function POST() {
     .insert(tasksToInsert)
     .select()
 
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 })
-  }
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
   return NextResponse.json({ created: inserted?.length ?? 0 })
 }

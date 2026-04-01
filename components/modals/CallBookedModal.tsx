@@ -37,9 +37,23 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
     if (!error && data) {
       await supabase.from('lead_history').insert({
         lead_id: lead.id,
-        action: `Call booked for ${new Date(callBookedAt).toLocaleString()}`,
+        action: `Call booked for ${new Date(callBookedAt).toLocaleString('en', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
         actor: 'You',
       })
+
+      // Create a "log outcome" reminder task due 2 hrs after the call
+      const callDate = new Date(callBookedAt)
+      await supabase.from('tasks').insert({
+        user_id: lead.user_id,
+        type: 'call_outcome',
+        priority: 'today',
+        title: `Log outcome — @${lead.ig_username}`,
+        description: `Call at ${callDate.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`,
+        lead_id: lead.id,
+        due_at: new Date(callDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        auto_generated: true,
+      })
+
       onSaved(data as Lead)
     }
     setLoading(false)

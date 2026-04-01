@@ -892,68 +892,147 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
 
 // ─── Section: Notifications ───────────────────────────────────────────────────
 
-function NotificationsSection() {
-  const [settings, setSettings] = useState({
-    followup_48hr: true,
-    followup_weekly: true,
-    followup_monthly: true,
-    followup_bimonthly: true,
-    payment_overdue: true,
-    invoice_reminder: true,
-    call_outcome: true,
-    upsell_reminder: true,
-  })
+function NotificationsSection({ userId }: { userId: string }) {
+  const supabase = createClient()
+  const [prefs, setPrefs] = useState<import('@/types').NotificationPrefs | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  function toggle(key: keyof typeof settings) {
-    setSettings(s => ({ ...s, [key]: !s[key] }))
+  useEffect(() => {
+    supabase.from('users').select('notification_prefs').eq('id', userId).single()
+      .then(({ data }) => {
+        const { resolveNotifPrefs } = require('@/types') as typeof import('@/types')
+        setPrefs(resolveNotifPrefs(data?.notification_prefs))
+      })
+  }, [userId])
+
+  async function save(updated: import('@/types').NotificationPrefs) {
+    setSaving(true)
+    await supabase.from('users').update({ notification_prefs: updated }).eq('id', userId)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
-  const groups = [
-    {
-      title: 'Follow-up cadence',
-      items: [
-        { key: 'followup_48hr', label: '48hr first follow-up' },
-        { key: 'followup_weekly', label: 'Weekly follow-up (weeks 1-8)' },
-        { key: 'followup_monthly', label: 'Monthly check-in (months 3-8)' },
-        { key: 'followup_bimonthly', label: 'Every 2 months (ongoing)' },
-      ],
-    },
-    {
-      title: 'Payments',
-      items: [
-        { key: 'payment_overdue', label: 'Payment overdue alert' },
-        { key: 'invoice_reminder', label: 'Invoice due in 3 days' },
-      ],
-    },
-    {
-      title: 'Calls & upsells',
-      items: [
-        { key: 'call_outcome', label: 'Log call outcome reminder' },
-        { key: 'upsell_reminder', label: 'Upsell reminder' },
-      ],
-    },
-  ] as { title: string; items: { key: keyof typeof settings; label: string }[] }[]
+  function toggle(key: keyof import('@/types').NotificationPrefs) {
+    if (!prefs) return
+    const updated = { ...prefs, [key]: !prefs[key] }
+    setPrefs(updated)
+    save(updated)
+  }
+
+  function setNumber(key: keyof import('@/types').NotificationPrefs, val: number) {
+    if (!prefs) return
+    const updated = { ...prefs, [key]: val }
+    setPrefs(updated)
+  }
+
+  function commitNumber(key: keyof import('@/types').NotificationPrefs) {
+    if (prefs) save(prefs)
+  }
+
+  function Toggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' }) {
+    const on = prefs?.[k] ?? true
+    return (
+      <button
+        onClick={() => toggle(k)}
+        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'}`}
+      >
+        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
+      </button>
+    )
+  }
+
+  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'overdue_days' | 'call_outcome_hours'; min: number; max: number; unit: string }) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          value={prefs?.[k] ?? 0}
+          min={min}
+          max={max}
+          onChange={e => setNumber(k, Math.max(min, Math.min(max, Number(e.target.value))))}
+          onBlur={() => commitNumber(k)}
+          className="w-14 px-2 py-1 text-sm text-center border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <span className="text-xs text-gray-400 dark:text-slate-500">{unit}</span>
+      </div>
+    )
+  }
+
+  if (!prefs) {
+    return <div className="text-sm text-gray-400 dark:text-slate-500 py-8 text-center">Loading…</div>
+  }
 
   return (
     <div className="space-y-4">
-      {groups.map(g => (
-        <div key={g.title} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">{g.title}</h3>
-          <div className="space-y-3">
-            {g.items.map(item => (
-              <div key={item.key} className="flex items-center justify-between">
-                <span className="text-sm text-gray-700 dark:text-slate-300">{item.label}</span>
-                <button
-                  onClick={() => toggle(item.key)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${settings[item.key] ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${settings[item.key] ? 'translate-x-7' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            ))}
-          </div>
+      {saved && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 rounded-xl px-4 py-2.5 text-xs text-green-700 dark:text-green-400 font-medium">
+          Saved ✓
         </div>
-      ))}
+      )}
+
+      {/* Follow-ups */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Follow-up reminders</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task when a lead hasn&apos;t been contacted in a while</p>
+          </div>
+          <Toggle k="followup_enabled" />
+        </div>
+        {prefs.followup_enabled && (
+          <div className="space-y-3 border-t border-gray-100 dark:border-slate-700 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-slate-300">Remind me after</span>
+              <NumberInput k="followup_days" min={1} max={30} unit="days without contact" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-slate-300">Mark overdue after</span>
+              <NumberInput k="overdue_days" min={1} max={60} unit="days" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Call outcome */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Log call outcome</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Reminds you to log what happened after a call</p>
+          </div>
+          <Toggle k="call_outcome_enabled" />
+        </div>
+        {prefs.call_outcome_enabled && (
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
+            <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+            <NumberInput k="call_outcome_hours" min={0} max={24} unit="hours after call" />
+          </div>
+        )}
+      </div>
+
+      {/* Payments */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Payment alerts</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Overdue payments and upcoming invoice reminders</p>
+          </div>
+          <Toggle k="payment_enabled" />
+        </div>
+      </div>
+
+      {/* Upsells */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Upsell reminders</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Reminds you to reach out when a client is near the end of their plan</p>
+          </div>
+          <Toggle k="upsell_enabled" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -1161,7 +1240,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
         {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
         {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
         {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />}
-        {section === 'notifications' && <NotificationsSection />}
+        {section === 'notifications' && <NotificationsSection userId={userId} />}
         {section === 'account' && <AccountSection userId={userId} profile={profile} />}
         {section === 'appearance' && <AppearanceSection />}
       </div>

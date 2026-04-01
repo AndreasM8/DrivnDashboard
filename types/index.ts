@@ -1,5 +1,29 @@
 // ─── Users ────────────────────────────────────────────────────────────────────
 
+export interface NotificationPrefs {
+  followup_enabled: boolean
+  followup_days: number      // days without contact before follow-up task
+  overdue_days: number       // days without contact before marked overdue
+  call_outcome_enabled: boolean
+  call_outcome_hours: number // hours after call to create log-outcome task
+  payment_enabled: boolean
+  upsell_enabled: boolean
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  followup_enabled: true,
+  followup_days: 3,
+  overdue_days: 7,
+  call_outcome_enabled: true,
+  call_outcome_hours: 2,
+  payment_enabled: true,
+  upsell_enabled: true,
+}
+
+export function resolveNotifPrefs(raw: Partial<NotificationPrefs> | null | undefined): NotificationPrefs {
+  return { ...DEFAULT_NOTIFICATION_PREFS, ...(raw ?? {}) }
+}
+
 export interface User {
   id: string
   name: string
@@ -7,6 +31,7 @@ export interface User {
   ig_handle: string
   base_currency: string
   timezone: string
+  notification_prefs: Partial<NotificationPrefs>
   created_at: string
 }
 

@@ -167,3 +167,10 @@ alter table calendly_integrations
   add column if not exists user_name text,
   add column if not exists user_email text,
   add column if not exists webhook_signing_key text;
+
+
+-- ── 8. Notification preferences ───────────────────────────────────────────────
+-- Single JSONB column on users. Defaults defined here; app merges with these
+-- so adding new keys in future is safe without another migration.
+alter table users
+  add column if not exists notification_prefs jsonb not null default '{}'::jsonb;
