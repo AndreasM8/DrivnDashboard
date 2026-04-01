@@ -140,9 +140,12 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
     setAdding(false)
   }
 
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+
   async function removeSetters(id: string) {
     await supabase.from('setters').update({ active: false }).eq('id', id)
     setSetters(ss => ss.filter(s => s.id !== id))
+    setConfirmRemove(null)
   }
 
   async function updateRole(id: string, role: SetterRole) {
@@ -173,14 +176,22 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
               <option value="both">Both</option>
             </select>
             {!s.is_self && (
-              <button
-                onClick={() => removeSetters(s.id)}
-                className="text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </button>
+              confirmRemove === s.id ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">Remove?</span>
+                  <button onClick={() => removeSetters(s.id)} className="text-xs font-semibold text-red-600 hover:text-red-700">Yes</button>
+                  <button onClick={() => setConfirmRemove(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmRemove(s.id)}
+                  className="text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )
             )}
           </div>
         ))}

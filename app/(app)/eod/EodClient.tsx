@@ -213,7 +213,7 @@ function EodForm({ userId, setters, existingReport, onSubmitted }: {
 // ─── Owner report feed ────────────────────────────────────────────────────────
 
 function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Setter[] }) {
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   if (reports.length === 0) {
     return (
@@ -229,7 +229,7 @@ function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Sette
     <div className="space-y-3">
       {reports.map(r => {
         const setter = setters.find(s => s.id === r.setter_id)
-        const isExpanded = expanded === r.id
+        const isExpanded = expanded.has(r.id)
         return (
           <div key={r.id} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-4">
             <div className="flex items-start gap-3 mb-3">
@@ -266,7 +266,11 @@ function ReportFeed({ reports, setters }: { reports: EodReport[]; setters: Sette
 
             {(r.notes || r.calls_held > 0) && (
               <button
-                onClick={() => setExpanded(isExpanded ? null : r.id)}
+                onClick={() => setExpanded(prev => {
+                  const next = new Set(prev)
+                  isExpanded ? next.delete(r.id) : next.add(r.id)
+                  return next
+                })}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium mt-1"
               >
                 {isExpanded ? 'Show less' : 'Show more'}

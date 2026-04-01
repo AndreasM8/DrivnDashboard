@@ -207,6 +207,7 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
   const [history, setHistory] = useState<LeadHistory[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState(false)
+  const [historyLimit, setHistoryLimit] = useState(10)
   const [saving, setSaving] = useState(false)
 
   // New label creation
@@ -571,7 +572,7 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
                   <div className="absolute left-4 top-2 bottom-2 w-px bg-gray-100 dark:bg-slate-700" />
 
                   <div className="space-y-0">
-                    {history.map((h, i) => {
+                    {history.slice(0, historyLimit).map((h, i) => {
                       const meta = historyMeta(h.action)
                       return (
                         <div key={h.id} className="relative flex gap-4 pb-5">
@@ -593,6 +594,14 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
                         </div>
                       )
                     })}
+                    {history.length > historyLimit && (
+                      <button
+                        onClick={() => setHistoryLimit(l => l + 10)}
+                        className="w-full mt-2 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors"
+                      >
+                        Show {Math.min(10, history.length - historyLimit)} more ({history.length - historyLimit} remaining)
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

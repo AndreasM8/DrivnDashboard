@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Client, PaymentInstallment } from '@/types'
@@ -73,12 +73,23 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
   const monthsElapsed = Math.floor((Date.now() - startDate.getTime()) / (30 * 24 * 60 * 60 * 1000))
   const monthsRemaining = client.plan_months ? Math.max(0, client.plan_months - monthsElapsed) : null
 
-  async function saveNotes() {
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  async function saveNotes(value: string) {
     setSaving(true)
-    const { data } = await supabase.from('clients').update({ notes }).eq('id', client.id).select().single()
+    const { data } = await supabase.from('clients').update({ notes: value }).eq('id', client.id).select().single()
     if (data) onUpdate(data as Client)
     setSaving(false)
   }
+
+  function handleNotesChange(value: string) {
+    setNotes(value)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => saveNotes(value), 2000)
+  }
+
+  // Flush on unmount
+  useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
 
   async function toggleUpsell() {
     const newVal = !upsellOn
@@ -281,18 +292,14 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
             <div className="p-5">
               <textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
+                onChange={e => handleNotesChange(e.target.value)}
                 rows={10}
                 placeholder="Anything useful about this client — goals, objections handled, what they respond to…"
                 className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
-              <button
-                onClick={saveNotes}
-                disabled={saving || notes === client.notes}
-                className="mt-3 w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-40"
-              >
-                {saving ? 'Saving…' : 'Save notes'}
-              </button>
+              <p className="mt-2 text-xs text-gray-400 dark:text-slate-500 text-right">
+                {saving ? '💾 Saving…' : notes === client.notes ? '✓ Saved' : 'Auto-saves in 2s'}
+              </p>
             </div>
           )}
         </div>

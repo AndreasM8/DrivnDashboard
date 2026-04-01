@@ -250,7 +250,12 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             </button>
                           )}
                           {hasOverdue && (
-                            <button className="text-xs px-2 py-1 bg-red-100 text-red-700 font-medium rounded-lg">Chase</button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setDrawerClient(client) }}
+                              className="text-xs px-2 py-1 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors"
+                            >
+                              Chase 🔴
+                            </button>
                           )}
                         </div>
                       </td>
