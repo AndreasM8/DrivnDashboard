@@ -42,35 +42,40 @@ export async function GET(request: NextRequest) {
       return fail('token', `${tokenRes.status}: ${body}`)
     }
 
+    // Calendly includes owner + organization URIs directly in the token response
     const tokenData = await tokenRes.json() as {
       access_token: string
       refresh_token: string
       expires_in: number
       token_type: string
+      owner: string        // e.g. https://api.calendly.com/users/XXXX
+      organization: string // e.g. https://api.calendly.com/organizations/XXXX
     }
 
     const { access_token, refresh_token, expires_in } = tokenData
     const tokenExpiry = new Date(Date.now() + expires_in * 1000).toISOString()
+    const userUri: string = tokenData.owner ?? ''
+    const orgUri: string = tokenData.organization ?? ''
 
-    // 2. Fetch Calendly user profile
-    const profileRes = await fetch('https://api.calendly.com/users/me', {
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
-
-    if (!profileRes.ok) {
-      const body = await profileRes.text()
-      console.error('[calendly oauth] Failed to fetch user profile', profileRes.status, body)
-      return fail('profile', `${profileRes.status}: ${body}`)
+    // 2. Try to fetch display name + email — optional, don't fail if scope is missing
+    let userName = ''
+    let userEmail = ''
+    try {
+      const profileRes = await fetch('https://api.calendly.com/users/me', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      if (profileRes.ok) {
+        const profileData = await profileRes.json() as {
+          resource: { name?: string; email?: string }
+        }
+        userName = profileData.resource?.name ?? ''
+        userEmail = profileData.resource?.email ?? ''
+      } else {
+        console.warn('[calendly oauth] Profile fetch failed (scope?), continuing without name/email', profileRes.status)
+      }
+    } catch {
+      console.warn('[calendly oauth] Profile fetch threw, continuing without name/email')
     }
-
-    const profileData = await profileRes.json() as {
-      resource: { uri: string; name: string; email: string; current_organization: string }
-    }
-
-    const userUri: string = profileData.resource?.uri ?? ''
-    const orgUri: string = profileData.resource?.current_organization ?? ''
-    const userName: string = profileData.resource?.name ?? ''
-    const userEmail: string = profileData.resource?.email ?? ''
 
     // 3. Get authenticated user from Supabase
     const supabase = await createServerSupabaseClient()
