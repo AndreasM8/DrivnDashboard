@@ -100,33 +100,62 @@ export async function GET(request: NextRequest) {
     // 5. Create Calendly webhook subscription and capture signing key
     const webhookUrl = `${appUrl}/api/webhooks/calendly`
 
-    const webhookRes = await fetch('https://api.calendly.com/webhook_subscriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: webhookUrl,
-        events: ['invitee.created'],
-        organization: orgUri,
-        user: userUri,
-        scope: 'user',
-      }),
-    })
-
-    if (webhookRes.ok) {
-      const webhookData = await webhookRes.json() as { resource?: { signing_key?: string } }
-      const signingKey = webhookData?.resource?.signing_key ?? null
-      if (signingKey) {
-        await supabase
-          .from('calendly_integrations')
-          .update({ webhook_signing_key: signingKey })
-          .eq('user_id', user.id)
+    async function createWebhook(): Promise<string | null> {
+      const res = await fetch('https://api.calendly.com/webhook_subscriptions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: webhookUrl,
+          events: ['invitee.created'],
+          organization: orgUri,
+          user: userUri,
+          scope: 'user',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json() as { resource?: { signing_key?: string } }
+        return data?.resource?.signing_key ?? null
       }
-    } else {
-      // Log but don't fail the whole flow — webhook can be re-registered later
-      console.warn('[calendly oauth] Webhook subscription failed', await webhookRes.text())
+      // 409 = already exists; anything else is unexpected
+      const errText = await res.text()
+      console.warn('[calendly oauth] Webhook create failed', res.status, errText)
+      return null
+    }
+
+    let signingKey = await createWebhook()
+
+    // If creation failed (likely a duplicate), find and delete the existing one then retry
+    if (signingKey === null) {
+      try {
+        const listRes = await fetch(
+          `https://api.calendly.com/webhook_subscriptions?organization=${encodeURIComponent(orgUri)}&user=${encodeURIComponent(userUri)}&scope=user`,
+          { headers: { Authorization: `Bearer ${access_token}` } }
+        )
+        if (listRes.ok) {
+          const listData = await listRes.json() as { collection?: { uri: string; callback_url: string }[] }
+          const existing = listData.collection?.find(w => w.callback_url === webhookUrl)
+          if (existing) {
+            // Delete the old webhook and recreate to get a fresh signing key
+            await fetch(existing.uri, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${access_token}` },
+            })
+            signingKey = await createWebhook()
+          }
+        }
+      } catch (webhookErr) {
+        console.warn('[calendly oauth] Could not recycle existing webhook', webhookErr)
+      }
+    }
+
+    if (signingKey) {
+      await supabase
+        .from('calendly_integrations')
+        .update({ webhook_signing_key: signingKey })
+        .eq('user_id', user.id)
     }
 
     return NextResponse.redirect(redirectBase)

@@ -6,7 +6,7 @@ import type { KpiTargets, Setter, User, SecondaryCurrency } from '@/types'
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string; google?: string }>
+  searchParams: Promise<{ section?: string; google?: string; calendly?: string }>
 }) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,6 +29,7 @@ export default async function SettingsPage({
       setters={(setters as Setter[]) ?? []}
       secondaryCurrencies={(currencies as SecondaryCurrency[]) ?? []}
       initialSection={params.section === 'integrations' ? 'integrations' : undefined}
+      calendlyResult={params.calendly === 'error' ? 'error' : params.calendly === 'ok' ? 'ok' : undefined}
     />
   )
 }

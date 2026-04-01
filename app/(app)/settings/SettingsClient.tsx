@@ -16,6 +16,7 @@ interface Props {
   setters: Setter[]
   secondaryCurrencies: SecondaryCurrency[]
   initialSection?: Section
+  calendlyResult?: 'error' | 'ok'
 }
 
 type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance'
@@ -704,11 +705,12 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   )
 }
 
-function CalendlyCard() {
+function CalendlyCard({ oauthResult }: { oauthResult?: 'error' | 'ok' }) {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
     fetch('/api/calendly/status')
@@ -723,27 +725,47 @@ function CalendlyCard() {
   }, [])
 
   async function handleDisconnect() {
+    setDisconnecting(true)
     await fetch('/api/calendly/status', { method: 'DELETE' })
     setConnected(false)
     setUserName(null)
     setUserEmail(null)
+    setDisconnecting(false)
   }
 
+  const showError = oauthResult === 'error'
+
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${
+      showError ? 'border-rose-200 dark:border-rose-800' :
+      connected ? 'border-green-200 dark:border-green-800' :
+      'border-gray-100 dark:border-slate-700'
+    }`}>
       <div className="flex items-start gap-4">
         <span className="text-2xl mt-0.5">📅</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Calendly</p>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
-            {!loading && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />}
+            {!loading && !showError && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />}
+            {showError && <span className="w-2 h-2 rounded-full flex-shrink-0 bg-rose-500" />}
           </div>
           <p className="text-xs text-gray-500 dark:text-slate-400">
             Auto-moves followers to &apos;Call booked&apos; when they book. Skip this and move them manually in the pipeline.
           </p>
 
-          {connected && (
+          {/* OAuth error banner */}
+          {showError && (
+            <div className="mt-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/40 rounded-lg px-3 py-2.5">
+              <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-1">Connection failed</p>
+              <p className="text-xs text-rose-600 dark:text-rose-400/80">
+                Something went wrong during the Calendly authorisation.
+                {connected ? ' Click Disconnect below, then try connecting again.' : ' Click Connect Calendly to try again.'}
+              </p>
+            </div>
+          )}
+
+          {connected && !showError && (
             <div className="mt-3 space-y-1">
               <p className="text-xs text-green-600 dark:text-green-400 font-medium">Connected — bookings sync automatically</p>
               {(userName || userEmail) && (
@@ -756,8 +778,8 @@ function CalendlyCard() {
             </div>
           )}
 
-          {!connected && !loading && (
-            <div className="mt-3 space-y-2">
+          {!connected && !loading && !showError && (
+            <div className="mt-3">
               <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
                 <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Connect Calendly</span> → you&apos;ll be taken to Calendly to sign in</li>
                 <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Allow</span> when Calendly asks for permission</li>
@@ -767,11 +789,27 @@ function CalendlyCard() {
           )}
         </div>
 
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col items-end gap-2">
           {loading ? (
             <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
           ) : connected ? (
-            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">Disconnect</button>
+            <>
+              <button
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50"
+              >
+                {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+              {showError && (
+                <a
+                  href="/api/calendly/oauth/start"
+                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 text-center"
+                >
+                  Reconnect
+                </a>
+              )}
+            </>
           ) : (
             <a
               href="/api/calendly/oauth/start"
@@ -786,7 +824,7 @@ function CalendlyCard() {
   )
 }
 
-function IntegrationsSection() {
+function IntegrationsSection({ calendlyResult }: { calendlyResult?: 'error' | 'ok' }) {
   const [status, setStatus] = useState<IntegrationStatus | null>(null)
 
   useEffect(() => {
@@ -821,7 +859,7 @@ function IntegrationsSection() {
 
       <StripeCard webhookUrl={stripeUrl} />
 
-      <CalendlyCard />
+      <CalendlyCard oauthResult={calendlyResult} />
 
       <GoogleSheetsCard />
     </div>
@@ -1058,7 +1096,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'appearance', label: 'Appearance' },
 ]
 
-export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection }: Props) {
+export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
 
   return (
@@ -1098,7 +1136,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
         {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
         {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
-        {section === 'integrations' && <IntegrationsSection />}
+        {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} />}
         {section === 'notifications' && <NotificationsSection />}
         {section === 'account' && <AccountSection userId={userId} profile={profile} />}
         {section === 'appearance' && <AppearanceSection />}
