@@ -162,32 +162,34 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [filter, setFilter] = useState<'all' | TaskType>('all')
   const [addOpen, setAddOpen] = useState(false)
+  const [watching, setWatching] = useState<number | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const supabase = createClient()
 
-  // Auto-generate follow-up tasks for stale leads on mount, then reload tasks
-  useEffect(() => {
-    async function generateAndRefresh() {
-      try {
-        const res = await fetch('/api/tasks/generate', { method: 'POST' })
-        if (!res.ok) return
-        const { created } = await res.json() as { created: number }
-        if (created > 0) {
-          // Reload open tasks to include newly generated ones
-          const client = createClient()
-          const { data } = await client
-            .from('tasks')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('completed', false)
-            .order('due_at')
-          if (data) setTasks(data as Task[])
-        }
-      } catch {
-        // Non-critical: silently ignore errors
+  async function generateAndRefresh() {
+    setRefreshing(true)
+    try {
+      const res = await fetch('/api/tasks/generate', { method: 'POST' })
+      if (res.ok) {
+        const json = await res.json() as { created: number; watching: number }
+        setWatching(json.watching ?? null)
+        // Always reload — even if 0 created, tasks might have been completed elsewhere
+        const { data } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('completed', false)
+          .order('due_at')
+        if (data) setTasks(data as Task[])
       }
+    } catch {
+      // Non-critical
     }
-    generateAndRefresh()
-  }, [userId])
+    setRefreshing(false)
+  }
+
+  // Run on mount
+  useEffect(() => { generateAndRefresh() }, [userId])
 
   const filtered = useMemo(() =>
     filter === 'all' ? tasks : tasks.filter(t => t.type === filter),
@@ -231,12 +233,24 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
             <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">{totalOpen}</span>
           )}
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Add task
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={generateAndRefresh}
+            disabled={refreshing}
+            className="p-1.5 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-40"
+            title="Refresh tasks"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}>
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Add task
+          </button>
+        </div>
       </div>
 
       {/* Filter bar */}
@@ -257,10 +271,34 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
       {/* Task list */}
       <div className="flex-1 overflow-y-auto p-6">
         {totalOpen === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-4xl mb-3">🎉</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">You&apos;re all caught up!</p>
-            <p className="text-sm text-gray-500 dark:text-slate-400">New tasks appear here automatically. Or hit + Add task to create one manually.</p>
+          <div className="text-center py-16 max-w-sm mx-auto">
+            <p className="text-4xl mb-3">{refreshing ? '⏳' : '✅'}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">
+              {refreshing ? 'Checking…' : 'No open tasks'}
+            </p>
+            {!refreshing && (
+              <div className="space-y-3">
+                {watching !== null && watching > 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    Watching <span className="font-semibold text-gray-700 dark:text-slate-300">{watching} lead{watching !== 1 ? 's' : ''}</span> — follow-up tasks appear automatically when they go {' '}
+                    <span className="font-semibold text-gray-700 dark:text-slate-300">3+ days</span> without contact.
+                  </p>
+                ) : watching === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    No leads in the pipeline yet. Add leads on the Pipeline page and tasks will appear here automatically.
+                  </p>
+                ) : null}
+                <p className="text-xs text-gray-400 dark:text-slate-500">
+                  Tasks also appear when you book a call, have a payment due, or when it&apos;s time to upsell a client.
+                </p>
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="mt-2 px-4 py-2 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  + Add a task manually
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-8 max-w-2xl">

@@ -34,7 +34,7 @@ export async function POST() {
     .in('stage', ['follower', 'replied', 'freebie_sent'])
 
   if (leadsError) return NextResponse.json({ error: leadsError.message }, { status: 500 })
-  if (!leads?.length) return NextResponse.json({ created: 0 })
+  if (!leads?.length) return NextResponse.json({ created: 0, watching: 0 })
 
   // Filter leads that haven't been contacted since the user's threshold
   const staleLeads = leads.filter(l => {
@@ -42,7 +42,7 @@ export async function POST() {
     return new Date(l.last_contact_at) < new Date(followupCutoff)
   })
 
-  if (!staleLeads.length) return NextResponse.json({ created: 0 })
+  if (!staleLeads.length) return NextResponse.json({ created: 0, watching: leads.length })
 
   // Skip leads that already have an open follow-up task
   const { data: existingTasks } = await supabase
@@ -56,7 +56,7 @@ export async function POST() {
   const alreadyTasked = new Set((existingTasks ?? []).map(t => t.lead_id as string))
   const leadsNeedingTasks = staleLeads.filter(l => !alreadyTasked.has(l.id))
 
-  if (!leadsNeedingTasks.length) return NextResponse.json({ created: 0 })
+  if (!leadsNeedingTasks.length) return NextResponse.json({ created: 0, watching: leads.length })
 
   function getPriority(lastContactAt: string | null): TaskPriority {
     if (!lastContactAt) return 'today'
@@ -84,5 +84,5 @@ export async function POST() {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  return NextResponse.json({ created: inserted?.length ?? 0 })
+  return NextResponse.json({ created: inserted?.length ?? 0, watching: leads.length })
 }

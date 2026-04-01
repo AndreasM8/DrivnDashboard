@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
-import { CURRENCIES, TIMEZONES } from '@/types'
+import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import { useDarkMode } from '@/components/providers/DarkModeProvider'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 
@@ -901,7 +901,6 @@ function NotificationsSection({ userId }: { userId: string }) {
   useEffect(() => {
     supabase.from('users').select('notification_prefs').eq('id', userId).single()
       .then(({ data }) => {
-        const { resolveNotifPrefs } = require('@/types') as typeof import('@/types')
         setPrefs(resolveNotifPrefs(data?.notification_prefs))
       })
   }, [userId])
