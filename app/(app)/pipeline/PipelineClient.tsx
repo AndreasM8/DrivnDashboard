@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter } from '@/types'
@@ -184,12 +184,126 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
 
 // ─── Stage column config ──────────────────────────────────────────────────────
 
-const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: string; extraStages?: LeadStage[] }[] = [
-  { stage: 'follower',    label: 'Follower',    auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20' },
-  { stage: 'replied',     label: 'Replied',     auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20', extraStages: ['freebie_sent'] },
-  { stage: 'call_booked', label: 'Call booked', auto: false, bg: 'bg-white dark:bg-slate-800',     extraStages: ['nurture'] },
-  { stage: 'closed',      label: 'Closed',      auto: false, bg: 'bg-white dark:bg-slate-800'     },
+interface StageColumnConfig {
+  stage: LeadStage
+  label: string
+  auto: boolean
+  bg: string
+  extraStages?: LeadStage[]
+  hideable: boolean
+  defaultHidden: boolean
+  dotColor: string
+}
+
+const STAGE_COLUMNS: StageColumnConfig[] = [
+  { stage: 'follower',       label: 'Follower',       auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
+  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20',    extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
+  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white dark:bg-slate-800',        extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
+  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white dark:bg-slate-800',        extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
+  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-amber-50 dark:bg-amber-900/10',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
+  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-gray-50 dark:bg-slate-800/50',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-gray-400' },
+  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-red-50 dark:bg-red-900/10',      extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-red-400' },
 ]
+
+const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
+
+function loadHiddenColumns(): Set<LeadStage> {
+  if (typeof window === 'undefined') return new Set(DEFAULT_HIDDEN)
+  try {
+    const raw = localStorage.getItem('drivn_hidden_columns')
+    if (raw) {
+      const parsed = JSON.parse(raw) as LeadStage[]
+      return new Set(parsed)
+    }
+  } catch {
+    // ignore
+  }
+  return new Set(DEFAULT_HIDDEN)
+}
+
+// ─── Column visibility popover ────────────────────────────────────────────────
+
+function ColumnVisibilityPopover({
+  hiddenColumns,
+  onToggle,
+}: {
+  hiddenColumns: Set<LeadStage>
+  onToggle: (stage: LeadStage) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  const hideableCols = STAGE_COLUMNS.filter(c => c.hideable)
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+          open
+            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+            : 'border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+        }`}
+        aria-label="Toggle column visibility"
+      >
+        {/* Eye icon */}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        View
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 z-50 w-56 shadow-lg rounded-xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-3">
+          <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2.5 uppercase tracking-wide">
+            Pipeline columns
+          </p>
+
+          <div className="flex flex-col gap-1">
+            {hideableCols.map(col => {
+              const visible = !hiddenColumns.has(col.stage)
+              return (
+                <button
+                  key={col.stage}
+                  onClick={() => onToggle(col.stage)}
+                  className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-lg text-left text-sm transition-colors ${
+                    visible
+                      ? 'text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700'
+                      : 'text-gray-400 dark:text-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {/* Colored dot */}
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dotColor} ${visible ? '' : 'opacity-30'}`} />
+                  <span className="flex-1 truncate">{col.label}</span>
+                  {/* Toggle indicator */}
+                  <span className={`w-8 h-4 rounded-full flex-shrink-0 transition-colors ${visible ? 'bg-blue-500' : 'bg-gray-200 dark:bg-slate-600'}`}>
+                    <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform mt-0.5 ${visible ? 'translate-x-4 ml-0.5' : 'translate-x-0.5'}`} />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-700">
+            Core stages are always shown
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Lead card ────────────────────────────────────────────────────────────────
 
@@ -365,6 +479,9 @@ function StageColumn({
             {stage === 'replied' && 'Add one with + Add above'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
             {stage === 'closed' && 'Move leads here when you close a deal'}
+            {stage === 'nurture' && 'Leads to keep warm over time'}
+            {stage === 'not_interested' && 'Leads who passed for now'}
+            {stage === 'bad_fit' && 'Leads that are not a good fit'}
           </div>
         )}
       </div>
@@ -382,6 +499,25 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [tierFilter, setTierFilter] = useState<TierFilter>('all')
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [search, setSearch] = useState('')
+
+  const [hiddenColumns, setHiddenColumns] = useState<Set<LeadStage>>(loadHiddenColumns)
+
+  function toggleColumn(stage: LeadStage) {
+    setHiddenColumns(prev => {
+      const next = new Set(prev)
+      if (next.has(stage)) {
+        next.delete(stage)
+      } else {
+        next.add(stage)
+      }
+      try {
+        localStorage.setItem('drivn_hidden_columns', JSON.stringify([...next]))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
 
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [addLeadStage, setAddLeadStage] = useState<LeadStage>('follower')
@@ -566,7 +702,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           </>
         )}
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <ColumnVisibilityPopover hiddenColumns={hiddenColumns} onToggle={toggleColumn} />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -582,7 +719,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       {/* Kanban columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-4 p-6 h-full min-w-max">
-          {STAGE_COLUMNS.map(col => (
+          {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => (
             <StageColumn
               key={col.stage}
               {...col}

@@ -18,7 +18,6 @@ export default async function PipelinePage() {
       .from('leads')
       .select('*')
       .eq('user_id', user.id)
-      .not('stage', 'in', '("bad_fit","not_interested")')
       .order('updated_at', { ascending: false }),
     supabase.from('lead_labels').select('*').eq('user_id', user.id),
     supabase.from('setters').select('*').eq('user_id', user.id).eq('active', true),
