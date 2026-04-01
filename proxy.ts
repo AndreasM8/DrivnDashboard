@@ -5,7 +5,15 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes — no auth required
-  const publicRoutes = ['/auth/login', '/auth/callback']
+  const publicRoutes = [
+    '/auth/login',
+    '/auth/callback',
+    '/api/webhooks/',        // inbound webhooks: Zapier, Calendly, Stripe
+    '/api/calendly/oauth/',  // Calendly OAuth callback
+    '/api/google/oauth/',    // Google OAuth callback (if added later)
+    '/manifest.json',
+    '/icon-',
+  ]
   if (publicRoutes.some(r => pathname.startsWith(r))) {
     return NextResponse.next()
   }
