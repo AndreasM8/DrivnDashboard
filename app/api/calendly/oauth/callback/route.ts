@@ -12,8 +12,14 @@ export async function GET(request: NextRequest) {
   const redirectBase = `${appUrl}/settings?section=integrations`
   const redirectUri = `${appUrl}/api/calendly/oauth/callback`
 
+  function fail(step: string, detail?: string) {
+    const params = new URLSearchParams({ calendly: 'error', step })
+    if (detail) params.set('detail', detail.slice(0, 120))
+    return NextResponse.redirect(`${redirectBase}&${params.toString()}`)
+  }
+
   if (error || !code) {
-    return NextResponse.redirect(`${redirectBase}&calendly=error`)
+    return fail('denied', error ?? 'no_code')
   }
 
   try {
@@ -31,8 +37,9 @@ export async function GET(request: NextRequest) {
     })
 
     if (!tokenRes.ok) {
-      console.error('[calendly oauth] Token exchange failed', await tokenRes.text())
-      return NextResponse.redirect(`${redirectBase}&calendly=error`)
+      const body = await tokenRes.text()
+      console.error('[calendly oauth] Token exchange failed', tokenRes.status, body)
+      return fail('token', `${tokenRes.status}: ${body}`)
     }
 
     const tokenData = await tokenRes.json() as {
@@ -51,17 +58,13 @@ export async function GET(request: NextRequest) {
     })
 
     if (!profileRes.ok) {
-      console.error('[calendly oauth] Failed to fetch user profile', await profileRes.text())
-      return NextResponse.redirect(`${redirectBase}&calendly=error`)
+      const body = await profileRes.text()
+      console.error('[calendly oauth] Failed to fetch user profile', profileRes.status, body)
+      return fail('profile', `${profileRes.status}: ${body}`)
     }
 
     const profileData = await profileRes.json() as {
-      resource: {
-        uri: string
-        name: string
-        email: string
-        current_organization: string
-      }
+      resource: { uri: string; name: string; email: string; current_organization: string }
     }
 
     const userUri: string = profileData.resource?.uri ?? ''
@@ -94,19 +97,16 @@ export async function GET(request: NextRequest) {
 
     if (upsertError) {
       console.error('[calendly oauth] Failed to upsert integration', upsertError)
-      return NextResponse.redirect(`${redirectBase}&calendly=error`)
+      return fail('db', upsertError.message)
     }
 
-    // 5. Create Calendly webhook subscription and capture signing key
+    // 5. Create / recycle Calendly webhook subscription
     const webhookUrl = `${appUrl}/api/webhooks/calendly`
 
     async function createWebhook(): Promise<string | null> {
       const res = await fetch('https://api.calendly.com/webhook_subscriptions', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: webhookUrl,
           events: ['invitee.created', 'invitee.canceled'],
@@ -119,15 +119,13 @@ export async function GET(request: NextRequest) {
         const data = await res.json() as { resource?: { signing_key?: string } }
         return data?.resource?.signing_key ?? null
       }
-      // 409 = already exists; anything else is unexpected
-      const errText = await res.text()
-      console.warn('[calendly oauth] Webhook create failed', res.status, errText)
+      console.warn('[calendly oauth] Webhook create failed', res.status, await res.text())
       return null
     }
 
     let signingKey = await createWebhook()
 
-    // If creation failed (likely a duplicate), find and delete the existing one then retry
+    // If creation failed (likely duplicate), delete existing and recreate
     if (signingKey === null) {
       try {
         const listRes = await fetch(
@@ -138,16 +136,12 @@ export async function GET(request: NextRequest) {
           const listData = await listRes.json() as { collection?: { uri: string; callback_url: string }[] }
           const existing = listData.collection?.find(w => w.callback_url === webhookUrl)
           if (existing) {
-            // Delete the old webhook and recreate to get a fresh signing key
-            await fetch(existing.uri, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${access_token}` },
-            })
+            await fetch(existing.uri, { method: 'DELETE', headers: { Authorization: `Bearer ${access_token}` } })
             signingKey = await createWebhook()
           }
         }
       } catch (webhookErr) {
-        console.warn('[calendly oauth] Could not recycle existing webhook', webhookErr)
+        console.warn('[calendly oauth] Could not recycle webhook', webhookErr)
       }
     }
 
@@ -161,6 +155,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectBase)
   } catch (err) {
     console.error('[calendly oauth] Unexpected error', err)
-    return NextResponse.redirect(`${redirectBase}&calendly=error`)
+    return fail('exception', String(err).slice(0, 120))
   }
 }

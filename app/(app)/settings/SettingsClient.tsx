@@ -17,6 +17,8 @@ interface Props {
   secondaryCurrencies: SecondaryCurrency[]
   initialSection?: Section
   calendlyResult?: 'error' | 'ok'
+  calendlyErrorStep?: string
+  calendlyErrorDetail?: string
 }
 
 type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance'
@@ -705,7 +707,7 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   )
 }
 
-function CalendlyCard({ oauthResult }: { oauthResult?: 'error' | 'ok' }) {
+function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: 'error' | 'ok'; errorStep?: string; errorDetail?: string }) {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState<string | null>(null)
@@ -756,11 +758,15 @@ function CalendlyCard({ oauthResult }: { oauthResult?: 'error' | 'ok' }) {
 
           {/* OAuth error banner */}
           {showError && (
-            <div className="mt-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/40 rounded-lg px-3 py-2.5">
-              <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-1">Connection failed</p>
+            <div className="mt-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/40 rounded-lg px-3 py-2.5 space-y-1">
+              <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">
+                Connection failed{errorStep ? ` — step: ${errorStep}` : ''}
+              </p>
+              {errorDetail && (
+                <p className="text-[11px] font-mono text-rose-600 dark:text-rose-400/80 break-all">{errorDetail}</p>
+              )}
               <p className="text-xs text-rose-600 dark:text-rose-400/80">
-                Something went wrong during the Calendly authorisation.
-                {connected ? ' Click Disconnect below, then try connecting again.' : ' Click Connect Calendly to try again.'}
+                {connected ? 'Click Disconnect below, then try connecting again.' : 'Click Connect Calendly to try again.'}
               </p>
             </div>
           )}
@@ -824,7 +830,7 @@ function CalendlyCard({ oauthResult }: { oauthResult?: 'error' | 'ok' }) {
   )
 }
 
-function IntegrationsSection({ calendlyResult }: { calendlyResult?: 'error' | 'ok' }) {
+function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorDetail }: { calendlyResult?: 'error' | 'ok'; calendlyErrorStep?: string; calendlyErrorDetail?: string }) {
   const [status, setStatus] = useState<IntegrationStatus | null>(null)
 
   useEffect(() => {
@@ -859,7 +865,7 @@ function IntegrationsSection({ calendlyResult }: { calendlyResult?: 'error' | 'o
 
       <StripeCard webhookUrl={stripeUrl} />
 
-      <CalendlyCard oauthResult={calendlyResult} />
+      <CalendlyCard oauthResult={calendlyResult} errorStep={calendlyErrorStep} errorDetail={calendlyErrorDetail} />
 
       <GoogleSheetsCard />
     </div>
@@ -1096,7 +1102,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'appearance', label: 'Appearance' },
 ]
 
-export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult }: Props) {
+export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
 
   return (
@@ -1136,7 +1142,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
         {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
         {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
-        {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} />}
+        {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />}
         {section === 'notifications' && <NotificationsSection />}
         {section === 'account' && <AccountSection userId={userId} profile={profile} />}
         {section === 'appearance' && <AppearanceSection />}
