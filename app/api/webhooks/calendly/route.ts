@@ -6,27 +6,58 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+async function verifyCalendlySignature(
+  rawBody: string,
+  signatureHeader: string | null,
+  signingKey: string,
+): Promise<boolean> {
+  if (!signatureHeader) return false
+  // Format: t=<timestamp>,v1=<hmac>
+  const parts = Object.fromEntries(signatureHeader.split(',').map(p => p.split('=')))
+  const timestamp = parts['t']
+  const v1 = parts['v1']
+  if (!timestamp || !v1) return false
+
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(signingKey)
+  const msgData = encoder.encode(`${timestamp}.${rawBody}`)
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData)
+  const computed = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+  return computed === v1
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const rawBody = await request.text()
+    let body: { event?: string; payload?: Record<string, unknown> }
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      return NextResponse.json({ ok: false, reason: 'invalid_json' }, { status: 400 })
+    }
 
     const event = body.event
-    const payload = body.payload
+    const payload = body.payload as Record<string, unknown> | undefined
 
     // Only handle new bookings
     if (event !== 'invitee.created') {
       return NextResponse.json({ ok: true })
     }
 
-    const inviteeName: string = payload?.invitee?.name ?? payload?.name ?? ''
-    const inviteeEmail: string = payload?.invitee?.email ?? payload?.email ?? ''
-    const startTime: string = payload?.scheduled_event?.start_time ?? ''
-    const eventName: string = payload?.scheduled_event?.name ?? 'Call'
+    const p = payload as { invitee?: { name?: string; email?: string }; name?: string; email?: string; scheduled_event?: { start_time?: string; name?: string } } | undefined
+    const inviteeName: string = p?.invitee?.name ?? p?.name ?? ''
+    const inviteeEmail: string = p?.invitee?.email ?? p?.email ?? ''
+    const startTime: string = p?.scheduled_event?.start_time ?? ''
+    const eventName: string = p?.scheduled_event?.name ?? 'Call'
 
-    // Find which user this Calendly account belongs to
+    // Find which user this Calendly account belongs to + get signing key
     const { data: integrations, error: integrationErr } = await supabase
       .from('calendly_integrations')
-      .select('user_id')
+      .select('user_id, webhook_signing_key')
       .limit(1)
       .single()
 
@@ -36,6 +67,16 @@ export async function POST(request: NextRequest) {
 
     if (!integrations) {
       return NextResponse.json({ ok: false, reason: 'no_integration' }, { status: 404 })
+    }
+
+    // Verify signature if we have the signing key
+    if (integrations.webhook_signing_key) {
+      const sigHeader = request.headers.get('Calendly-Webhook-Signature')
+      const valid = await verifyCalendlySignature(rawBody, sigHeader, integrations.webhook_signing_key)
+      if (!valid) {
+        console.warn('[calendly] Invalid webhook signature — rejecting')
+        return NextResponse.json({ ok: false, reason: 'invalid_signature' }, { status: 401 })
+      }
     }
 
     const userId = integrations.user_id

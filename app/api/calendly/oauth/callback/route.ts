@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${redirectBase}&calendly=error`)
     }
 
-    // 5. Create Calendly webhook subscription
+    // 5. Create Calendly webhook subscription and capture signing key
     const webhookUrl = `${appUrl}/api/webhooks/calendly`
 
     const webhookRes = await fetch('https://api.calendly.com/webhook_subscriptions', {
@@ -116,7 +116,16 @@ export async function GET(request: NextRequest) {
       }),
     })
 
-    if (!webhookRes.ok) {
+    if (webhookRes.ok) {
+      const webhookData = await webhookRes.json() as { resource?: { signing_key?: string } }
+      const signingKey = webhookData?.resource?.signing_key ?? null
+      if (signingKey) {
+        await supabase
+          .from('calendly_integrations')
+          .update({ webhook_signing_key: signingKey })
+          .eq('user_id', user.id)
+      }
+    } else {
       // Log but don't fail the whole flow — webhook can be re-registered later
       console.warn('[calendly oauth] Webhook subscription failed', await webhookRes.text())
     }
