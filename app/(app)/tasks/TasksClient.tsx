@@ -204,11 +204,16 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
   const totalOpen = tasks.length
 
   async function handleComplete(id: string) {
+    const task = tasks.find(t => t.id === id)
     setTasks(ts => ts.filter(t => t.id !== id))
     await supabase.from('tasks').update({
       completed: true,
       completed_at: new Date().toISOString(),
     }).eq('id', id)
+    // For follow_up tasks linked to a lead, reset the lead's follow-up timer
+    if (task?.type === 'follow_up' && task.lead_id) {
+      await fetch(`/api/leads/${task.lead_id}/contacted`, { method: 'PATCH' })
+    }
   }
 
   function onTaskAdded(task: Task) {
