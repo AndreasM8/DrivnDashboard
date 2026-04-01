@@ -194,19 +194,24 @@ const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: strin
 // ─── Lead card ────────────────────────────────────────────────────────────────
 
 function LeadCard({
-  lead, labels, assignedLabelIds, onClick, onTierChange,
+  lead, labels, assignedLabelIds, onClick, onTierChange, onDragStart, onDragEnd,
 }: {
   lead: Lead
   labels: LeadLabel[]
   assignedLabelIds: string[]
   onClick: () => void
   onTierChange: (tier: 1 | 2 | 3) => void
+  onDragStart: (e: React.DragEvent<HTMLDivElement>) => void
+  onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void
 }) {
   const days = daysSince(lead.last_contact_at)
   const assignedLabels = labels.filter(l => assignedLabelIds.includes(l.id))
 
   return (
     <div
+      draggable={true}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onClick}
       className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3 cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all group"
     >
@@ -261,7 +266,7 @@ function LeadCard({
 // ─── Stage column ─────────────────────────────────────────────────────────────
 
 function StageColumn({
-  stage, label, auto, bg, leads, labels, assignments, onLeadClick, onTierChange, onAddClick, extraStages: _extraStages,
+  stage, label, auto, bg, leads, labels, assignments, onLeadClick, onTierChange, onAddClick, onDrop, extraStages: _extraStages,
 }: {
   stage: LeadStage
   label: string
@@ -273,10 +278,39 @@ function StageColumn({
   onLeadClick: (lead: Lead) => void
   onTierChange: (leadId: string, tier: 1 | 2 | 3) => void
   onAddClick: () => void
+  onDrop: (leadId: string, targetStage: LeadStage) => void
   extraStages?: LeadStage[]
 }) {
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    // Only clear if leaving the column itself, not a child element
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false)
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setIsDragOver(false)
+    const leadId = e.dataTransfer.getData('leadId')
+    if (leadId) onDrop(leadId, stage)
+  }
+
   return (
-    <div className={`flex-shrink-0 w-64 min-w-[260px] rounded-xl p-3 ${bg} border border-gray-100 dark:border-slate-700 flex flex-col gap-2`}>
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`flex-shrink-0 w-64 min-w-[260px] rounded-xl p-3 ${bg} border transition-all ${
+        isDragOver ? 'ring-2 ring-blue-400 border-blue-300' : 'border-gray-100 dark:border-slate-700'
+      } flex flex-col gap-2`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
@@ -315,6 +349,13 @@ function StageColumn({
               assignedLabelIds={assignedLabelIds}
               onClick={() => onLeadClick(lead)}
               onTierChange={tier => onTierChange(lead.id, tier)}
+              onDragStart={e => {
+                e.dataTransfer.setData('leadId', lead.id)
+                ;(e.currentTarget as HTMLDivElement).classList.add('opacity-50')
+              }}
+              onDragEnd={e => {
+                ;(e.currentTarget as HTMLDivElement).classList.remove('opacity-50')
+              }}
             />
           )
         })}
@@ -339,7 +380,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [assignments, setAssignments] = useState<LeadLabelAssignment[]>(initialAssignments)
 
   const [tierFilter, setTierFilter] = useState<TierFilter>('all')
-  const [labelFilter, setLabelFilter] = useState<string | null>(null)
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [search, setSearch] = useState('')
 
   const [addLeadOpen, setAddLeadOpen] = useState(false)
@@ -362,9 +403,11 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         const days = daysSince(l.last_contact_at)
         if (days === null || days < 3) return false
       }
-      if (labelFilter) {
-        const hasLabel = assignments.some(a => a.lead_id === l.id && a.label_id === labelFilter)
-        if (!hasLabel) return false
+      if (selectedLabels.length > 0) {
+        const hasAtLeastOne = selectedLabels.some(labelId =>
+          assignments.some(a => a.lead_id === l.id && a.label_id === labelId)
+        )
+        if (!hasAtLeastOne) return false
       }
       if (search) {
         const q = search.toLowerCase()
@@ -376,7 +419,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       }
       return true
     })
-  }, [leads, tierFilter, labelFilter, search, assignments])
+  }, [leads, tierFilter, selectedLabels, search, assignments])
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -407,6 +450,21 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       // Revert optimistic update
       setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
     }
+  }
+
+  function handleDrop(leadId: string, targetStage: LeadStage) {
+    const lead = leads.find(l => l.id === leadId)
+    if (!lead) return
+    if (lead.stage === targetStage) return
+    if (targetStage === 'call_booked') {
+      setCallBookedLead(lead)
+      return
+    }
+    if (targetStage === 'closed') {
+      setCallOutcomeLead(lead)
+      return
+    }
+    moveStage(lead, targetStage)
   }
 
   function onLeadAdded(lead: Lead) {
@@ -470,22 +528,43 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           </button>
         ))}
 
-        <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 mx-1" />
+        {labels.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 mx-1" />
 
-        {labels.map(l => (
-          <button
-            key={l.id}
-            onClick={() => setLabelFilter(labelFilter === l.id ? null : l.id)}
-            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
-            style={
-              labelFilter === l.id
-                ? { background: l.bg_color, color: l.text_color, outline: `2px solid ${l.text_color}` }
-                : { background: l.bg_color, color: l.text_color }
-            }
-          >
-            {l.name}
-          </button>
-        ))}
+            {/* All pill — clears label filter */}
+            <button
+              onClick={() => setSelectedLabels([])}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                selectedLabels.length === 0
+                  ? 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200'
+                  : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              All
+            </button>
+
+            {labels.map(l => {
+              const isActive = selectedLabels.includes(l.id)
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => setSelectedLabels(prev =>
+                    isActive ? prev.filter(id => id !== l.id) : [...prev, l.id]
+                  )}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
+                  style={
+                    isActive
+                      ? { background: l.bg_color, color: l.text_color, outline: `2px solid ${l.text_color}`, outlineOffset: '1px' }
+                      : { background: l.bg_color, color: l.text_color, opacity: 0.55 }
+                  }
+                >
+                  {l.name}
+                </button>
+              )
+            })}
+          </>
+        )}
 
         <div className="ml-auto">
           <input
@@ -515,6 +594,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
               onLeadClick={setDrawerLead}
               onTierChange={updateTier}
               onAddClick={() => { setAddLeadStage(col.stage); setAddLeadOpen(true) }}
+              onDrop={handleDrop}
             />
           ))}
         </div>
