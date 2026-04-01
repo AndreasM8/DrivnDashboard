@@ -45,15 +45,13 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
   const total = leads.length
 
   const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const freebieStages: LeadStage[]    = ['freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
   const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
 
   const steps = [
-    { label: 'Followers',    count: total },
-    { label: 'Replied',      count: leads.filter(l => repliedStages.includes(l.stage)).length },
-    { label: 'Freebie sent', count: leads.filter(l => freebieStages.includes(l.stage)).length },
-    { label: 'Call booked',  count: leads.filter(l => callBookedStages.includes(l.stage)).length },
-    { label: 'Closed',       count: leads.filter(l => l.stage === 'closed').length },
+    { label: 'Followers',           count: total },
+    { label: 'Replied',             count: leads.filter(l => repliedStages.includes(l.stage)).length },
+    { label: 'Call booked',         count: leads.filter(l => callBookedStages.includes(l.stage)).length },
+    { label: 'Closed',              count: leads.filter(l => l.stage === 'closed').length },
   ]
 
   // SVG coordinate space
@@ -186,12 +184,11 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
 
 // ─── Stage column config ──────────────────────────────────────────────────────
 
-const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: string }[] = [
-  { stage: 'follower',     label: 'Follower',     auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20'  },
-  { stage: 'replied',      label: 'Replied',      auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20'  },
-  { stage: 'freebie_sent', label: 'Freebie sent', auto: false, bg: 'bg-white dark:bg-slate-800'      },
-  { stage: 'call_booked',  label: 'Call booked',  auto: false, bg: 'bg-white dark:bg-slate-800'      },
-  { stage: 'closed',       label: 'Closed',       auto: false, bg: 'bg-white dark:bg-slate-800'      },
+const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: string; extraStages?: LeadStage[] }[] = [
+  { stage: 'follower',    label: 'Follower',    auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20' },
+  { stage: 'replied',     label: 'Replied',     auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20', extraStages: ['freebie_sent'] },
+  { stage: 'call_booked', label: 'Call booked', auto: false, bg: 'bg-white dark:bg-slate-800'     },
+  { stage: 'closed',      label: 'Closed',      auto: false, bg: 'bg-white dark:bg-slate-800'     },
 ]
 
 // ─── Lead card ────────────────────────────────────────────────────────────────
@@ -264,7 +261,7 @@ function LeadCard({
 // ─── Stage column ─────────────────────────────────────────────────────────────
 
 function StageColumn({
-  stage, label, auto, bg, leads, labels, assignments, onLeadClick, onTierChange, onAddClick,
+  stage, label, auto, bg, leads, labels, assignments, onLeadClick, onTierChange, onAddClick, extraStages: _extraStages,
 }: {
   stage: LeadStage
   label: string
@@ -276,6 +273,7 @@ function StageColumn({
   onLeadClick: (lead: Lead) => void
   onTierChange: (leadId: string, tier: 1 | 2 | 3) => void
   onAddClick: () => void
+  extraStages?: LeadStage[]
 }) {
   return (
     <div className={`flex-shrink-0 w-64 min-w-[260px] rounded-xl p-3 ${bg} border border-gray-100 dark:border-slate-700 flex flex-col gap-2`}>
@@ -324,7 +322,6 @@ function StageColumn({
           <div className="text-center py-6 text-xs text-gray-400 dark:text-slate-500 px-2">
             {stage === 'follower' && 'Add one with + Add above'}
             {stage === 'replied' && 'Add one with + Add above'}
-            {stage === 'freebie_sent' && 'Move leads here after sending a freebie'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
             {stage === 'closed' && 'Move leads here when you close a deal'}
           </div>
@@ -510,7 +507,9 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
             <StageColumn
               key={col.stage}
               {...col}
-              leads={filteredLeads.filter(l => l.stage === col.stage)}
+              leads={filteredLeads.filter(l =>
+                l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
+              )}
               labels={labels}
               assignments={assignments}
               onLeadClick={setDrawerLead}

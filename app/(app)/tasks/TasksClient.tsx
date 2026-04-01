@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
 import { TASK_TYPE_STYLES } from '@/types'
@@ -70,9 +70,19 @@ function TaskRow({
     setTimeout(() => onComplete(task.id), 600)
   }
 
+  const isOverdue = task.priority === 'overdue'
+
+  // Extract @username from title if present (e.g. "Follow up — @johndoe")
+  const usernameMatch = task.title.match(/@([\w.]+)/)
+  const leadUsername = usernameMatch ? usernameMatch[1] : null
+
   return (
     <div
-      className={`flex items-start gap-3 py-3 px-4 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 transition-all ${fading ? 'task-fade-out pointer-events-none' : ''}`}
+      className={`flex items-start gap-3 py-3 px-4 rounded-xl border transition-all ${fading ? 'task-fade-out pointer-events-none' : ''} ${
+        isOverdue
+          ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30'
+          : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700'
+      }`}
     >
       {/* Dot */}
       <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${dotColor}`} />
@@ -91,7 +101,7 @@ function TaskRow({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{task.title}</p>
           <span
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
@@ -99,12 +109,23 @@ function TaskRow({
           >
             {style.label}
           </span>
+          {task.lead_id && leadUsername && (
+            <a
+              href="/pipeline"
+              onClick={e => e.stopPropagation()}
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              @{leadUsername}
+            </a>
+          )}
         </div>
         <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2">{task.description}</p>
       </div>
 
       {/* Date */}
-      <span className="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0 mt-0.5">{formatDueDate(task.due_at)}</span>
+      <span className={`text-xs flex-shrink-0 mt-0.5 ${isOverdue ? 'text-red-500 dark:text-red-400 font-semibold' : 'text-gray-400 dark:text-slate-500'}`}>
+        {formatDueDate(task.due_at)}
+      </span>
     </div>
   )
 }
@@ -142,6 +163,31 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
   const [filter, setFilter] = useState<'all' | TaskType>('all')
   const [addOpen, setAddOpen] = useState(false)
   const supabase = createClient()
+
+  // Auto-generate follow-up tasks for stale leads on mount, then reload tasks
+  useEffect(() => {
+    async function generateAndRefresh() {
+      try {
+        const res = await fetch('/api/tasks/generate', { method: 'POST' })
+        if (!res.ok) return
+        const { created } = await res.json() as { created: number }
+        if (created > 0) {
+          // Reload open tasks to include newly generated ones
+          const client = createClient()
+          const { data } = await client
+            .from('tasks')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('completed', false)
+            .order('due_at')
+          if (data) setTasks(data as Task[])
+        }
+      } catch {
+        // Non-critical: silently ignore errors
+      }
+    }
+    generateAndRefresh()
+  }, [userId])
 
   const filtered = useMemo(() =>
     filter === 'all' ? tasks : tasks.filter(t => t.type === filter),
@@ -208,7 +254,7 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
         {totalOpen === 0 ? (
           <div className="text-center py-20">
             <p className="text-4xl mb-3">🎉</p>
-            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">Nothing due today — you&apos;re on top of it!</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">You&apos;re all caught up!</p>
             <p className="text-sm text-gray-500 dark:text-slate-400">New tasks appear here automatically. Or hit + Add task to create one manually.</p>
           </div>
         ) : (
