@@ -712,6 +712,8 @@ function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: '
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userUri, setUserUri] = useState<string | null>(null)
+  const [connectedAt, setConnectedAt] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
@@ -721,6 +723,8 @@ function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: '
         setConnected(d.connected)
         setUserName(d.userName ?? null)
         setUserEmail(d.userEmail ?? null)
+        setUserUri(d.userUri ?? null)
+        setConnectedAt(d.connectedAt ?? null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -732,8 +736,13 @@ function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: '
     setConnected(false)
     setUserName(null)
     setUserEmail(null)
+    setUserUri(null)
+    setConnectedAt(null)
     setDisconnecting(false)
   }
+
+  // Extract a readable ID from the URI: https://api.calendly.com/users/XXXX → XXXX
+  const accountId = userUri ? userUri.split('/').pop() : null
 
   const showError = oauthResult === 'error'
 
@@ -774,13 +783,22 @@ function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: '
           {connected && !showError && (
             <div className="mt-3 space-y-1">
               <p className="text-xs text-green-600 dark:text-green-400 font-medium">Connected — bookings sync automatically</p>
-              {(userName || userEmail) && (
-                <p className="text-xs text-gray-500 dark:text-slate-400">
-                  {userName && <span className="font-medium text-gray-700 dark:text-slate-300">{userName}</span>}
-                  {userName && userEmail && ' · '}
-                  {userEmail && <span>{userEmail}</span>}
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                {userName
+                  ? <><span className="font-medium text-gray-700 dark:text-slate-300">{userName}</span>{userEmail && ` · ${userEmail}`}</>
+                  : accountId
+                    ? <span className="font-mono">Account: {accountId}</span>
+                    : 'Account details unavailable'
+                }
+              </p>
+              {connectedAt && (
+                <p className="text-[11px] text-gray-400 dark:text-slate-500">
+                  Connected {new Date(connectedAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               )}
+              <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
+                Not the right account? Click Disconnect and reconnect after logging into the correct Calendly account.
+              </p>
             </div>
           )}
 
