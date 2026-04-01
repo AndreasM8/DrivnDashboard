@@ -57,24 +57,28 @@ export async function GET(request: NextRequest) {
     const userUri: string = tokenData.owner ?? ''
     const orgUri: string = tokenData.organization ?? ''
 
-    // 2. Try to fetch display name + email — optional, don't fail if scope is missing
+    // 2. Try to fetch display name + email using the owner URI from the token.
+    //    Calling the specific user URI directly works without extra scopes,
+    //    unlike /users/me which requires an explicit profile scope.
     let userName = ''
     let userEmail = ''
-    try {
-      const profileRes = await fetch('https://api.calendly.com/users/me', {
-        headers: { Authorization: `Bearer ${access_token}` },
-      })
-      if (profileRes.ok) {
-        const profileData = await profileRes.json() as {
-          resource: { name?: string; email?: string }
+    if (userUri) {
+      try {
+        const profileRes = await fetch(userUri, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        })
+        if (profileRes.ok) {
+          const profileData = await profileRes.json() as {
+            resource: { name?: string; email?: string }
+          }
+          userName = profileData.resource?.name ?? ''
+          userEmail = profileData.resource?.email ?? ''
+        } else {
+          console.warn('[calendly oauth] Profile fetch failed', profileRes.status)
         }
-        userName = profileData.resource?.name ?? ''
-        userEmail = profileData.resource?.email ?? ''
-      } else {
-        console.warn('[calendly oauth] Profile fetch failed (scope?), continuing without name/email', profileRes.status)
+      } catch {
+        console.warn('[calendly oauth] Profile fetch threw, continuing without name/email')
       }
-    } catch {
-      console.warn('[calendly oauth] Profile fetch threw, continuing without name/email')
     }
 
     // 3. Get authenticated user from Supabase
