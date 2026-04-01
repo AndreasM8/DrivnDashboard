@@ -140,9 +140,53 @@ export async function handleFreebieSent(userId: string, data: FreebieSentPayload
     })
     .eq('id', lead.id)
 
+  // ── Auto-apply "Freebie sent" label ───────────────────────────────────────
+
+  // Find or create the label for this user
+  let labelId: string | null = null
+  const { data: existingLabel } = await supabase
+    .from('lead_labels')
+    .select('id')
+    .eq('user_id', userId)
+    .ilike('name', 'Freebie sent')
+    .maybeSingle()
+
+  if (existingLabel) {
+    labelId = existingLabel.id
+  } else {
+    const { data: newLabel } = await supabase
+      .from('lead_labels')
+      .insert({
+        user_id: userId,
+        name: 'Freebie sent',
+        bg_color: '#DDD6FE',
+        text_color: '#5B21B6',
+      })
+      .select()
+      .single()
+    if (newLabel) labelId = newLabel.id
+  }
+
+  // Assign label to lead (ignore conflict if already assigned)
+  if (labelId) {
+    const { data: existingAssignment } = await supabase
+      .from('lead_label_assignments')
+      .select('id')
+      .eq('lead_id', lead.id)
+      .eq('label_id', labelId)
+      .maybeSingle()
+
+    if (!existingAssignment) {
+      await supabase
+        .from('lead_label_assignments')
+        .insert({ lead_id: lead.id, label_id: labelId })
+    }
+  }
+
+  // ── History entry ──────────────────────────────────────────────────────────
   await supabase.from('lead_history').insert({
     lead_id: lead.id,
-    action: 'Freebie sent — stage moved to Freebie sent',
+    action: 'Freebie sent via ManyChat — label applied automatically',
     actor: 'Automation',
   })
 }

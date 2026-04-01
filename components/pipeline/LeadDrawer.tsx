@@ -10,11 +10,27 @@ interface Props {
   labels: LeadLabel[]
   assignments: LeadLabelAssignment[]
   setters: Setter[]
+  userId: string
   onClose: () => void
   onUpdate: (updated: Lead) => void
   onStageChange: (stage: LeadStage) => void
   onAssignmentsChanged: (assignments: LeadLabelAssignment[]) => void
+  onLabelAdded: (label: LeadLabel) => void
 }
+
+// ─── Preset label colours ─────────────────────────────────────────────────────
+
+const LABEL_PRESETS: { bg: string; text: string; swatch: string }[] = [
+  { bg: '#FECACA', text: '#991B1B', swatch: '#EF4444' },
+  { bg: '#FED7AA', text: '#9A3412', swatch: '#F97316' },
+  { bg: '#FEF08A', text: '#854D0E', swatch: '#EAB308' },
+  { bg: '#BBF7D0', text: '#166534', swatch: '#22C55E' },
+  { bg: '#99F6E4', text: '#0F766E', swatch: '#14B8A6' },
+  { bg: '#BAE6FD', text: '#075985', swatch: '#0EA5E9' },
+  { bg: '#DDD6FE', text: '#5B21B6', swatch: '#8B5CF6' },
+  { bg: '#FBCFE8', text: '#9D174D', swatch: '#EC4899' },
+  { bg: '#E5E7EB', text: '#374151', swatch: '#6B7280' },
+]
 
 const MOVEABLE_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'closed', 'nurture', 'bad_fit', 'not_interested']
 
@@ -185,13 +201,20 @@ function formatDate(dateStr: string) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function LeadDrawer({ lead, labels, assignments, setters, onClose, onUpdate, onStageChange, onAssignmentsChanged }: Props) {
+export default function LeadDrawer({ lead, labels, assignments, setters, userId, onClose, onUpdate, onStageChange, onAssignmentsChanged, onLabelAdded }: Props) {
   const [activeTab, setActiveTab] = useState<'info' | 'timeline'>('info')
   const [notes, setNotes] = useState(lead.setter_notes)
   const [history, setHistory] = useState<LeadHistory[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // New label creation
+  const [showNewLabel, setShowNewLabel] = useState(false)
+  const [newLabelName, setNewLabelName] = useState('')
+  const [newLabelColor, setNewLabelColor] = useState(LABEL_PRESETS[6]) // purple default
+  const [creatingLabel, setCreatingLabel] = useState(false)
+
   const supabase = createClient()
 
   useEffect(() => {
@@ -224,15 +247,64 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
   }
 
   async function toggleLabel(labelId: string) {
+    const label = labels.find(l => l.id === labelId)
     const existing = assignments.find(a => a.label_id === labelId)
+
     if (existing) {
       await supabase.from('lead_label_assignments').delete().eq('id', existing.id)
       onAssignmentsChanged(assignments.filter(a => a.id !== existing.id))
+
+      // Log removal to timeline
+      const { data: histEntry } = await supabase.from('lead_history').insert({
+        lead_id: lead.id,
+        action: `Label removed — ${label?.name ?? 'label'}`,
+        actor: 'You',
+      }).select().single()
+      if (histEntry) setHistory(h => [histEntry as LeadHistory, ...h])
     } else {
       const { data } = await supabase.from('lead_label_assignments')
         .insert({ lead_id: lead.id, label_id: labelId }).select().single()
       if (data) onAssignmentsChanged([...assignments, data as LeadLabelAssignment])
+
+      // Log application to timeline
+      const { data: histEntry } = await supabase.from('lead_history').insert({
+        lead_id: lead.id,
+        action: `Label added — ${label?.name ?? 'label'}`,
+        actor: 'You',
+      }).select().single()
+      if (histEntry) setHistory(h => [histEntry as LeadHistory, ...h])
     }
+  }
+
+  async function createLabel() {
+    if (!newLabelName.trim()) return
+    setCreatingLabel(true)
+    const { data: label } = await supabase.from('lead_labels').insert({
+      user_id: userId,
+      name: newLabelName.trim(),
+      bg_color: newLabelColor.bg,
+      text_color: newLabelColor.text,
+    }).select().single()
+
+    if (label) {
+      onLabelAdded(label as LeadLabel)
+      // Immediately assign to this lead
+      const { data: assignment } = await supabase.from('lead_label_assignments')
+        .insert({ lead_id: lead.id, label_id: label.id }).select().single()
+      if (assignment) onAssignmentsChanged([...assignments, assignment as LeadLabelAssignment])
+
+      // Log creation to timeline
+      const { data: histEntry } = await supabase.from('lead_history').insert({
+        lead_id: lead.id,
+        action: `Label added — ${label.name}`,
+        actor: 'You',
+      }).select().single()
+      if (histEntry) setHistory(h => [histEntry as LeadHistory, ...h])
+    }
+
+    setNewLabelName('')
+    setShowNewLabel(false)
+    setCreatingLabel(false)
   }
 
   const stageBadge = STAGE_BADGE[lead.stage]
@@ -285,25 +357,77 @@ export default function LeadDrawer({ lead, labels, assignments, setters, onClose
           </div>
 
           {/* Labels */}
-          {labels.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {labels.map(l => {
-                const active = assignments.some(a => a.label_id === l.id)
-                return (
+          <div className="flex flex-wrap gap-1.5">
+            {labels.map(l => {
+              const active = assignments.some(a => a.label_id === l.id)
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => toggleLabel(l.id)}
+                  title={active ? `Remove "${l.name}"` : `Add "${l.name}"`}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium transition-all border"
+                  style={
+                    active
+                      ? { background: l.bg_color, color: l.text_color, borderColor: l.text_color + '44', opacity: 1 }
+                      : { background: 'transparent', color: '#9ca3af', borderColor: '#e5e7eb', opacity: 0.55 }
+                  }
+                >
+                  {active ? '● ' : '○ '}{l.name}
+                </button>
+              )
+            })}
+
+            {/* + New label */}
+            {!showNewLabel && (
+              <button
+                onClick={() => setShowNewLabel(true)}
+                className="px-2.5 py-1 rounded-full text-xs font-medium text-gray-400 dark:text-slate-500 border border-dashed border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-500 dark:hover:text-slate-400 transition-all"
+              >
+                + New label
+              </button>
+            )}
+          </div>
+
+          {/* Inline new-label form */}
+          {showNewLabel && (
+            <div className="mt-2 flex flex-col gap-2 p-3 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+              <input
+                autoFocus
+                value={newLabelName}
+                onChange={e => setNewLabelName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') createLabel(); if (e.key === 'Escape') setShowNewLabel(false) }}
+                placeholder="Label name…"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {LABEL_PRESETS.map(p => (
                   <button
-                    key={l.id}
-                    onClick={() => toggleLabel(l.id)}
-                    className="px-2.5 py-1 rounded-full text-xs font-medium transition-all border"
-                    style={
-                      active
-                        ? { background: l.bg_color, color: l.text_color, borderColor: l.text_color + '66' }
-                        : { background: 'transparent', color: '#9ca3af', borderColor: '#e5e7eb' }
-                    }
-                  >
-                    {active ? '● ' : '+ '}{l.name}
-                  </button>
-                )
-              })}
+                    key={p.swatch}
+                    onClick={() => setNewLabelColor(p)}
+                    className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110"
+                    style={{
+                      background: p.swatch,
+                      borderColor: newLabelColor.swatch === p.swatch ? '#374151' : 'transparent',
+                    }}
+                    title=""
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={createLabel}
+                  disabled={!newLabelName.trim() || creatingLabel}
+                  className="flex-1 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  {creatingLabel ? 'Creating…' : 'Create & apply'}
+                </button>
+                <button
+                  onClick={() => { setShowNewLabel(false); setNewLabelName('') }}
+                  className="px-3 py-1.5 text-xs text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>

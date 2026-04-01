@@ -744,10 +744,12 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           labels={labels}
           assignments={assignments.filter(a => a.lead_id === drawerLead.id)}
           setters={setters}
+          userId={userId}
           onClose={() => setDrawerLead(null)}
           onUpdate={onLeadUpdated}
           onStageChange={stage => moveStage(drawerLead, stage)}
           onAssignmentsChanged={as => onAssignmentsChanged(drawerLead.id, as)}
+          onLabelAdded={onLabelAdded}
         />
       )}
 
