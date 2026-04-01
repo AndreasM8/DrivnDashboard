@@ -1,23 +1,39 @@
 // ─── Users ────────────────────────────────────────────────────────────────────
 
+export type UpsellTiming = 'after_start' | 'before_end'
+
 export interface NotificationPrefs {
   followup_enabled: boolean
-  followup_days: number      // days without contact before follow-up task
-  overdue_days: number       // days without contact before marked overdue
+  followup_days: number        // kept for compat; use tier-specific fields when set
+  followup_days_tier1: number  // hot lead (tier 1) — days without contact
+  followup_days_tier2: number  // warm lead (tier 2) — days without contact
+  followup_days_tier3: number  // cold lead (tier 3) — days without contact
+  overdue_days: number         // days without contact before marked overdue
   call_outcome_enabled: boolean
-  call_outcome_hours: number // hours after call to create log-outcome task
+  call_outcome_hours: number   // hours after call to create log-outcome task
   payment_enabled: boolean
+  payment_days_before: number  // days before due date to create payment task
   upsell_enabled: boolean
+  upsell_timing: UpsellTiming  // 'after_start' or 'before_end'
+  upsell_months: number        // months offset for upsell reminder
+  daily_digest_enabled: boolean
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   followup_enabled: true,
   followup_days: 3,
+  followup_days_tier1: 1,
+  followup_days_tier2: 3,
+  followup_days_tier3: 7,
   overdue_days: 7,
   call_outcome_enabled: true,
   call_outcome_hours: 2,
   payment_enabled: true,
+  payment_days_before: 3,
   upsell_enabled: true,
+  upsell_timing: 'before_end',
+  upsell_months: 1,
+  daily_digest_enabled: true,
 }
 
 export function resolveNotifPrefs(raw: Partial<NotificationPrefs> | null | undefined): NotificationPrefs {
@@ -220,6 +236,7 @@ export interface Task {
   lead_id: string | null
   client_id: string | null
   due_at: string
+  reminder_at: string | null
   completed: boolean
   completed_at: string | null
   auto_generated: boolean

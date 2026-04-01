@@ -930,7 +930,7 @@ function NotificationsSection({ userId }: { userId: string }) {
     if (prefs) save(prefs)
   }
 
-  function Toggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' }) {
+  function Toggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
     const on = prefs?.[k] ?? true
     return (
       <button
@@ -942,7 +942,7 @@ function NotificationsSection({ userId }: { userId: string }) {
     )
   }
 
-  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'overdue_days' | 'call_outcome_hours'; min: number; max: number; unit: string }) {
+  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'call_outcome_hours' | 'payment_days_before' | 'upsell_months'; min: number; max: number; unit: string }) {
     return (
       <div className="flex items-center gap-2">
         <input
@@ -975,18 +975,33 @@ function NotificationsSection({ userId }: { userId: string }) {
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Follow-up reminders</p>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Follow-up tasks</p>
             <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task when a lead hasn&apos;t been contacted in a while</p>
           </div>
           <Toggle k="followup_enabled" />
         </div>
         {prefs.followup_enabled && (
           <div className="space-y-3 border-t border-gray-100 dark:border-slate-700 pt-3">
+            <p className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">By lead tier</p>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700 dark:text-slate-300">Remind me after</span>
-              <NumberInput k="followup_days" min={1} max={30} unit="days without contact" />
+              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
+                <span className="text-base">🔥</span> Tier 1 — hot lead
+              </span>
+              <NumberInput k="followup_days_tier1" min={1} max={14} unit="days" />
             </div>
             <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
+                <span className="text-base">💪</span> Tier 2 — warm lead
+              </span>
+              <NumberInput k="followup_days_tier2" min={1} max={21} unit="days" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
+                <span className="text-base">🌱</span> Tier 3 — cold lead
+              </span>
+              <NumberInput k="followup_days_tier3" min={1} max={30} unit="days" />
+            </div>
+            <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
               <span className="text-sm text-gray-700 dark:text-slate-300">Mark overdue after</span>
               <NumberInput k="overdue_days" min={1} max={60} unit="days" />
             </div>
@@ -1012,24 +1027,64 @@ function NotificationsSection({ userId }: { userId: string }) {
       </div>
 
       {/* Payments */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Payment alerts</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Overdue payments and upcoming invoice reminders</p>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Payment tasks</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task in your task list before each client payment is due</p>
           </div>
           <Toggle k="payment_enabled" />
         </div>
+        {prefs.payment_enabled && (
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
+            <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+            <NumberInput k="payment_days_before" min={0} max={14} unit="days before due" />
+          </div>
+        )}
       </div>
 
       {/* Upsells */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-semibold text-gray-900 dark:text-slate-100">Upsell reminders</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Reminds you to reach out when a client is near the end of their plan</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task in your task list to reach out about renewing or upgrading</p>
           </div>
           <Toggle k="upsell_enabled" />
+        </div>
+        {prefs.upsell_enabled && (
+          <div className="space-y-3 border-t border-gray-100 dark:border-slate-700 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+              <NumberInput k="upsell_months" min={1} max={12} unit="month(s)" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-slate-300">Timing</span>
+              <select
+                value={prefs.upsell_timing}
+                onChange={e => {
+                  const updated = { ...prefs, upsell_timing: e.target.value as import('@/types').UpsellTiming }
+                  setPrefs(updated)
+                  save(updated)
+                }}
+                className="text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="after_start">after contract start</option>
+                <option value="before_end">before contract end</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Daily digest */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 dark:text-slate-100">Daily digest</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Shows a morning summary when you open the Tasks page — overdue, today&apos;s tasks, leads being watched</p>
+          </div>
+          <Toggle k="daily_digest_enabled" />
         </div>
       </div>
     </div>

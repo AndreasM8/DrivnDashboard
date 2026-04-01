@@ -117,7 +117,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-50 dark:border-slate-700">
         {[
           { label: 'Active clients', value: String(activeCount) },
-          { label: 'Total LTV collected', value: formatCurrency(totalLtv, baseCurrency) },
+          { label: 'LTV (months)', value: formatCurrency(totalLtv, baseCurrency) },
           { label: 'Invoices due soon', value: String(invoicesDueSoon) },
           { label: 'Upsell ready', value: String(upsellReady) },
         ].map(s => (

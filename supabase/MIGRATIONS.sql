@@ -174,3 +174,17 @@ alter table calendly_integrations
 -- so adding new keys in future is safe without another migration.
 alter table users
   add column if not exists notification_prefs jsonb not null default '{}'::jsonb;
+
+
+-- ── 9. Task reminders ─────────────────────────────────────────────────────────
+-- Optional reminder timestamp on tasks. When set, the task surfaces in the
+-- list early (at reminder_at) so the user gets a heads-up before the due date.
+alter table tasks
+  add column if not exists reminder_at timestamp with time zone;
+
+
+-- ── 10. Lead tier ─────────────────────────────────────────────────────────────
+-- 1 = hot, 2 = warm (default), 3 = cold.
+-- Controls per-tier follow-up thresholds in the task generator.
+alter table leads
+  add column if not exists tier int check (tier in (1, 2, 3)) default 2;
