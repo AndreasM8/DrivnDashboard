@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         },
         body: JSON.stringify({
           url: webhookUrl,
-          events: ['invitee.created'],
+          events: ['invitee.created', 'invitee.canceled'],
           organization: orgUri,
           user: userUri,
           scope: 'user',
