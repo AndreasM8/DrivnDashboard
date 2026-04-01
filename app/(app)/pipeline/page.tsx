@@ -22,7 +22,7 @@ export default async function PipelinePage() {
       .order('updated_at', { ascending: false }),
     supabase.from('lead_labels').select('*').eq('user_id', user.id),
     supabase.from('setters').select('*').eq('user_id', user.id).eq('active', true),
-    supabase.from('lead_label_assignments').select('*'),
+    supabase.from('lead_label_assignments').select('*, leads!inner(user_id)').eq('leads.user_id', user.id),
   ])
 
   return (

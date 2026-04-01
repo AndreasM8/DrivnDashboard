@@ -187,7 +187,7 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
 const STAGE_COLUMNS: { stage: LeadStage; label: string; auto: boolean; bg: string; extraStages?: LeadStage[] }[] = [
   { stage: 'follower',    label: 'Follower',    auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20' },
   { stage: 'replied',     label: 'Replied',     auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20', extraStages: ['freebie_sent'] },
-  { stage: 'call_booked', label: 'Call booked', auto: false, bg: 'bg-white dark:bg-slate-800'     },
+  { stage: 'call_booked', label: 'Call booked', auto: false, bg: 'bg-white dark:bg-slate-800',     extraStages: ['nurture'] },
   { stage: 'closed',      label: 'Closed',      auto: false, bg: 'bg-white dark:bg-slate-800'     },
 ]
 
