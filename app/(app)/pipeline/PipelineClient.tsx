@@ -653,30 +653,30 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           </>
         )}
 
-        {/* Inline column toggles — shown when eye is active */}
-        {showColumnToggles && (
-          <>
-            <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 mx-1 flex-shrink-0" />
-            {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
-              const visible = !hiddenColumns.has(col.stage)
-              return (
-                <button
-                  key={col.stage}
-                  onClick={() => toggleColumn(col.stage)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-                    visible
-                      ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
-                      : 'text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {col.label}
-                </button>
-              )
-            })}
-          </>
-        )}
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          {/* Column visibility pills — appear to the left of the eye when active */}
+          {showColumnToggles && (
+            <>
+              {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
+                const visible = !hiddenColumns.has(col.stage)
+                return (
+                  <button
+                    key={col.stage}
+                    onClick={() => toggleColumn(col.stage)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                      visible
+                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                        : 'text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {col.label}
+                  </button>
+                )
+              })}
+              <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 flex-shrink-0" />
+            </>
+          )}
 
-        <div className="ml-auto flex items-center gap-2">
           {/* Eye toggle */}
           <button
             onClick={() => setShowColumnToggles(v => !v)}
