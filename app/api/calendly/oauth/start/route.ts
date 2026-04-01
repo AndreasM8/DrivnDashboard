@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
+export async function GET(request: NextRequest) {
+  // Derive the app origin from the incoming request — this is always correct
+  // and avoids any env var mismatch with the Calendly developer portal.
+  const { protocol, host } = new URL(request.url)
+  const appUrl = `${protocol}//${host}`
   const redirectUri = `${appUrl}/api/calendly/oauth/callback`
 
   const params = new URLSearchParams({

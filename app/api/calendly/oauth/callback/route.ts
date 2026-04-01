@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const reqUrl = new URL(request.url)
+  const { searchParams } = reqUrl
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
+  // Always derive from the request — must match what start/route.ts sends
+  const appUrl = `${reqUrl.protocol}//${reqUrl.host}`
   const redirectBase = `${appUrl}/settings?section=integrations`
   const redirectUri = `${appUrl}/api/calendly/oauth/callback`
 
