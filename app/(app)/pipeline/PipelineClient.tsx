@@ -324,7 +324,7 @@ function LeadCard({
 // ─── Stage column ─────────────────────────────────────────────────────────────
 
 function StageColumn({
-  stage, label, auto, bg, leads, allLeadsInStage, labels, assignments, selectedLabels,
+  stage, label, auto, bg, leads, allLeadsInStage, labels, assignments, selectedLabels, tierFilter,
   onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages,
 }: {
   stage: LeadStage
@@ -336,6 +336,7 @@ function StageColumn({
   labels: LeadLabel[]
   assignments: LeadLabelAssignment[]
   selectedLabels: string[]
+  tierFilter: TierFilter
   onLeadClick: (lead: Lead) => void
   onTierChange: (leadId: string, tier: 1 | 2 | 3) => void
   onAddClick: () => void
@@ -354,6 +355,19 @@ function StageColumn({
       ).length,
     })).filter(x => x.count > 0)
   }, [labels, allLeadsInStage, assignments])
+
+  // Tier breakdown for this stage
+  const tierBreakdown = useMemo(() => {
+    const tiers: { tier: 1 | 2 | 3; icon: string; cls: string }[] = [
+      { tier: 1, icon: '🔥', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+      { tier: 2, icon: '💪', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400' },
+    ]
+    return tiers.map(t => ({
+      ...t,
+      count: allLeadsInStage.filter(l => (l.tier ?? 2) === t.tier).length,
+    })).filter(t => t.count > 0)
+  }, [allLeadsInStage])
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -406,6 +420,25 @@ function StageColumn({
           + Add
         </button>
       </div>
+
+      {/* Tier breakdown */}
+      {tierBreakdown.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-1">
+          {tierBreakdown.map(({ tier, icon, cls, count }) => {
+            const isActive = tierFilter === String(tier)
+            return (
+              <span
+                key={tier}
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all ${cls} ${
+                  tierFilter !== 'all' && !isActive ? 'opacity-30' : ''
+                } ${isActive ? 'ring-1 ring-current ring-offset-0' : ''}`}
+              >
+                {icon} T{tier} · {count}
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* Label breakdown — always visible when labels exist in this stage */}
       {labelCountsInStage.length > 0 && (
@@ -518,6 +551,14 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
 
   const supabase = createClient()
+
+  // ─── Tier counts (unfiltered, across entire pipeline) ──────────────────────
+
+  const tierCounts = useMemo(() => ({
+    1: leads.filter(l => (l.tier ?? 2) === 1).length,
+    2: leads.filter(l => (l.tier ?? 2) === 2).length,
+    3: leads.filter(l => (l.tier ?? 2) === 3).length,
+  }), [leads])
 
   // ─── Label counts (unfiltered, across entire pipeline) ─────────────────────
 
@@ -656,17 +697,23 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
 
       {/* Filter bar */}
       <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-x-auto">
-        {(['all', '1', '2', '3', 'needs_followup'] as TierFilter[]).map(f => (
-          <button
-            key={f}
-            onClick={() => setTierFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              tierFilter === f ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
-            }`}
-          >
-            {f === 'all' ? 'All' : f === 'needs_followup' ? 'Needs follow-up' : `Tier ${f}`}
-          </button>
-        ))}
+        {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
+          const icons: Record<string, string> = { '1': '🔥', '2': '💪', '3': '🌱' }
+          const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
+          return (
+            <button
+              key={f}
+              onClick={() => setTierFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
+                tierFilter === f ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              {icons[f] && <span>{icons[f]}</span>}
+              {f === 'all' ? 'All' : `Tier ${f}`}
+              <span className="font-bold opacity-60">{count}</span>
+            </button>
+          )
+        })}
 
         {labels.length > 0 && (
           <>
@@ -773,6 +820,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                 labels={labels}
                 assignments={assignments}
                 selectedLabels={selectedLabels}
+                tierFilter={tierFilter}
                 onLeadClick={setDrawerLead}
                 onTierChange={updateTier}
                 onContacted={handleContacted}
