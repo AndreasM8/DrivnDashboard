@@ -25,6 +25,8 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
   const [totalAmount, setTotalAmount] = useState('')
   const [monthlyAmount, setMonthlyAmount] = useState('')
   const [planMonths, setPlanMonths] = useState(3)
+  const [splitPayments, setSplitPayments] = useState(2)
+  const [splitAmount, setSplitAmount] = useState('')
   const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 10))
   const [showMore, setShowMore] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -38,7 +40,9 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
     const supabase = createClient()
     const total = paymentType === 'plan'
       ? Number(monthlyAmount) * planMonths
-      : Number(totalAmount)
+      : paymentType === 'split'
+        ? Number(splitAmount) * splitPayments
+        : Number(totalAmount)
 
     const { data } = await supabase.from('clients').insert({
       user_id: userId,
@@ -49,16 +53,16 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
       program_type: programType,
       referred_by: referredBy,
       payment_type: paymentType,
-      plan_months: paymentType === 'plan' ? planMonths : null,
-      monthly_amount: paymentType === 'plan' ? Number(monthlyAmount) : null,
+      plan_months: planMonths,
+      monthly_amount: paymentType === 'plan' ? Number(monthlyAmount) : paymentType === 'split' ? Number(splitAmount) : null,
       total_amount: total,
       currency: baseCurrency,
       started_at: new Date(startedAt).toISOString(),
     }).select().single()
 
     if (data) {
+      const start = new Date(startedAt)
       if (paymentType === 'plan') {
-        const start = new Date(startedAt)
         const installments = Array.from({ length: planMonths }, (_, i) => {
           const due = new Date(start)
           due.setMonth(due.getMonth() + i)
@@ -67,6 +71,19 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
             month_number: i + 1,
             due_date: due.toISOString().slice(0, 10),
             amount: Number(monthlyAmount),
+          }
+        })
+        await supabase.from('payment_installments').insert(installments)
+      }
+      if (paymentType === 'split') {
+        const installments = Array.from({ length: splitPayments }, (_, i) => {
+          const due = new Date(start)
+          due.setMonth(due.getMonth() + i)
+          return {
+            client_id: data.id,
+            month_number: i + 1,
+            due_date: due.toISOString().slice(0, 10),
+            amount: Number(splitAmount),
           }
         })
         await supabase.from('payment_installments').insert(installments)
@@ -158,19 +175,78 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
             </div>
           </div>
 
-          {(paymentType === 'pif' || paymentType === 'split') && (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount ({baseCurrency})</label>
-              <input
-                type="number"
-                value={totalAmount}
-                onChange={e => setTotalAmount(e.target.value)}
-                placeholder="0"
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {/* PIF: total + duration */}
+          {paymentType === 'pif' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount ({baseCurrency})</label>
+                <input
+                  type="number"
+                  value={totalAmount}
+                  onChange={e => setTotalAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {PLAN_MONTHS.map(m => (
+                    <button key={m} type="button" onClick={() => setPlanMonths(m)}
+                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Split: N payments + amount per payment + duration */}
+          {paymentType === 'split' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Number of payments</label>
+                <div className="flex gap-2">
+                  {[2, 3, 4, 5, 6].map(n => (
+                    <button key={n} type="button" onClick={() => setSplitPayments(n)}
+                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${splitPayments === n ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Amount per payment ({baseCurrency})</label>
+                <input
+                  type="number"
+                  value={splitAmount}
+                  onChange={e => setSplitAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {PLAN_MONTHS.map(m => (
+                    <button key={m} type="button" onClick={() => setPlanMonths(m)}
+                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {splitAmount && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 flex justify-between text-xs">
+                  <span className="text-gray-500 dark:text-slate-400">Total contract value</span>
+                  <span className="font-semibold text-gray-900 dark:text-slate-100">{Number(splitAmount) * splitPayments} {baseCurrency}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payment plan: monthly + duration */}
           {paymentType === 'plan' && (
             <div className="space-y-3">
               <div>

@@ -222,6 +222,7 @@ export type TaskType =
   | 'nurture'
   | 'call_outcome'
   | 'ad_spend'
+  | 'contract_end'
   | 'manual'
 
 export type TaskPriority = 'overdue' | 'today' | 'this_week' | 'upcoming'
@@ -332,6 +333,7 @@ export const TASK_TYPE_STYLES: Record<TaskType, TaskTypeStyle> = {
   nurture:      { bg: '#EAF3DE', text: '#27500A', label: 'Nurture' },
   call_outcome: { bg: '#E1F5EE', text: '#085041', label: 'Log outcome' },
   ad_spend:     { bg: '#FFF3CD', text: '#856404', label: 'Ad spend' },
+  contract_end: { bg: '#FEE2E2', text: '#991B1B', label: 'Contract ending' },
   manual:       { bg: '#F3F4F6', text: '#374151', label: 'Task' },
 }
 

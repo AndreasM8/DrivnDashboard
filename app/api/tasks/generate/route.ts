@@ -175,6 +175,49 @@ export async function POST() {
     }
   }
 
+  // ── 4. Contract ending alerts ─────────────────────────────────────────────────
+  {
+    const alertWindow = new Date(now.getTime() + 21 * 86400000)
+
+    const { data: endingClients } = await supabase
+      .from('clients')
+      .select('id, ig_username, full_name, started_at, plan_months, contract_end_date')
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .not('plan_months', 'is', null)
+
+    for (const c of endingClients ?? []) {
+      const endDate = c.contract_end_date
+        ? new Date(c.contract_end_date)
+        : c.started_at && c.plan_months
+          ? new Date(new Date(c.started_at).setMonth(new Date(c.started_at).getMonth() + c.plan_months))
+          : null
+      if (!endDate || endDate > alertWindow) continue
+      if (await hasOpenTask('contract_end', undefined, c.id)) continue
+
+      const name = c.ig_username || c.full_name
+      const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / 86400000)
+      const priority: TaskPriority = daysLeft <= 0 ? 'overdue' : daysLeft <= 7 ? 'today' : 'this_week'
+
+      const { error } = await supabase.from('tasks').insert({
+        user_id:        user.id,
+        type:           'contract_end',
+        priority,
+        title:          `Contract ending — @${name}`,
+        description:    daysLeft <= 0
+          ? `Contract ended ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''} ago. Confirm if they renewed or closed.`
+          : `Contract ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}. Talk to them about renewing or closing.`,
+        lead_id:        null,
+        client_id:      c.id,
+        due_at:         endDate.toISOString(),
+        completed:      false,
+        completed_at:   null,
+        auto_generated: true,
+      })
+      if (!error) created++
+    }
+  }
+
   // ── Watching count (leads being monitored for follow-ups) ───────────────────
   const { count: watching } = await supabase
     .from('leads')

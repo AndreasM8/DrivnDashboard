@@ -25,6 +25,8 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
   const [totalAmount, setTotalAmount] = useState('')
   const [monthlyAmount, setMonthlyAmount] = useState('')
   const [planMonths, setPlanMonths] = useState(3)
+  const [splitPayments, setSplitPayments] = useState(2)
+  const [splitAmount, setSplitAmount] = useState('')
   const [loading, setLoading] = useState(false)
 
   const supabase = createClient()
@@ -98,7 +100,9 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
     // Create client record
     const total = paymentType === 'plan'
       ? Number(monthlyAmount) * planMonths
-      : Number(totalAmount)
+      : paymentType === 'split'
+        ? Number(splitAmount) * splitPayments
+        : Number(totalAmount)
 
     const { data: client } = await supabase.from('clients').insert({
       user_id: userId,
@@ -106,14 +110,14 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
       ig_username: lead.ig_username,
       full_name: lead.full_name,
       payment_type: paymentType,
-      plan_months: paymentType === 'plan' ? planMonths : null,
-      monthly_amount: paymentType === 'plan' ? Number(monthlyAmount) : null,
+      plan_months: planMonths,
+      monthly_amount: paymentType === 'plan' ? Number(monthlyAmount) : paymentType === 'split' ? Number(splitAmount) : null,
       total_amount: total,
       started_at: new Date().toISOString(),
       closer_id: lead.closer_id,
     }).select().single()
 
-    // Create payment installments for payment plan
+    // Create payment installments
     if (paymentType === 'plan' && client) {
       const installments = Array.from({ length: planMonths }, (_, i) => {
         const due = new Date()
@@ -123,6 +127,19 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
           month_number: i + 1,
           due_date: due.toISOString().slice(0, 10),
           amount: Number(monthlyAmount),
+        }
+      })
+      await supabase.from('payment_installments').insert(installments)
+    }
+    if (paymentType === 'split' && client) {
+      const installments = Array.from({ length: splitPayments }, (_, i) => {
+        const due = new Date()
+        due.setMonth(due.getMonth() + i)
+        return {
+          client_id: client.id,
+          month_number: i + 1,
+          due_date: due.toISOString().slice(0, 10),
+          amount: Number(splitAmount),
         }
       })
       await supabase.from('payment_installments').insert(installments)
@@ -274,16 +291,73 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
               ))}
             </div>
 
-            {(paymentType === 'pif' || paymentType === 'split') && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount</label>
-                <input
-                  type="number"
-                  value={totalAmount}
-                  onChange={e => setTotalAmount(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {paymentType === 'pif' && (
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount</label>
+                  <input
+                    type="number"
+                    value={totalAmount}
+                    onChange={e => setTotalAmount(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {PLAN_MONTHS.map(m => (
+                      <button key={m} onClick={() => setPlanMonths(m)}
+                        className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {paymentType === 'split' && (
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Number of payments</label>
+                  <div className="flex gap-2">
+                    {[2, 3, 4, 5, 6].map(n => (
+                      <button key={n} onClick={() => setSplitPayments(n)}
+                        className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${splitPayments === n ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Amount per payment</label>
+                  <input
+                    type="number"
+                    value={splitAmount}
+                    onChange={e => setSplitAmount(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {PLAN_MONTHS.map(m => (
+                      <button key={m} onClick={() => setPlanMonths(m)}
+                        className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {splitAmount && (
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-center">
+                    <span className="font-semibold text-blue-700 dark:text-blue-300">
+                      {splitPayments} × {splitAmount} = {Number(splitAmount) * splitPayments} total
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -300,7 +374,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Number of months</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Months of collaboration</label>
                   <div className="flex gap-1.5 flex-wrap">
                     {PLAN_MONTHS.map(m => (
                       <button
@@ -315,10 +389,15 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                     ))}
                   </div>
                 </div>
-                {monthlyAmount && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500">
-                    Total: {Number(monthlyAmount) * planMonths} ({planMonths} months)
-                  </p>
+                {planMonths > 0 && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-center">
+                    <p className="text-sm font-bold text-blue-700 dark:text-blue-300">📅 {planMonths} month{planMonths !== 1 ? 's' : ''} of coaching</p>
+                    {monthlyAmount && (
+                      <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">
+                        {Number(monthlyAmount) * planMonths} total
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -330,7 +409,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
                 disabled={
                   loading ||
                   (paymentType === 'pif'   && !totalAmount) ||
-                  (paymentType === 'split' && !totalAmount) ||
+                  (paymentType === 'split' && !splitAmount) ||
                   (paymentType === 'plan'  && (!monthlyAmount || planMonths < 1))
                 }
                 className="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
