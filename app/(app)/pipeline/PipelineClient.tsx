@@ -617,6 +617,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     }
 
     setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, stage } : l))
+    setDrawerLead(d => d?.id === lead.id ? { ...d, stage } : d)
     const { error } = await supabase.from('leads').update({ stage, updated_at: new Date().toISOString() }).eq('id', lead.id)
     if (!error) {
       await supabase.from('lead_history').insert({
@@ -626,6 +627,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     } else {
       // Revert optimistic update
       setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
+      setDrawerLead(d => d?.id === lead.id ? lead : d)
     }
   }
 
