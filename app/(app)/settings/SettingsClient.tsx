@@ -39,19 +39,28 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   async function handleSave() {
     setSaving(true)
+    setSaveError(null)
     const supabase = createClient()
-    await supabase.from('kpi_targets').upsert({
-      user_id: userId,
-      ...Object.fromEntries(
-        Object.entries(values).map(([k, v]) => [k, v ? Number(v) : null])
-      ),
-    })
+    const { error } = await supabase.from('kpi_targets').upsert(
+      {
+        user_id: userId,
+        ...Object.fromEntries(
+          Object.entries(values).map(([k, v]) => [k, v !== '' ? Number(v) : null])
+        ),
+      },
+      { onConflict: 'user_id' }
+    )
     setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    if (error) {
+      setSaveError(error.message)
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
   }
 
   const groups = [
@@ -106,6 +115,9 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
         </div>
       ))}
 
+      {saveError && (
+        <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{saveError}</p>
+      )}
       <div className="flex justify-end">
         <button
           onClick={handleSave}
