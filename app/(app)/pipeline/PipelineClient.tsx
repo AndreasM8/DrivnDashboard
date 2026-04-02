@@ -130,19 +130,18 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
 
   if (total === 0) return null
 
-  // Map each funnel step's conversion to its KPI target field
-  const convTargets: (number | null)[] = [
-    kpiTargets?.reply_rate_target   ?? null,
-    kpiTargets?.booking_rate_target ?? null,
-    kpiTargets?.close_rate_target   ?? null,
+  // Map each funnel step's conversion to its KPI target field + label
+  const convMeta: { target: number | null; label: string }[] = [
+    { target: kpiTargets?.reply_rate_target   ?? null, label: 'Reply rate' },
+    { target: kpiTargets?.booking_rate_target ?? null, label: 'Booking rate' },
+    { target: kpiTargets?.close_rate_target   ?? null, label: 'Close rate' },
   ]
 
   const segs = steps.map((s, i) => ({
     ...s,
-    convRate: i < n - 1 && s.count > 0
-      ? Math.round((steps[i + 1].count / s.count) * 100)
-      : null,
-    convTarget: convTargets[i] ?? null,
+    convRate:   i < n - 1 && s.count > 0 ? Math.round((steps[i + 1].count / s.count) * 100) : null,
+    convTarget: convMeta[i]?.target ?? null,
+    convLabel:  convMeta[i]?.label  ?? '',
   }))
 
   return (
@@ -212,7 +211,7 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
       </div>
 
       {/* Conversion rates */}
-      <div className="relative h-9 mt-0.5">
+      <div className="relative h-11 mt-0.5">
         {segs.slice(0, -1).map((seg, i) => {
           if (seg.convRate === null) return null
           const r = seg.convRate
@@ -247,6 +246,7 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
             <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
               style={{ left: `${((i + 1) / n) * 100}%` }}
               title={tooltip}>
+              <span className="text-[9px] text-gray-400 dark:text-slate-500 font-medium leading-none mb-0.5">{seg.convLabel}</span>
               <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
               <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
               {t !== null && (
