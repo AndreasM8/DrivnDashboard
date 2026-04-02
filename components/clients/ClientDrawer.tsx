@@ -59,6 +59,7 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
   const [tab, setTab] = useState<'overview' | 'payments' | 'notes'>('overview')
   const [showExtend, setShowExtend] = useState(false)
   const [extendMonths, setExtendMonths] = useState(3)
+  const [extendPayType, setExtendPayType] = useState<'plan' | 'pif'>('plan')
   const [extendAmount, setExtendAmount] = useState(client.monthly_amount ? String(client.monthly_amount) : '')
   const [extending, setExtending] = useState(false)
   const supabase = createClient()
@@ -99,31 +100,49 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
     if (!extendMonths || !extendAmount) return
     setExtending(true)
     const newPlanMonths = (client.plan_months ?? 0) + extendMonths
-    const monthlyAmt = Number(extendAmount)
-    const newTotal = client.total_amount + monthlyAmt * extendMonths
+    const amt = Number(extendAmount)
+    const addedTotal = extendPayType === 'plan' ? amt * extendMonths : amt
+    const newTotal = client.total_amount + addedTotal
 
-    // Update client
+    // Update client record
     const { data } = await supabase.from('clients').update({
-      plan_months: newPlanMonths,
-      monthly_amount: monthlyAmt,
-      total_amount: newTotal,
+      plan_months:    newPlanMonths,
+      monthly_amount: extendPayType === 'plan' ? amt : client.monthly_amount,
+      total_amount:   newTotal,
     }).eq('id', client.id).select().single()
 
-    // Add new installments
-    const lastMonth = insts.length > 0 ? Math.max(...insts.map(i => i.month_number)) : (client.plan_months ?? 0)
-    const newInsts = Array.from({ length: extendMonths }, (_, i) => {
-      const due = new Date(client.started_at)
-      due.setMonth(due.getMonth() + lastMonth + i + 1)
-      return {
-        client_id: client.id,
-        month_number: lastMonth + i + 1,
-        due_date: due.toISOString().slice(0, 10),
-        amount: monthlyAmt,
-        paid: false,
-      }
-    })
-    const { data: newInstData } = await supabase.from('payment_installments').insert(newInsts).select()
-    if (newInstData) setInsts(is => [...is, ...newInstData as PaymentInstallment[]])
+    // Payment plan → create monthly installments
+    if (extendPayType === 'plan') {
+      const lastMonth = insts.length > 0 ? Math.max(...insts.map(i => i.month_number)) : (client.plan_months ?? 0)
+      const newInsts = Array.from({ length: extendMonths }, (_, i) => {
+        const due = new Date(client.started_at)
+        due.setMonth(due.getMonth() + lastMonth + i + 1)
+        return {
+          client_id:    client.id,
+          month_number: lastMonth + i + 1,
+          due_date:     due.toISOString().slice(0, 10),
+          amount:       amt,
+          paid:         false,
+        }
+      })
+      const { data: newInstData } = await supabase.from('payment_installments').insert(newInsts).select()
+      if (newInstData) setInsts(is => [...is, ...newInstData as PaymentInstallment[]])
+    }
+
+    // PIF → single upfront installment
+    if (extendPayType === 'pif') {
+      const lastMonth = insts.length > 0 ? Math.max(...insts.map(i => i.month_number)) : (client.plan_months ?? 0)
+      const due = new Date()
+      const { data: newInstData } = await supabase.from('payment_installments').insert({
+        client_id:    client.id,
+        month_number: lastMonth + 1,
+        due_date:     due.toISOString().slice(0, 10),
+        amount:       amt,
+        paid:         false,
+      }).select()
+      if (newInstData) setInsts(is => [...is, ...newInstData as PaymentInstallment[]])
+    }
+
     if (data) onUpdate(data as Client)
     setShowExtend(false)
     setExtending(false)
@@ -313,6 +332,8 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                 </div>
                 {showExtend && (
                   <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-xl space-y-3">
+
+                    {/* Duration */}
                     <div>
                       <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Months to add</p>
                       <div className="flex gap-1.5 flex-wrap">
@@ -327,23 +348,59 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                         ))}
                       </div>
                     </div>
+
+                    {/* Payment type */}
                     <div>
-                      <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Monthly amount ({baseCurrency})</label>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Payment type</p>
+                      <div className="flex gap-2">
+                        {(['plan', 'pif'] as const).map(t => (
+                          <button
+                            key={t}
+                            onClick={() => { setExtendPayType(t); setExtendAmount('') }}
+                            className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                              extendPayType === t
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                : 'border-gray-200 dark:border-slate-500 text-gray-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {t === 'plan' ? '📅 Payment plan' : '💳 Paid in full'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">
+                        {extendPayType === 'plan' ? `Monthly amount (${baseCurrency})` : `Total upfront (${baseCurrency})`}
+                      </label>
                       <input
                         type="number"
                         value={extendAmount}
                         onChange={e => setExtendAmount(e.target.value)}
-                        placeholder={client.monthly_amount ? String(client.monthly_amount) : '0'}
+                        placeholder={extendPayType === 'plan' && client.monthly_amount ? String(client.monthly_amount) : '0'}
                         className="w-full px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+
+                    {/* Summary */}
                     {extendAmount && (
-                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-center">
-                        <span className="font-semibold text-blue-700 dark:text-blue-300">
-                          +{extendMonths} month{extendMonths !== 1 ? 's' : ''} · {Number(extendAmount) * extendMonths} {baseCurrency} added
-                        </span>
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-center space-y-0.5">
+                        <p className="font-semibold text-blue-700 dark:text-blue-300">
+                          +{extendMonths} month{extendMonths !== 1 ? 's' : ''}
+                          {extendPayType === 'plan'
+                            ? ` · ${Number(extendAmount) * extendMonths} ${baseCurrency} total`
+                            : ` · ${Number(extendAmount)} ${baseCurrency} upfront`}
+                        </p>
+                        {extendPayType === 'plan' && (
+                          <p className="text-blue-400 dark:text-blue-500">{extendMonths} installment{extendMonths !== 1 ? 's' : ''} of {extendAmount} {baseCurrency}</p>
+                        )}
+                        {extendPayType === 'pif' && (
+                          <p className="text-blue-400 dark:text-blue-500">1 payment due today</p>
+                        )}
                       </div>
                     )}
+
                     <button
                       onClick={extendContract}
                       disabled={extending || !extendAmount}
