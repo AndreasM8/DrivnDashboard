@@ -48,99 +48,111 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
   const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
 
   const steps = [
-    { label: 'Followers',           count: total },
-    { label: 'Replied',             count: leads.filter(l => repliedStages.includes(l.stage)).length },
-    { label: 'Call booked',         count: leads.filter(l => callBookedStages.includes(l.stage)).length },
-    { label: 'Closed',              count: leads.filter(l => l.stage === 'closed').length },
+    { label: 'Followers',   count: total },
+    { label: 'Replied',     count: leads.filter(l => repliedStages.includes(l.stage)).length },
+    { label: 'Call booked', count: leads.filter(l => callBookedStages.includes(l.stage)).length },
+    { label: 'Closed',      count: leads.filter(l => l.stage === 'closed').length },
   ]
 
-  // SVG coordinate space
   const W = 500
-  const H = 68
+  const H = 88
   const cy = H / 2
   const n = steps.length
   const segW = W / n
-  const MIN_H = H * 0.08   // never thinner than 8% — keeps it visible even at 0 count
-  const MAX_H = H * 0.94
+  const MIN_H = H * 0.10
+  const MAX_H = H * 0.92
+  const CP   = segW * 0.62   // bezier control-point offset → stronger = more wave
 
-  function barH(count: number): number {
+  function barH(count: number) {
     if (total === 0) return MIN_H
     return Math.max(MIN_H, (count / total) * MAX_H)
   }
 
-  // Build segments — each trapezoid's right edge = next segment's left edge (seamless)
-  const segs = steps.map((s, i) => {
-    const lh = barH(s.count)
-    const rh = i < n - 1 ? barH(steps[i + 1].count) : barH(s.count)  // last = rect
-    const x0 = i * segW
-    const x1 = (i + 1) * segW
-    return {
-      ...s,
-      lh, rh, x0, x1,
-      cx: x0 + segW / 2,
-      points: `${x0},${cy - lh / 2} ${x1},${cy - rh / 2} ${x1},${cy + rh / 2} ${x0},${cy + lh / 2}`,
-      convRate: i < n - 1 && s.count > 0
-        ? Math.round((steps[i + 1].count / s.count) * 100)
-        : null,
+  // Heights at each vertical boundary (n+1 values; last two are equal → rect end)
+  const hs = [...steps.map(s => barH(s.count)), barH(steps[n - 1].count)]
+  const xs = Array.from({ length: n + 1 }, (_, i) => i * segW)
+
+  // Smooth top edge (left → right) using cubic beziers
+  function topPath() {
+    let d = `M ${xs[0]},${cy - hs[0] / 2}`
+    for (let i = 0; i < n; i++) {
+      const [x0, x1] = [xs[i], xs[i + 1]]
+      const [y0, y1] = [cy - hs[i] / 2, cy - hs[i + 1] / 2]
+      d += ` C ${x0 + CP},${y0} ${x1 - CP},${y1} ${x1},${y1}`
     }
-  })
+    return d
+  }
+
+  // Smooth bottom edge (right → left)
+  function bottomPath() {
+    let d = `L ${xs[n]},${cy + hs[n] / 2}`
+    for (let i = n - 1; i >= 0; i--) {
+      const [x0, x1] = [xs[i], xs[i + 1]]
+      const [y0, y1] = [cy + hs[i] / 2, cy + hs[i + 1] / 2]
+      d += ` C ${x1 - CP},${y1} ${x0 + CP},${y0} ${x0},${y0}`
+    }
+    return d
+  }
+
+  const pathD = `${topPath()} ${bottomPath()} Z`
+
+  const segs = steps.map((s, i) => ({
+    ...s,
+    cx: xs[i] + segW / 2,
+    convRate: i < n - 1 && s.count > 0
+      ? Math.round((steps[i + 1].count / s.count) * 100)
+      : null,
+  }))
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-5 pt-4 pb-3 mx-6 mt-4 mb-2">
 
-      {/* ── SVG funnel shape ── */}
+      {/* ── Wavy SVG funnel ── */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
-        className="w-full rounded-lg"
-        style={{ height: 68, display: 'block' }}
+        className="w-full"
+        style={{ height: 88, display: 'block' }}
       >
         <defs>
-          {/* Light-mode gradient */}
           <linearGradient id="fgLight" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
             <stop offset="0%"   stopColor="#a5b4fc" stopOpacity="0.95" />
             <stop offset="30%"  stopColor="#60a5fa" stopOpacity="0.90" />
             <stop offset="68%"  stopColor="#fb923c" stopOpacity="0.85" />
             <stop offset="100%" stopColor="#34d399" stopOpacity="0.95" />
           </linearGradient>
-          {/* Dark-mode gradient — deeper, richer tones */}
           <linearGradient id="fgDark" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
             <stop offset="0%"   stopColor="#818cf8" stopOpacity="0.85" />
             <stop offset="30%"  stopColor="#3b82f6" stopOpacity="0.80" />
-            <stop offset="68%"  stopColor="#f97316" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.85" />
+            <stop offset="68%"  stopColor="#f97316" stopOpacity="0.80" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.90" />
           </linearGradient>
           <filter id="fShadow">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#00000018" />
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#00000014" />
           </filter>
         </defs>
 
-        {/* Trapezoid segments — light mode */}
-        <g filter="url(#fShadow)" className="dark:opacity-0 transition-opacity">
-          {segs.map((seg, i) => (
-            <polygon key={i} points={seg.points} fill="url(#fgLight)" />
-          ))}
-        </g>
+        {/* Light mode */}
+        <path d={pathD} fill="url(#fgLight)" filter="url(#fShadow)" className="dark:opacity-0 transition-opacity" />
+        {/* Dark mode */}
+        <path d={pathD} fill="url(#fgDark)" filter="url(#fShadow)" className="opacity-0 dark:opacity-100 transition-opacity" />
 
-        {/* Trapezoid segments — dark mode */}
-        <g filter="url(#fShadow)" className="opacity-0 dark:opacity-100 transition-opacity">
-          {segs.map((seg, i) => (
-            <polygon key={i} points={seg.points} fill="url(#fgDark)" />
-          ))}
-        </g>
-
-        {/* Thin white dividers between segments */}
-        {segs.slice(0, -1).map((seg, i) => (
-          <line
-            key={i}
-            x1={seg.x1} y1={cy - seg.rh / 2}
-            x2={seg.x1} y2={cy + seg.rh / 2}
-            stroke="white" strokeOpacity="0.45" strokeWidth="1"
-          />
-        ))}
+        {/* Soft dividers at each junction — vertical lines clipped to funnel height */}
+        {xs.slice(1, -1).map((x, i) => {
+          const h = hs[i + 1]
+          return (
+            <line
+              key={i}
+              x1={x} y1={cy - h / 2}
+              x2={x} y2={cy + h / 2}
+              stroke="white" strokeOpacity="0.35" strokeWidth="1.5"
+              strokeDasharray="3 3"
+            />
+          )
+        })}
       </svg>
 
-      {/* ── Counts + labels row ── */}
+      {/* ── Counts + labels ── */}
       <div className="flex mt-2.5">
         {segs.map((seg, i) => (
           <div key={i} className="flex-1 text-center min-w-0 px-0.5">
@@ -150,19 +162,15 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
         ))}
       </div>
 
-      {/* ── Conversion rate KPIs pinned to each junction point ── */}
+      {/* ── Conversion rates ── */}
       <div className="relative h-9 mt-1">
         {segs.slice(0, -1).map((seg, i) => {
           if (seg.convRate === null) return null
           const r = seg.convRate
-          const color =
-            r >= 60 ? 'text-emerald-500 dark:text-emerald-400' :
-            r >= 35 ? 'text-amber-500 dark:text-amber-400' :
-                      'text-rose-500 dark:text-rose-400'
-          const dot =
-            r >= 60 ? 'bg-emerald-400' :
-            r >= 35 ? 'bg-amber-400' :
-                      'bg-rose-400'
+          const color = r >= 60 ? 'text-emerald-500 dark:text-emerald-400'
+                      : r >= 35 ? 'text-amber-500 dark:text-amber-400'
+                                : 'text-rose-500 dark:text-rose-400'
+          const dot   = r >= 60 ? 'bg-emerald-400' : r >= 35 ? 'bg-amber-400' : 'bg-rose-400'
           return (
             <div
               key={i}
@@ -170,9 +178,7 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
               style={{ left: `${((i + 1) / n) * 100}%` }}
             >
               <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
-              <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>
-                {r}%
-              </span>
+              <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
             </div>
           )
         })}
