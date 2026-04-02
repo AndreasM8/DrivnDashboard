@@ -45,8 +45,8 @@ export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavP
       <Tab href="/dashboard" label="Home" icon={<HomeIcon />} />
       <Tab href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
       <Tab href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
-      <Tab href="/clients" label="Clients" icon={<ClientsIcon />} />
       <Tab href="/numbers" label="Numbers" icon={<NumbersIcon />} />
+      <Tab href="/ask" label="AI Coaches" icon={<AskIcon />} />
     </nav>
   )
 }
@@ -88,6 +88,14 @@ function NumbersIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
       <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+    </svg>
+  )
+}
+
+function AskIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
+      <path d="M11.983 1.907a.75.75 0 0 0-1.292-.657l-8.5 9.5A.75.75 0 0 0 2.75 12h6.572l-1.305 6.093a.75.75 0 0 0 1.292.657l8.5-9.5A.75.75 0 0 0 17.25 8h-6.572l1.305-6.093Z" />
     </svg>
   )
 }
