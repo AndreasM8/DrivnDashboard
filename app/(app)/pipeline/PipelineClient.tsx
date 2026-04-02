@@ -804,7 +804,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       </div>
 
       {/* Conversion funnel */}
-      <PipelineFunnel leads={leads} />
+      <PipelineFunnel leads={filteredLeads} />
 
       {/* Kanban columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
