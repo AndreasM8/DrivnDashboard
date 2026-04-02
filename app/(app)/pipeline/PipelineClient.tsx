@@ -324,15 +324,18 @@ function LeadCard({
 // ─── Stage column ─────────────────────────────────────────────────────────────
 
 function StageColumn({
-  stage, label, auto, bg, leads, labels, assignments, onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages,
+  stage, label, auto, bg, leads, allLeadsInStage, labels, assignments, selectedLabels,
+  onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages,
 }: {
   stage: LeadStage
   label: string
   auto: boolean
   bg: string
   leads: Lead[]
+  allLeadsInStage: Lead[]
   labels: LeadLabel[]
   assignments: LeadLabelAssignment[]
+  selectedLabels: string[]
   onLeadClick: (lead: Lead) => void
   onTierChange: (leadId: string, tier: 1 | 2 | 3) => void
   onAddClick: () => void
@@ -341,6 +344,16 @@ function StageColumn({
   extraStages?: LeadStage[]
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
+
+  // Count per label for ALL leads in this stage (unfiltered)
+  const labelCountsInStage = useMemo(() => {
+    return labels.map(l => ({
+      label: l,
+      count: allLeadsInStage.filter(lead =>
+        assignments.some(a => a.lead_id === lead.id && a.label_id === l.id)
+      ).length,
+    })).filter(x => x.count > 0)
+  }, [labels, allLeadsInStage, assignments])
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -377,7 +390,14 @@ function StageColumn({
           {auto && (
             <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">AUTO</span>
           )}
-          <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">{leads.length}</span>
+          {selectedLabels.length > 0 ? (
+            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
+              {leads.length}
+              <span className="text-gray-300 dark:text-slate-600"> / {allLeadsInStage.length}</span>
+            </span>
+          ) : (
+            <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">{leads.length}</span>
+          )}
         </div>
         <button
           onClick={onAddClick}
@@ -386,6 +406,30 @@ function StageColumn({
           + Add
         </button>
       </div>
+
+      {/* Label breakdown — always visible when labels exist in this stage */}
+      {labelCountsInStage.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-1">
+          {labelCountsInStage.map(({ label: l, count }) => {
+            const isActive = selectedLabels.includes(l.id)
+            return (
+              <span
+                key={l.id}
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all"
+                style={{
+                  background: l.bg_color,
+                  color: l.text_color,
+                  opacity: selectedLabels.length === 0 || isActive ? 1 : 0.35,
+                  outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
+                  outlineOffset: '1px',
+                }}
+              >
+                {l.name} · {count}
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* Auto note */}
       {auto && (
@@ -474,6 +518,15 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
 
   const supabase = createClient()
+
+  // ─── Label counts (unfiltered, across entire pipeline) ─────────────────────
+
+  const labelCounts = useMemo(() => {
+    return labels.reduce<Record<string, number>>((acc, l) => {
+      acc[l.id] = assignments.filter(a => a.label_id === l.id).length
+      return acc
+    }, {})
+  }, [labels, assignments])
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
 
@@ -633,13 +686,14 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
 
             {labels.map(l => {
               const isActive = selectedLabels.includes(l.id)
+              const count = labelCounts[l.id] ?? 0
               return (
                 <button
                   key={l.id}
                   onClick={() => setSelectedLabels(prev =>
                     isActive ? prev.filter(id => id !== l.id) : [...prev, l.id]
                   )}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1"
                   style={
                     isActive
                       ? { background: l.bg_color, color: l.text_color, outline: `2px solid ${l.text_color}`, outlineOffset: '1px' }
@@ -647,6 +701,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                   }
                 >
                   {l.name}
+                  <span className="font-bold opacity-75">{count}</span>
                 </button>
               )
             })}
@@ -707,22 +762,25 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       {/* Kanban columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-4 p-6 h-full min-w-max">
-          {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => (
-            <StageColumn
-              key={col.stage}
-              {...col}
-              leads={filteredLeads.filter(l =>
-                l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
-              )}
-              labels={labels}
-              assignments={assignments}
-              onLeadClick={setDrawerLead}
-              onTierChange={updateTier}
-              onContacted={handleContacted}
-              onAddClick={() => { setAddLeadStage(col.stage); setAddLeadOpen(true) }}
-              onDrop={handleDrop}
-            />
-          ))}
+          {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => {
+            const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
+            return (
+              <StageColumn
+                key={col.stage}
+                {...col}
+                leads={filteredLeads.filter(inStage)}
+                allLeadsInStage={leads.filter(inStage)}
+                labels={labels}
+                assignments={assignments}
+                selectedLabels={selectedLabels}
+                onLeadClick={setDrawerLead}
+                onTierChange={updateTier}
+                onContacted={handleContacted}
+                onAddClick={() => { setAddLeadStage(col.stage); setAddLeadOpen(true) }}
+                onDrop={handleDrop}
+              />
+            )
+          })}
         </div>
       </div>
 
