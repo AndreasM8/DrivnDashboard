@@ -267,6 +267,7 @@ interface StageColumnConfig {
   label: string
   auto: boolean
   bg: string
+  accent: string
   extraStages?: LeadStage[]
   hideable: boolean
   defaultHidden: boolean
@@ -274,13 +275,13 @@ interface StageColumnConfig {
 }
 
 const STAGE_COLUMNS: StageColumnConfig[] = [
-  { stage: 'follower',       label: 'Follower',       auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
-  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-blue-50 dark:bg-blue-900/20',    extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
-  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white dark:bg-slate-800',        extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
-  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white dark:bg-slate-800',        extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
-  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-amber-50 dark:bg-amber-900/10',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
-  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-gray-50 dark:bg-slate-800/50',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-gray-400' },
-  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-red-50 dark:bg-red-900/10',      extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-red-400' },
+  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white dark:bg-slate-800',       accent: 'bg-blue-500',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
+  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white dark:bg-slate-800',       accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
+  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-orange-500',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
+  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-emerald-500', extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
+  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-amber-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
+  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-slate-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-slate-400' },
+  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-rose-400',    extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-rose-400' },
 ]
 
 const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
@@ -303,6 +304,12 @@ function loadHiddenColumns(): Set<LeadStage> {
 
 const CONTACTED_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent']
 
+const TIER_META = {
+  1: { label: 'T1', emoji: '🔥', bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400' },
+  2: { label: 'T2', emoji: '💪', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
+  3: { label: 'T3', emoji: '🌱', bg: 'bg-gray-100 dark:bg-slate-700',    text: 'text-gray-500 dark:text-slate-400' },
+} as const
+
 function LeadCard({
   lead, labels, assignedLabelIds, onClick, onTierChange, onDragStart, onDragEnd, onContacted,
 }: {
@@ -319,6 +326,20 @@ function LeadCard({
   const days = daysSince(lead.last_contact_at)
   const assignedLabels = labels.filter(l => assignedLabelIds.includes(l.id))
   const showContactedBtn = CONTACTED_STAGES.includes(lead.stage)
+  const tier = (lead.tier ?? 2) as 1 | 2 | 3
+  const tierMeta = TIER_META[tier]
+
+  // Pipedrive-style urgency dot
+  const urgencyDot = days === null
+    ? 'bg-gray-200 dark:bg-slate-600'
+    : days >= 5 ? 'bg-red-500'
+    : days >= 3 ? 'bg-amber-400'
+    : 'bg-emerald-400'
+
+  const urgencyTitle = days === null
+    ? 'Never contacted'
+    : days === 0 ? 'Contacted today'
+    : `Last contact: ${days}d ago`
 
   async function handleContacted(e: React.MouseEvent) {
     e.stopPropagation()
@@ -328,26 +349,29 @@ function LeadCard({
     onContacted(lead.id)
   }
 
+  function handleTierCycle(e: React.MouseEvent) {
+    e.stopPropagation()
+    onTierChange(tier === 3 ? 1 : ((tier + 1) as 1 | 2 | 3))
+  }
+
   return (
     <div
       draggable={true}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className="relative bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3 cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all group"
+      className="relative bg-white dark:bg-slate-750 rounded-xl border border-gray-100 dark:border-slate-700 p-3 cursor-pointer hover:shadow-md hover:border-gray-200 dark:hover:border-slate-600 transition-all group shadow-sm"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm truncate">@{lead.ig_username}</p>
-        {days !== null && (
-          <span className={`text-xs font-medium flex-shrink-0 ${contactColor(days)}`}>
-            {days === 0 ? 'today' : `${days}d`}
-          </span>
-        )}
+      {/* Top row: username + urgency dot */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm truncate leading-tight">
+          @{lead.ig_username}
+        </p>
+        <div
+          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-slate-800 ${urgencyDot}`}
+          title={urgencyTitle}
+        />
       </div>
-
-      {lead.setter_notes && (
-        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2 mb-2">{lead.setter_notes}</p>
-      )}
 
       {/* Labels */}
       {assignedLabels.length > 0 && (
@@ -355,7 +379,7 @@ function LeadCard({
           {assignedLabels.map(l => (
             <span
               key={l.id}
-              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
               style={{ background: l.bg_color, color: l.text_color }}
             >
               {l.name}
@@ -364,36 +388,40 @@ function LeadCard({
         </div>
       )}
 
-      {/* Tier buttons + contacted button */}
-      <div className="flex items-center justify-between" onClick={e => e.stopPropagation()}>
-        <div className="flex gap-1">
-          {([1, 2, 3] as const).map(t => (
+      {lead.setter_notes && (
+        <p className="text-[11px] text-gray-400 dark:text-slate-500 line-clamp-1 mb-2 leading-snug">{lead.setter_notes}</p>
+      )}
+
+      {/* Bottom row: tier badge + time ago + contacted btn */}
+      <div className="flex items-center justify-between gap-2 mt-1" onClick={e => e.stopPropagation()}>
+        <button
+          onClick={handleTierCycle}
+          title="Click to change tier"
+          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all hover:opacity-80 ${tierMeta.bg} ${tierMeta.text}`}
+        >
+          {tierMeta.emoji} {tierMeta.label}
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {days !== null && (
+            <span className="text-[10px] text-gray-400 dark:text-slate-500 tabular-nums">
+              {days === 0 ? 'today' : `${days}d ago`}
+            </span>
+          )}
+          {showContactedBtn && (
             <button
-              key={t}
-              onClick={() => onTierChange(t)}
-              className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
-                lead.tier === t
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600'
+              onClick={handleContacted}
+              title="Mark as contacted"
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                contactedFlash
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100'
               }`}
             >
-              {t}
+              ✓
             </button>
-          ))}
+          )}
         </div>
-        {showContactedBtn && (
-          <button
-            onClick={handleContacted}
-            title="Mark as contacted"
-            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all opacity-0 group-hover:opacity-100 md:opacity-100 ${
-              contactedFlash
-                ? 'bg-green-500 text-white'
-                : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-            }`}
-          >
-            ✓
-          </button>
-        )}
       </div>
     </div>
   )
@@ -402,13 +430,14 @@ function LeadCard({
 // ─── Stage column ─────────────────────────────────────────────────────────────
 
 function StageColumn({
-  stage, label, auto, bg, leads, allLeadsInStage, labels, assignments, selectedLabels, tierFilter,
+  stage, label, auto, bg, accent, leads, allLeadsInStage, labels, assignments, selectedLabels, tierFilter,
   onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages,
 }: {
   stage: LeadStage
   label: string
   auto: boolean
   bg: string
+  accent: string
   leads: Lead[]
   allLeadsInStage: Lead[]
   labels: LeadLabel[]
@@ -424,7 +453,6 @@ function StageColumn({
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
 
-  // Count per label for ALL leads in this stage (unfiltered)
   const labelCountsInStage = useMemo(() => {
     return labels.map(l => ({
       label: l,
@@ -434,12 +462,11 @@ function StageColumn({
     })).filter(x => x.count > 0)
   }, [labels, allLeadsInStage, assignments])
 
-  // Tier breakdown for this stage
   const tierBreakdown = useMemo(() => {
     const tiers: { tier: 1 | 2 | 3; icon: string; cls: string }[] = [
-      { tier: 1, icon: '🔥', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-      { tier: 2, icon: '💪', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400' },
+      { tier: 1, icon: '🔥', cls: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' },
+      { tier: 2, icon: '💪', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' },
+      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400' },
     ]
     return tiers.map(t => ({
       ...t,
@@ -453,10 +480,7 @@ function StageColumn({
   }
 
   function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
-    // Only clear if leaving the column itself, not a child element
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsDragOver(false)
-    }
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false)
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -466,116 +490,103 @@ function StageColumn({
     if (leadId) onDrop(leadId, stage)
   }
 
+  const hasFilter = selectedLabels.length > 0
+
   return (
     <div
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex-shrink-0 w-64 min-w-[260px] rounded-xl p-3 ${bg} border transition-all ${
-        isDragOver ? 'ring-2 ring-blue-400 border-blue-300' : 'border-gray-100 dark:border-slate-700'
-      } flex flex-col gap-2`}
+      className={`flex-shrink-0 w-64 min-w-[256px] rounded-2xl ${bg} border transition-all ${
+        isDragOver
+          ? 'ring-2 ring-blue-400 border-blue-300 shadow-lg'
+          : 'border-gray-100 dark:border-slate-700 shadow-sm'
+      } flex flex-col`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-gray-800 dark:text-slate-200">{label}</span>
-          {auto && (
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">AUTO</span>
-          )}
-          {selectedLabels.length > 0 ? (
-            <span className="text-xs font-medium text-gray-600 dark:text-slate-400">
-              {leads.length}
-              <span className="text-gray-300 dark:text-slate-600"> / {allLeadsInStage.length}</span>
+      {/* Colored accent bar */}
+      <div className={`h-1 rounded-t-2xl ${accent} ${isDragOver ? 'opacity-100' : 'opacity-80'}`} />
+
+      <div className="p-3 flex flex-col gap-2 flex-1">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm text-gray-800 dark:text-slate-100">{label}</span>
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full tabular-nums ${
+              hasFilter
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'
+            }`}>
+              {hasFilter ? `${leads.length} / ${allLeadsInStage.length}` : leads.length}
             </span>
-          ) : (
-            <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">{leads.length}</span>
-          )}
+            {auto && (
+              <span className="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wide">Auto</span>
+            )}
+          </div>
+          <button
+            onClick={onAddClick}
+            className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-all flex items-center justify-center text-sm font-bold leading-none"
+          >
+            +
+          </button>
         </div>
-        <button
-          onClick={onAddClick}
-          className="text-xs text-gray-400 dark:text-slate-500 hover:text-blue-600 transition-colors font-medium"
-        >
-          + Add
-        </button>
-      </div>
 
-      {/* Tier breakdown */}
-      {tierBreakdown.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-1">
-          {tierBreakdown.map(({ tier, icon, cls, count }) => {
-            const isActive = tierFilter === String(tier)
-            return (
-              <span
-                key={tier}
-                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all ${cls} ${
-                  tierFilter !== 'all' && !isActive ? 'opacity-30' : ''
-                } ${isActive ? 'ring-1 ring-current ring-offset-0' : ''}`}
-              >
-                {icon} T{tier} · {count}
-              </span>
-            )
-          })}
-        </div>
-      )}
+        {/* Tier + label chips — compact single row */}
+        {(tierBreakdown.length > 0 || labelCountsInStage.length > 0) && (
+          <div className="flex flex-wrap gap-1">
+            {tierBreakdown.map(({ tier, icon, cls, count }) => {
+              const isActive = tierFilter === String(tier)
+              return (
+                <span key={tier} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all ${cls} ${
+                  tierFilter !== 'all' && !isActive ? 'opacity-25' : ''
+                } ${isActive ? 'ring-1 ring-current' : ''}`}>
+                  {icon} {count}
+                </span>
+              )
+            })}
+            {labelCountsInStage.map(({ label: l, count }) => {
+              const isActive = selectedLabels.includes(l.id)
+              return (
+                <span key={l.id} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all"
+                  style={{
+                    background: l.bg_color, color: l.text_color,
+                    opacity: selectedLabels.length === 0 || isActive ? 1 : 0.25,
+                    outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
+                    outlineOffset: '1px',
+                  }}>
+                  {l.name} {count}
+                </span>
+              )
+            })}
+          </div>
+        )}
 
-      {/* Label breakdown — always visible when labels exist in this stage */}
-      {labelCountsInStage.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-1">
-          {labelCountsInStage.map(({ label: l, count }) => {
-            const isActive = selectedLabels.includes(l.id)
+        {/* Cards */}
+        <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-240px)]">
+          {leads.map(lead => {
+            const assignedLabelIds = assignments
+              .filter(a => a.lead_id === lead.id)
+              .map(a => a.label_id)
             return (
-              <span
-                key={l.id}
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all"
-                style={{
-                  background: l.bg_color,
-                  color: l.text_color,
-                  opacity: selectedLabels.length === 0 || isActive ? 1 : 0.35,
-                  outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
-                  outlineOffset: '1px',
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                labels={labels}
+                assignedLabelIds={assignedLabelIds}
+                onClick={() => onLeadClick(lead)}
+                onTierChange={tier => onTierChange(lead.id, tier)}
+                onContacted={onContacted}
+                onDragStart={e => {
+                  e.dataTransfer.setData('leadId', lead.id)
+                  ;(e.currentTarget as HTMLDivElement).classList.add('opacity-50')
                 }}
-              >
-                {l.name} · {count}
-              </span>
+                onDragEnd={e => {
+                  ;(e.currentTarget as HTMLDivElement).classList.remove('opacity-50')
+                }}
+              />
             )
           })}
-        </div>
-      )}
-
-      {/* Auto note */}
-      {auto && (
-        <div className="text-[11px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 rounded-lg px-2.5 py-1.5 leading-tight">
-          ManyChat auto-fills this — or tap + Add to add manually.
-        </div>
-      )}
-
-      {/* Cards */}
-      <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-220px)]">
-        {leads.map(lead => {
-          const assignedLabelIds = assignments
-            .filter(a => a.lead_id === lead.id)
-            .map(a => a.label_id)
-          return (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              labels={labels}
-              assignedLabelIds={assignedLabelIds}
-              onClick={() => onLeadClick(lead)}
-              onTierChange={tier => onTierChange(lead.id, tier)}
-              onContacted={onContacted}
-              onDragStart={e => {
-                e.dataTransfer.setData('leadId', lead.id)
-                ;(e.currentTarget as HTMLDivElement).classList.add('opacity-50')
-              }}
-              onDragEnd={e => {
-                ;(e.currentTarget as HTMLDivElement).classList.remove('opacity-50')
-              }}
-            />
-          )
-        })}
-        {leads.length === 0 && (
-          <div className="text-center py-6 text-xs text-gray-400 dark:text-slate-500 px-2">
+          {leads.length === 0 && (
+            <div className="text-center py-6 text-xs text-gray-400 dark:text-slate-500 px-2">
             {stage === 'follower' && 'Add one with + Add above'}
             {stage === 'replied' && 'Add one with + Add above'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
@@ -585,6 +596,7 @@ function StageColumn({
             {stage === 'bad_fit' && 'Leads that are not a good fit'}
           </div>
         )}
+        </div>
       </div>
     </div>
   )

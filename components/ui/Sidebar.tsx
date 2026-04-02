@@ -52,8 +52,19 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
   return (
     <aside className="hidden md:flex flex-col w-56 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-700 h-full flex-shrink-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100 dark:border-slate-700">
-        <span className="text-xl font-bold text-gray-900 dark:text-slate-100">Drivn</span>
+      <div className="px-4 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2.5">
+        {/* Drivnscaling mark */}
+        <svg viewBox="0 0 28 24" className="w-7 h-6 flex-shrink-0 text-gray-900 dark:text-slate-100" fill="currentColor">
+          {/* Left bracket / curved chevron */}
+          <path d="M0 0 L5 0 L9.5 12 L5 24 L0 24 L4.5 12 Z" />
+          {/* Top right wedge */}
+          <path d="M11 0 L23 0 L17 10 L11 10 Z" />
+          {/* Bottom diagonal stripe */}
+          <path d="M12 14 L24 14 L28 24 L16 24 Z" />
+        </svg>
+        <div>
+          <span className="text-sm font-bold text-gray-900 dark:text-slate-100 leading-none tracking-tight">Drivnscaling</span>
+        </div>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
