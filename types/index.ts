@@ -277,26 +277,6 @@ export interface TeamMember {
   created_at: string
 }
 
-// ─── EOD Reports ──────────────────────────────────────────────────────────────
-
-export interface EodReport {
-  id: string
-  workspace_id: string
-  setter_id: string
-  date: string
-  leads_contacted: number
-  new_leads_added: number
-  freebies_sent: number
-  calls_booked: number
-  calls_held: number
-  calls_closed: number
-  total_cash_collected: number
-  biggest_win: string
-  biggest_challenge: string
-  notes: string
-  submitted_at: string
-  created_at: string
-}
 
 // ─── Monthly Snapshots ────────────────────────────────────────────────────────
 
