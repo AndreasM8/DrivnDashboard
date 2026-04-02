@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter } from '@/types'
@@ -40,69 +40,94 @@ function contactColor(days: number | null) {
 // ─── Pipeline Funnel ──────────────────────────────────────────────────────────
 
 function PipelineFunnel({ leads }: { leads: Lead[] }) {
-  if (leads.length === 0) return null
+  const mainLightRef = useRef<SVGPathElement>(null)
+  const mainDarkRef  = useRef<SVGPathElement>(null)
+  const hlLightRef   = useRef<SVGPathElement>(null)
+  const hlDarkRef    = useRef<SVGPathElement>(null)
+  const prevPathRef  = useRef<string | null>(null)
 
   const total = leads.length
+
   const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const callBookedStages: LeadStage[] = ['call_booked', 'closed']
 
   const steps = [
-    { label: 'Followers',   count: total },
+    { label: 'Leads',       count: total },
     { label: 'Replied',     count: leads.filter(l => repliedStages.includes(l.stage)).length },
     { label: 'Call booked', count: leads.filter(l => callBookedStages.includes(l.stage)).length },
     { label: 'Closed',      count: leads.filter(l => l.stage === 'closed').length },
   ]
 
-  const W = 600
-  const H = 110
-  const cy = H / 2
-  const n  = steps.length
-  const segW = W / n
-  const MIN_H = H * 0.05   // very thin floor so drop-offs look dramatic
-  const MAX_H = H * 0.90
+  const W      = 600
+  const H      = 120
+  const cy     = H / 2
+  const n      = steps.length
+  const segW   = W / n
+  const MIN_H  = H * 0.02   // ultra-thin floor — makes drop-offs extremely dramatic
+  const MAX_H  = H * 0.92
 
   function barH(count: number) {
     if (total === 0) return MIN_H
     return Math.max(MIN_H, (count / total) * MAX_H)
   }
 
-  // Height at each stage boundary
+  // Height at each stage boundary (repeat last so shape closes)
   const hs = [...steps.map(s => barH(s.count)), barH(steps[n - 1].count)]
 
-  // Interpolate height smoothly across the full width using smoothstep
-  function heightAt(x: number): number {
-    const seg  = Math.min(Math.floor(x / segW), n - 1)
-    const t    = (x - seg * segW) / segW
-    const st   = t * t * (3 - 2 * t)           // smoothstep
-    return hs[seg] * (1 - st) + hs[seg + 1] * st
+  // Smootherstep (Ken Perlin) — steeper shoulders, flatter middle than plain smoothstep
+  function smootherstep(t: number): number {
+    return t * t * t * (t * (t * 6 - 15) + 10)
   }
 
-  // Build wavy top + bottom edges by sampling many points
-  const SAMPLES = 90
-  const FREQ    = 2.5 * Math.PI * 2   // wave cycles across the width
-  const AMP     = 4.5                  // max wave amplitude in px
+  function heightAt(x: number): number {
+    const seg = Math.min(Math.floor(x / segW), n - 1)
+    const t   = (x - seg * segW) / segW
+    return hs[seg] * (1 - smootherstep(t)) + hs[seg + 1] * smootherstep(t)
+  }
+
+  const SAMPLES = 120
+  const FREQ    = 3.2 * Math.PI * 2  // more wave cycles across the width
+  const AMP     = 7                   // more pronounced waves
 
   function buildPath(): string {
     const top: string[] = []
     const bot: string[] = []
 
     for (let i = 0; i <= SAMPLES; i++) {
-      const x  = (i / SAMPLES) * W
-      const h  = heightAt(x)
-      // wave amplitude scales with local height so thin sections barely wave
-      const amp  = AMP * (h / MAX_H)
-      const wave = Math.sin((x / W) * FREQ) * amp
+      const x    = (i / SAMPLES) * W
+      const h    = heightAt(x)
+      const amp  = AMP * Math.pow(h / MAX_H, 0.6)  // even thin sections get a little wave
+      const wave = Math.sin((x / W) * FREQ + 0.4) * amp
       top.push(`${x.toFixed(1)},${(cy - h / 2 + wave).toFixed(2)}`)
       bot.push(`${x.toFixed(1)},${(cy + h / 2 - wave).toFixed(2)}`)
     }
 
-    // Smooth path: use L for top (left→right), then reverse bottom (right→left)
     const topPath = `M ${top[0]} ` + top.slice(1).map(p => `L ${p}`).join(' ')
     const botPath = bot.slice().reverse().map(p => `L ${p}`).join(' ')
     return `${topPath} ${botPath} Z`
   }
 
-  const pathD = buildPath()
+  const pathD = useMemo(buildPath, [total, ...steps.map(s => s.count)])
+
+  // Animate the path morph using Web Animations API whenever counts change
+  useEffect(() => {
+    const prev = prevPathRef.current
+    if (!prev || prev === pathD) {
+      prevPathRef.current = pathD
+      return
+    }
+    const refs = [mainLightRef, mainDarkRef, hlLightRef, hlDarkRef]
+    refs.forEach(r => {
+      if (!r.current) return
+      r.current.animate(
+        [{ d: `path("${prev}")` }, { d: `path("${pathD}")` }],
+        { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
+      )
+    })
+    prevPathRef.current = pathD
+  }, [pathD])
+
+  if (total === 0) return null
 
   const segs = steps.map((s, i) => ({
     ...s,
@@ -118,7 +143,7 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="w-full"
-        style={{ height: 110, display: 'block' }}
+        style={{ height: 120, display: 'block' }}
       >
         <defs>
           <linearGradient id="fgLight" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
@@ -133,28 +158,25 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
             <stop offset="66%"  stopColor="#f97316" stopOpacity="0.80" />
             <stop offset="100%" stopColor="#10b981" stopOpacity="0.90" />
           </linearGradient>
-          {/* Inner highlight — lighter strip along the top third */}
           <linearGradient id="hlLight" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="white" stopOpacity="0.28" />
+            <stop offset="0%"   stopColor="white" stopOpacity="0.32" />
+            <stop offset="60%"  stopColor="white" stopOpacity="0.05" />
             <stop offset="100%" stopColor="white" stopOpacity="0"    />
           </linearGradient>
           <linearGradient id="hlDark" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="white" stopOpacity="0.12" />
+            <stop offset="0%"   stopColor="white" stopOpacity="0.14" />
             <stop offset="100%" stopColor="white" stopOpacity="0"    />
           </linearGradient>
-          <filter id="fGlow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+          <filter id="funnelGlow" x="-5%" y="-20%" width="110%" height="140%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
 
-        {/* Main shape — light */}
-        <path d={pathD} fill="url(#fgLight)" className="dark:opacity-0 transition-opacity" />
-        {/* Main shape — dark */}
-        <path d={pathD} fill="url(#fgDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
-        {/* Highlight overlay */}
-        <path d={pathD} fill="url(#hlLight)" className="dark:opacity-0 transition-opacity" />
-        <path d={pathD} fill="url(#hlDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
+        <path ref={mainLightRef} d={pathD} fill="url(#fgLight)" filter="url(#funnelGlow)" className="dark:opacity-0 transition-opacity" />
+        <path ref={mainDarkRef}  d={pathD} fill="url(#fgDark)"  filter="url(#funnelGlow)" className="opacity-0 dark:opacity-100 transition-opacity" />
+        <path ref={hlLightRef}   d={pathD} fill="url(#hlLight)" className="dark:opacity-0 transition-opacity" />
+        <path ref={hlDarkRef}    d={pathD} fill="url(#hlDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
 
         {/* Stage dividers */}
         {Array.from({ length: n - 1 }, (_, i) => {
@@ -164,7 +186,7 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
             <line key={i}
               x1={x} y1={cy - h / 2 + 2}
               x2={x} y2={cy + h / 2 - 2}
-              stroke="white" strokeOpacity="0.4" strokeWidth="1"
+              stroke="white" strokeOpacity="0.5" strokeWidth="1.5"
             />
           )
         })}
