@@ -102,7 +102,7 @@ export default async function NumbersPage() {
     <NumbersClient
       baseCurrency={profile?.base_currency ?? 'NOK'}
       targets={(targets as KpiTargets) ?? null}
-      currentSnapshot={storedCurrentSnapshot ? (storedCurrentSnapshot as MonthlySnapshot) : liveSnapshot}
+      currentSnapshot={liveSnapshot}
       lastMonthSnapshot={(lastMonthSnapshot as MonthlySnapshot) ?? null}
       history={(snapshots as MonthlySnapshot[]) ?? []}
       clients={(clients as Client[]) ?? []}

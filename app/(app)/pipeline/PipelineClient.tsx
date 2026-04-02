@@ -275,13 +275,13 @@ interface StageColumnConfig {
 }
 
 const STAGE_COLUMNS: StageColumnConfig[] = [
-  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white',       accent: 'bg-blue-500',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
-  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white',       accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
-  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-orange-500',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
-  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-emerald-500', extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
-  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-amber-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
-  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-slate-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-slate-400' },
-  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-rose-400',    extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-rose-400' },
+  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white', accent: 'bg-blue-500',    extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
+  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white', accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
+  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white', accent: 'bg-orange-500',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
+  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white', accent: 'bg-emerald-500', extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
+  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white', accent: 'bg-amber-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
+  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white', accent: 'bg-slate-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-slate-400' },
+  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white', accent: 'bg-rose-400',    extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-rose-400' },
 ]
 
 const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
@@ -360,7 +360,7 @@ function LeadCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className="relative bg-white rounded-xl border border-gray-100 p-3 cursor-pointer hover:shadow-md hover:border-gray-200 transition-all group shadow-sm"
+      className="relative bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:bg-white hover:shadow-md hover:border-gray-300 transition-all group"
     >
       {/* Top row: username + urgency dot */}
       <div className="flex items-center justify-between gap-2 mb-2">

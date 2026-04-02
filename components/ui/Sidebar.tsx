@@ -52,17 +52,11 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
   return (
     <aside className="hidden md:flex flex-col w-56 bg-slate-900 h-full flex-shrink-0">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-slate-800 flex items-center gap-2.5">
-        {/* Drivnscaling mark */}
-        <svg viewBox="0 0 40 36" className="w-8 h-7 flex-shrink-0 text-white" fill="currentColor">
-          {/* Left D-bracket chevron */}
-          <path d="M2 2 L8 2 L8 4 L17 18 L8 32 L8 34 L2 34 L11 18 Z" />
-          {/* Top-right bar */}
-          <path d="M20 2 L38 2 L38 12 L28 12 Z" />
-          {/* Bottom-right diagonal stripe */}
-          <path d="M22 22 L38 22 L38 34 L26 34 Z" />
-        </svg>
-        <span className="text-sm font-bold text-white leading-none tracking-tight">Drivnscaling</span>
+      <div className="px-4 py-5 border-b border-slate-800 flex items-center gap-2">
+        <div className="flex flex-col leading-none">
+          <span className="text-[11px] font-black text-white tracking-[0.18em] uppercase">Drivn</span>
+          <span className="text-[9px] font-semibold text-slate-400 tracking-[0.22em] uppercase">Scaling</span>
+        </div>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
