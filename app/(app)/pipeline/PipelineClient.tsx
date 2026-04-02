@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
-import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter } from '@/types'
+import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter, KpiTargets } from '@/types'
 import { STAGE_LABELS } from '@/types'
 import AddLeadModal from '@/components/modals/AddLeadModal'
 import LeadDrawer from '@/components/pipeline/LeadDrawer'
@@ -19,6 +19,7 @@ interface Props {
   setters: Setter[]
   assignments: LeadLabelAssignment[]
   userId: string
+  kpiTargets: KpiTargets | null
 }
 
 type TierFilter = 'all' | '1' | '2' | '3' | 'needs_followup'
@@ -39,7 +40,7 @@ function contactColor(days: number | null) {
 
 // ─── Pipeline Funnel ──────────────────────────────────────────────────────────
 
-function PipelineFunnel({ leads }: { leads: Lead[] }) {
+function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTargets | null }) {
   const mainLightRef = useRef<SVGPathElement>(null)
   const mainDarkRef  = useRef<SVGPathElement>(null)
   const hlLightRef   = useRef<SVGPathElement>(null)
@@ -129,11 +130,19 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
 
   if (total === 0) return null
 
+  // Map each funnel step's conversion to its KPI target field
+  const convTargets: (number | null)[] = [
+    kpiTargets?.reply_rate_target   ?? null,
+    kpiTargets?.booking_rate_target ?? null,
+    kpiTargets?.close_rate_target   ?? null,
+  ]
+
   const segs = steps.map((s, i) => ({
     ...s,
     convRate: i < n - 1 && s.count > 0
       ? Math.round((steps[i + 1].count / s.count) * 100)
       : null,
+    convTarget: convTargets[i] ?? null,
   }))
 
   return (
@@ -203,19 +212,46 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
       </div>
 
       {/* Conversion rates */}
-      <div className="relative h-8 mt-0.5">
+      <div className="relative h-9 mt-0.5">
         {segs.slice(0, -1).map((seg, i) => {
           if (seg.convRate === null) return null
           const r = seg.convRate
-          const color = r >= 60 ? 'text-emerald-500 dark:text-emerald-400'
-                      : r >= 35 ? 'text-amber-500 dark:text-amber-400'
-                                : 'text-rose-500 dark:text-rose-400'
-          const dot = r >= 60 ? 'bg-emerald-400' : r >= 35 ? 'bg-amber-400' : 'bg-rose-400'
+          const t = seg.convTarget
+
+          // Color relative to KPI target if set, otherwise neutral thresholds
+          let color: string
+          let dot: string
+          let tooltip: string
+          if (t !== null) {
+            if (r >= t) {
+              color = 'text-emerald-500 dark:text-emerald-400'
+              dot   = 'bg-emerald-400'
+              tooltip = `Target: ${t}% ✓`
+            } else if (r >= t * 0.8) {
+              color = 'text-amber-500 dark:text-amber-400'
+              dot   = 'bg-amber-400'
+              tooltip = `Target: ${t}% (${t - r}% below)`
+            } else {
+              color = 'text-rose-500 dark:text-rose-400'
+              dot   = 'bg-rose-400'
+              tooltip = `Target: ${t}% (${t - r}% below)`
+            }
+          } else {
+            // No target set — neutral grey with a subtle hint to add one
+            color   = 'text-gray-400 dark:text-slate-500'
+            dot     = 'bg-gray-300 dark:bg-slate-600'
+            tooltip = 'Set a target in Settings → Conversion targets'
+          }
+
           return (
             <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
-              style={{ left: `${((i + 1) / n) * 100}%` }}>
+              style={{ left: `${((i + 1) / n) * 100}%` }}
+              title={tooltip}>
               <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
               <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
+              {t !== null && (
+                <span className="text-[9px] text-gray-300 dark:text-slate-600 leading-none tabular-nums">{t}%</span>
+              )}
             </div>
           )
         })}
@@ -556,7 +592,7 @@ function StageColumn({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId }: Props) {
+export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets }: Props) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [labels, setLabels] = useState<LeadLabel[]>(initialLabels)
   const [assignments, setAssignments] = useState<LeadLabelAssignment[]>(initialAssignments)
@@ -848,7 +884,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       </div>
 
       {/* Conversion funnel */}
-      <PipelineFunnel leads={filteredLeads} />
+      <PipelineFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
 
       {/* Kanban columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">

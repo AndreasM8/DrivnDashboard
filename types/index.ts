@@ -83,8 +83,10 @@ export interface KpiTargets {
   clients_target: number
   meetings_target: number
   followers_target: number
-  close_rate_target: number
-  show_up_target: number
+  reply_rate_target: number    // % of followers who reply
+  booking_rate_target: number  // % of replies who book a call
+  close_rate_target: number    // % of calls that close
+  show_up_target: number       // % of booked calls that show up
   updated_at: string
 }
 

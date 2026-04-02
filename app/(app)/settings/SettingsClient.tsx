@@ -32,6 +32,8 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
     clients_target: String(targets?.clients_target ?? ''),
     meetings_target: String(targets?.meetings_target ?? ''),
     followers_target: String(targets?.followers_target ?? ''),
+    reply_rate_target: String(targets?.reply_rate_target ?? ''),
+    booking_rate_target: String(targets?.booking_rate_target ?? ''),
     close_rate_target: String(targets?.close_rate_target ?? ''),
     show_up_target: String(targets?.show_up_target ?? ''),
   })
@@ -69,10 +71,12 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
       ],
     },
     {
-      title: 'Call quality',
+      title: 'Conversion targets',
       fields: [
-        { key: 'close_rate_target', label: 'Close rate target', unit: '%' },
-        { key: 'show_up_target', label: 'Show-up rate target', unit: '%' },
+        { key: 'reply_rate_target',   label: 'Reply rate target',    unit: '%' },
+        { key: 'booking_rate_target', label: 'Booking rate target',  unit: '%' },
+        { key: 'close_rate_target',   label: 'Close rate target',    unit: '%' },
+        { key: 'show_up_target',      label: 'Show-up rate target',  unit: '%' },
       ],
     },
   ] as { title: string; fields: { key: keyof typeof values; label: string; unit: string }[] }[]

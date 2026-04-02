@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import PipelineClient from './PipelineClient'
-import type { Lead, LeadLabel, Setter } from '@/types'
+import type { Lead, LeadLabel, Setter, KpiTargets } from '@/types'
 
 export default async function PipelinePage() {
   const supabase = await createServerSupabaseClient()
@@ -13,6 +13,7 @@ export default async function PipelinePage() {
     { data: labels },
     { data: setters },
     { data: assignments },
+    { data: kpiTargets },
   ] = await Promise.all([
     supabase
       .from('leads')
@@ -22,6 +23,7 @@ export default async function PipelinePage() {
     supabase.from('lead_labels').select('*').eq('user_id', user.id),
     supabase.from('setters').select('*').eq('user_id', user.id).eq('active', true),
     supabase.from('lead_label_assignments').select('*, leads!inner(user_id)').eq('leads.user_id', user.id),
+    supabase.from('kpi_targets').select('*').eq('user_id', user.id).maybeSingle(),
   ])
 
   return (
@@ -31,6 +33,7 @@ export default async function PipelinePage() {
       setters={(setters as Setter[]) ?? []}
       assignments={assignments ?? []}
       userId={user.id}
+      kpiTargets={(kpiTargets as KpiTargets) ?? null}
     />
   )
 }
