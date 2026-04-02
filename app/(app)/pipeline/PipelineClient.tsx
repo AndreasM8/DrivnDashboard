@@ -561,7 +561,7 @@ function StageColumn({
         )}
 
         {/* Cards */}
-        <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-240px)]">
+        <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pb-2">
           {leads.map(lead => {
             const assignedLabelIds = assignments
               .filter(a => a.lead_id === lead.id)
