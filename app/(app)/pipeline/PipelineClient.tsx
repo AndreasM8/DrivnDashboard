@@ -145,7 +145,7 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
   }))
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-5 pt-4 pb-2 mx-6 mt-4 mb-2">
+    <div className="bg-white border border-gray-200 rounded-xl px-5 pt-4 pb-2 mx-6 mt-4 mb-2 shadow-sm">
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -204,8 +204,8 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
       <div className="flex mt-2">
         {segs.map((seg, i) => (
           <div key={i} className="flex-1 text-center min-w-0 px-1">
-            <p className="text-sm font-bold text-gray-800 dark:text-slate-100 tabular-nums">{seg.count}</p>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate">{seg.label}</p>
+            <p className="text-sm font-bold text-gray-800 tabular-nums">{seg.count}</p>
+            <p className="text-[10px] text-gray-400 font-medium truncate">{seg.label}</p>
           </div>
         ))}
       </div>
@@ -223,22 +223,22 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
           let tooltip: string
           if (t !== null) {
             if (r >= t) {
-              color = 'text-emerald-500 dark:text-emerald-400'
+              color = 'text-emerald-500'
               dot   = 'bg-emerald-400'
               tooltip = `Target: ${t}% ✓`
             } else if (r >= t * 0.8) {
-              color = 'text-amber-500 dark:text-amber-400'
+              color = 'text-amber-500'
               dot   = 'bg-amber-400'
               tooltip = `Target: ${t}% (${t - r}% below)`
             } else {
-              color = 'text-rose-500 dark:text-rose-400'
+              color = 'text-rose-500'
               dot   = 'bg-rose-400'
               tooltip = `Target: ${t}% (${t - r}% below)`
             }
           } else {
             // No target set — neutral grey with a subtle hint to add one
-            color   = 'text-gray-400 dark:text-slate-500'
-            dot     = 'bg-gray-300 dark:bg-slate-600'
+            color   = 'text-gray-400'
+            dot     = 'bg-gray-300'
             tooltip = 'Set a target in Settings → Conversion targets'
           }
 
@@ -246,11 +246,11 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
             <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
               style={{ left: `${((i + 1) / n) * 100}%` }}
               title={tooltip}>
-              <span className="text-[9px] text-gray-400 dark:text-slate-500 font-medium leading-none mb-0.5">{seg.convLabel}</span>
+              <span className="text-[9px] text-gray-400 font-medium leading-none mb-0.5">{seg.convLabel}</span>
               <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
               <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
               {t !== null && (
-                <span className="text-[9px] text-gray-300 dark:text-slate-600 leading-none tabular-nums">{t}%</span>
+                <span className="text-[9px] text-gray-300 leading-none tabular-nums">{t}%</span>
               )}
             </div>
           )
@@ -275,8 +275,8 @@ interface StageColumnConfig {
 }
 
 const STAGE_COLUMNS: StageColumnConfig[] = [
-  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white dark:bg-slate-800',       accent: 'bg-blue-500',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
-  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white dark:bg-slate-800',       accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
+  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white',       accent: 'bg-blue-500',    extraStages: undefined,       hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
+  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white',       accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
   { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-orange-500',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
   { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-emerald-500', extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
   { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white dark:bg-slate-800',       accent: 'bg-amber-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
@@ -305,9 +305,9 @@ function loadHiddenColumns(): Set<LeadStage> {
 const CONTACTED_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent']
 
 const TIER_META = {
-  1: { label: 'T1', emoji: '🔥', bg: 'bg-red-50 dark:bg-red-900/20',    text: 'text-red-600 dark:text-red-400' },
-  2: { label: 'T2', emoji: '💪', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400' },
-  3: { label: 'T3', emoji: '🌱', bg: 'bg-gray-100 dark:bg-slate-700',    text: 'text-gray-500 dark:text-slate-400' },
+  1: { label: 'T1', emoji: '🔥', bg: 'bg-red-50',    text: 'text-red-600' },
+  2: { label: 'T2', emoji: '💪', bg: 'bg-amber-50',  text: 'text-amber-600' },
+  3: { label: 'T3', emoji: '🌱', bg: 'bg-gray-100',  text: 'text-gray-500' },
 } as const
 
 function LeadCard({
@@ -360,7 +360,7 @@ function LeadCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className="relative bg-white dark:bg-slate-750 rounded-xl border border-gray-100 dark:border-slate-700 p-3 cursor-pointer hover:shadow-md hover:border-gray-200 dark:hover:border-slate-600 transition-all group shadow-sm"
+      className="relative bg-white rounded-xl border border-gray-100 p-3 cursor-pointer hover:shadow-md hover:border-gray-200 transition-all group shadow-sm"
     >
       {/* Top row: username + urgency dot */}
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -368,7 +368,7 @@ function LeadCard({
           @{lead.ig_username}
         </p>
         <div
-          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-slate-800 ${urgencyDot}`}
+          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white ${urgencyDot}`}
           title={urgencyTitle}
         />
       </div>
@@ -389,7 +389,7 @@ function LeadCard({
       )}
 
       {lead.setter_notes && (
-        <p className="text-[11px] text-gray-400 dark:text-slate-500 line-clamp-1 mb-2 leading-snug">{lead.setter_notes}</p>
+        <p className="text-[11px] text-gray-400 line-clamp-1 mb-2 leading-snug">{lead.setter_notes}</p>
       )}
 
       {/* Bottom row: tier badge + time ago + contacted btn */}
@@ -404,7 +404,7 @@ function LeadCard({
 
         <div className="flex items-center gap-1.5">
           {days !== null && (
-            <span className="text-[10px] text-gray-400 dark:text-slate-500 tabular-nums">
+            <span className="text-[10px] text-gray-400 tabular-nums">
               {days === 0 ? 'today' : `${days}d ago`}
             </span>
           )}
@@ -415,7 +415,7 @@ function LeadCard({
               className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
                 contactedFlash
                   ? 'bg-emerald-500 text-white'
-                  : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 opacity-0 group-hover:opacity-100'
+                  : 'bg-emerald-50 text-emerald-600 opacity-0 group-hover:opacity-100'
               }`}
             >
               ✓
@@ -464,9 +464,9 @@ function StageColumn({
 
   const tierBreakdown = useMemo(() => {
     const tiers: { tier: 1 | 2 | 3; icon: string; cls: string }[] = [
-      { tier: 1, icon: '🔥', cls: 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' },
-      { tier: 2, icon: '💪', cls: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400' },
-      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400' },
+      { tier: 1, icon: '🔥', cls: 'bg-red-50 text-red-600' },
+      { tier: 2, icon: '💪', cls: 'bg-amber-50 text-amber-600' },
+      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-500' },
     ]
     return tiers.map(t => ({
       ...t,
@@ -500,7 +500,7 @@ function StageColumn({
       className={`flex-shrink-0 w-64 min-w-[256px] rounded-2xl ${bg} border transition-all ${
         isDragOver
           ? 'ring-2 ring-blue-400 border-blue-300 shadow-lg'
-          : 'border-gray-100 dark:border-slate-700 shadow-sm'
+          : 'border-gray-200 shadow-sm'
       } flex flex-col`}
     >
       {/* Colored accent bar */}
@@ -510,21 +510,21 @@ function StageColumn({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-gray-800 dark:text-slate-100">{label}</span>
+            <span className="font-bold text-sm text-gray-800">{label}</span>
             <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full tabular-nums ${
               hasFilter
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-500'
             }`}>
               {hasFilter ? `${leads.length} / ${allLeadsInStage.length}` : leads.length}
             </span>
             {auto && (
-              <span className="text-[9px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-wide">Auto</span>
+              <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wide">Auto</span>
             )}
           </div>
           <button
             onClick={onAddClick}
-            className="w-6 h-6 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-all flex items-center justify-center text-sm font-bold leading-none"
+            className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-all flex items-center justify-center text-sm font-bold leading-none"
           >
             +
           </button>
@@ -586,7 +586,7 @@ function StageColumn({
             )
           })}
           {leads.length === 0 && (
-            <div className="text-center py-6 text-xs text-gray-400 dark:text-slate-500 px-2">
+            <div className="text-center py-6 text-xs text-gray-400 px-2">
             {stage === 'follower' && 'Add one with + Add above'}
             {stage === 'replied' && 'Add one with + Add above'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
@@ -769,12 +769,12 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Pipeline</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
+        <h1 className="text-xl font-bold text-gray-900">Pipeline</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLabelManagerOpen(true)}
-            className="px-3 py-1.5 text-sm text-gray-600 dark:text-slate-400 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Labels
           </button>
@@ -788,7 +788,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-x-auto">
+      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-100 bg-white overflow-x-auto">
         {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
           const icons: Record<string, string> = { '1': '🔥', '2': '💪', '3': '🌱' }
           const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
@@ -797,7 +797,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
               key={f}
               onClick={() => setTierFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                tierFilter === f ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                tierFilter === f ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
               }`}
             >
               {icons[f] && <span>{icons[f]}</span>}
@@ -809,15 +809,15 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
 
         {labels.length > 0 && (
           <>
-            <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 mx-1" />
+            <div className="w-px h-4 bg-gray-200 mx-1" />
 
             {/* All pill — clears label filter */}
             <button
               onClick={() => setSelectedLabels([])}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedLabels.length === 0
-                  ? 'bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200'
-                  : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                  ? 'bg-gray-200 text-gray-700'
+                  : 'text-gray-500 hover:bg-gray-100'
               }`}
             >
               All
@@ -859,15 +859,15 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                     onClick={() => toggleColumn(col.stage)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                       visible
-                        ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
-                        : 'text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-700'
+                        ? 'bg-slate-200 text-slate-700'
+                        : 'text-gray-400 hover:bg-gray-100'
                     }`}
                   >
                     {col.label}
                   </button>
                 )
               })}
-              <div className="w-px h-4 bg-gray-200 dark:bg-slate-600 flex-shrink-0" />
+              <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
             </>
           )}
 
@@ -876,8 +876,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
             onClick={() => setShowColumnToggles(v => !v)}
             className={`p-1.5 rounded-lg transition-colors ${
               showColumnToggles
-                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
-                : 'text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-700'
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-gray-400 hover:bg-gray-100'
             }`}
             aria-label="Toggle column visibility"
           >
@@ -890,7 +890,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search followers…"
-            className="px-3 py-1.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 bg-white text-gray-900 placeholder-gray-400"
           />
         </div>
       </div>

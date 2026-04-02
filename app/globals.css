@@ -2,15 +2,15 @@
 
 :root {
   --font-geist: 'Geist', sans-serif;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
   --bg-card: #ffffff;
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;
   --border: #e5e7eb;
   --border-light: #f3f4f6;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #0f172a;
 }
 
 .dark {

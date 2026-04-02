@@ -20,8 +20,8 @@ function NavLink({ href, label, icon, badge }: NavItem) {
       href={href}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
         active
-          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+          ? 'bg-slate-800 text-white'
+          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
       }`}
     >
       <span className="w-5 h-5 flex-shrink-0">{icon}</span>
@@ -50,33 +50,31 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-56 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-700 h-full flex-shrink-0">
+    <aside className="hidden md:flex flex-col w-56 bg-slate-900 h-full flex-shrink-0">
       {/* Logo */}
-      <div className="px-4 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2.5">
-        {/* Drivnscaling mark */}
-        <svg viewBox="0 0 28 24" className="w-7 h-6 flex-shrink-0 text-gray-900 dark:text-slate-100" fill="currentColor">
-          {/* Left bracket / curved chevron */}
-          <path d="M0 0 L5 0 L9.5 12 L5 24 L0 24 L4.5 12 Z" />
-          {/* Top right wedge */}
-          <path d="M11 0 L23 0 L17 10 L11 10 Z" />
-          {/* Bottom diagonal stripe */}
-          <path d="M12 14 L24 14 L28 24 L16 24 Z" />
+      <div className="px-4 py-5 border-b border-slate-800 flex items-center gap-2.5">
+        {/* Drivnscaling mark — geometric D+S icon */}
+        <svg viewBox="0 0 32 28" className="w-7 h-6 flex-shrink-0 text-white" fill="currentColor">
+          {/* Left D-bracket chevron */}
+          <path d="M0 0 L6 0 L6 2 L14 14 L6 26 L6 28 L0 28 L8 14 Z" />
+          {/* Top-right bar */}
+          <path d="M17 0 L32 0 L32 10 L23 10 Z" />
+          {/* Bottom-right diagonal stripe */}
+          <path d="M18 18 L32 18 L32 28 L21 28 Z" />
         </svg>
-        <div>
-          <span className="text-sm font-bold text-gray-900 dark:text-slate-100 leading-none tracking-tight">Drivnscaling</span>
-        </div>
+        <span className="text-sm font-bold text-white leading-none tracking-tight">Drivnscaling</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <NavLink href="/dashboard" label="Home" icon={<HomeIcon />} />
         <NavLink href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
 
-        <div className="my-2 border-t border-gray-100 dark:border-slate-700" />
+        <div className="my-2 border-t border-slate-800" />
 
         <NavLink href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
         <NavLink href="/clients" label="Clients" icon={<ClientsIcon />} />
 
-        <div className="my-2 border-t border-gray-100 dark:border-slate-700" />
+        <div className="my-2 border-t border-slate-800" />
 
         <NavLink href="/numbers" label="Numbers" icon={<NumbersIcon />} />
 
@@ -87,13 +85,13 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
       </nav>
 
       {/* Bottom: Settings + Logout */}
-      <div className="px-3 py-4 border-t border-gray-100 dark:border-slate-700 space-y-0.5">
+      <div className="px-3 py-4 border-t border-slate-800 space-y-0.5">
         {isOwner && (
           <NavLink href="/settings" label="Settings" icon={<SettingsIcon />} />
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
         >
           <span className="w-5 h-5 flex-shrink-0"><LogoutIcon /></span>
           <span>Log out</span>
