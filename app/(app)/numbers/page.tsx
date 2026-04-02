@@ -93,10 +93,22 @@ export default async function NumbersPage() {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const storedCurrentSnapshot = snapshots?.find(s => s.month === currentMonth)
   const lastMonthSnapshot = snapshots?.find(s => s.month === lastMonth)
 
   const adSpendTotal = (adSpend ?? []).reduce((sum, row) => sum + ((row as { actual_amount: number }).actual_amount ?? 0), 0)
+
+  // ── All-time / current business overview (all active clients, not just this month) ──
+  const allClients = (clients ?? []) as Client[]
+  const allInstallments = (installments ?? []) as PaymentInstallment[]
+  const totalActiveClients = allClients.length
+  const totalContracted = allClients.reduce((s, c) => s + c.total_amount, 0)
+  const totalCashCollected = allClients
+    .filter(c => c.payment_type !== 'plan')
+    .reduce((s, c) => s + c.total_amount, 0)
+    + allInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
+  const totalOutstanding = allInstallments
+    .filter(i => !i.paid)
+    .reduce((s, i) => s + i.amount, 0)
 
   return (
     <NumbersClient
@@ -105,11 +117,15 @@ export default async function NumbersPage() {
       currentSnapshot={liveSnapshot}
       lastMonthSnapshot={(lastMonthSnapshot as MonthlySnapshot) ?? null}
       history={(snapshots as MonthlySnapshot[]) ?? []}
-      clients={(clients as Client[]) ?? []}
-      installments={(installments as PaymentInstallment[]) ?? []}
+      clients={allClients}
+      installments={allInstallments}
       currentMonth={currentMonth}
       expenses={(expenses as Expense[]) ?? []}
       adSpendTotal={adSpendTotal}
+      totalActiveClients={totalActiveClients}
+      totalContracted={totalContracted}
+      totalCashCollected={totalCashCollected}
+      totalOutstanding={totalOutstanding}
     />
   )
 }

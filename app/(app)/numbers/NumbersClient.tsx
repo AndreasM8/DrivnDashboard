@@ -28,6 +28,10 @@ interface Props {
   currentMonth: string
   expenses: Expense[]
   adSpendTotal: number
+  totalActiveClients: number
+  totalContracted: number
+  totalCashCollected: number
+  totalOutstanding: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -222,7 +226,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function NumbersClient({ baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history, clients, installments, currentMonth, expenses, adSpendTotal }: Props) {
+export default function NumbersClient({ baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history, clients, installments, currentMonth, expenses, adSpendTotal, totalActiveClients, totalContracted, totalCashCollected, totalOutstanding }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
     if (lastMonthSnapshot !== null) return false
@@ -334,6 +338,28 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
           </div>
         )}
 
+        {/* ── Current business overview (all-time active clients) ── */}
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Current business</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Active clients', value: String(totalActiveClients) },
+              { label: 'Total contracted', value: formatCurrency(totalContracted, baseCurrency) },
+              { label: 'Cash collected', value: formatCurrency(totalCashCollected, baseCurrency) },
+              { label: 'Outstanding', value: formatCurrency(totalOutstanding, baseCurrency) },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white rounded-xl border border-gray-100 px-4 py-3">
+                <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
+                <p className="text-xl font-bold text-gray-900">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Monthly KPIs ── */}
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This month — {formatMonth(currentMonth)}</p>
+
         {/* KPI cards — row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <KpiCard
@@ -428,6 +454,7 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
             color="neutral"
           />
         </div>
+        </div>{/* end monthly section */}
 
         {/* Chart */}
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
