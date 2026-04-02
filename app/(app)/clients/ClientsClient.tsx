@@ -57,7 +57,10 @@ export default function ClientsClient({ initialClients, installments, userId, ba
 
   // Stats
   const activeCount = clients.length
-  const totalLtv = clients.reduce((sum, c) => sum + c.total_amount, 0)
+  const clientsWithMonths = clients.filter(c => c.plan_months && c.plan_months > 0)
+  const avgLtvMonths = clientsWithMonths.length > 0
+    ? Math.round(clientsWithMonths.reduce((sum, c) => sum + (c.plan_months ?? 0), 0) / clientsWithMonths.length)
+    : null
   const invoicesDueSoon = allInstallments.filter(i => {
     const days = daysUntil(i.due_date)
     return !i.paid && days >= 0 && days <= 7
@@ -117,7 +120,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-50 dark:border-slate-700">
         {[
           { label: 'Active clients', value: String(activeCount) },
-          { label: 'LTV (months)', value: formatCurrency(totalLtv, baseCurrency) },
+          { label: 'Avg. LTV (months)', value: avgLtvMonths !== null ? `${avgLtvMonths} mo` : '—' },
           { label: 'Invoices due soon', value: String(invoicesDueSoon) },
           { label: 'Upsell ready', value: String(upsellReady) },
         ].map(s => (
