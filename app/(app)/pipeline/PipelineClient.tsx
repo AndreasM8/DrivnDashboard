@@ -43,7 +43,6 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
   if (leads.length === 0) return null
 
   const total = leads.length
-
   const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
   const callBookedStages: LeadStage[] = ['call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
 
@@ -54,136 +53,151 @@ function PipelineFunnel({ leads }: { leads: Lead[] }) {
     { label: 'Closed',      count: leads.filter(l => l.stage === 'closed').length },
   ]
 
-  const W = 500
-  const H = 88
+  const W = 600
+  const H = 110
   const cy = H / 2
-  const n = steps.length
+  const n  = steps.length
   const segW = W / n
-  const MIN_H = H * 0.10
-  const MAX_H = H * 0.92
-  const CP   = segW * 0.62   // bezier control-point offset → stronger = more wave
+  const MIN_H = H * 0.05   // very thin floor so drop-offs look dramatic
+  const MAX_H = H * 0.90
 
   function barH(count: number) {
     if (total === 0) return MIN_H
     return Math.max(MIN_H, (count / total) * MAX_H)
   }
 
-  // Heights at each vertical boundary (n+1 values; last two are equal → rect end)
+  // Height at each stage boundary
   const hs = [...steps.map(s => barH(s.count)), barH(steps[n - 1].count)]
-  const xs = Array.from({ length: n + 1 }, (_, i) => i * segW)
 
-  // Smooth top edge (left → right) using cubic beziers
-  function topPath() {
-    let d = `M ${xs[0]},${cy - hs[0] / 2}`
-    for (let i = 0; i < n; i++) {
-      const [x0, x1] = [xs[i], xs[i + 1]]
-      const [y0, y1] = [cy - hs[i] / 2, cy - hs[i + 1] / 2]
-      d += ` C ${x0 + CP},${y0} ${x1 - CP},${y1} ${x1},${y1}`
-    }
-    return d
+  // Interpolate height smoothly across the full width using smoothstep
+  function heightAt(x: number): number {
+    const seg  = Math.min(Math.floor(x / segW), n - 1)
+    const t    = (x - seg * segW) / segW
+    const st   = t * t * (3 - 2 * t)           // smoothstep
+    return hs[seg] * (1 - st) + hs[seg + 1] * st
   }
 
-  // Smooth bottom edge (right → left)
-  function bottomPath() {
-    let d = `L ${xs[n]},${cy + hs[n] / 2}`
-    for (let i = n - 1; i >= 0; i--) {
-      const [x0, x1] = [xs[i], xs[i + 1]]
-      const [y0, y1] = [cy + hs[i] / 2, cy + hs[i + 1] / 2]
-      d += ` C ${x1 - CP},${y1} ${x0 + CP},${y0} ${x0},${y0}`
+  // Build wavy top + bottom edges by sampling many points
+  const SAMPLES = 90
+  const FREQ    = 2.5 * Math.PI * 2   // wave cycles across the width
+  const AMP     = 4.5                  // max wave amplitude in px
+
+  function buildPath(): string {
+    const top: string[] = []
+    const bot: string[] = []
+
+    for (let i = 0; i <= SAMPLES; i++) {
+      const x  = (i / SAMPLES) * W
+      const h  = heightAt(x)
+      // wave amplitude scales with local height so thin sections barely wave
+      const amp  = AMP * (h / MAX_H)
+      const wave = Math.sin((x / W) * FREQ) * amp
+      top.push(`${x.toFixed(1)},${(cy - h / 2 + wave).toFixed(2)}`)
+      bot.push(`${x.toFixed(1)},${(cy + h / 2 - wave).toFixed(2)}`)
     }
-    return d
+
+    // Smooth path: use L for top (left→right), then reverse bottom (right→left)
+    const topPath = `M ${top[0]} ` + top.slice(1).map(p => `L ${p}`).join(' ')
+    const botPath = bot.slice().reverse().map(p => `L ${p}`).join(' ')
+    return `${topPath} ${botPath} Z`
   }
 
-  const pathD = `${topPath()} ${bottomPath()} Z`
+  const pathD = buildPath()
 
   const segs = steps.map((s, i) => ({
     ...s,
-    cx: xs[i] + segW / 2,
     convRate: i < n - 1 && s.count > 0
       ? Math.round((steps[i + 1].count / s.count) * 100)
       : null,
   }))
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-5 pt-4 pb-3 mx-6 mt-4 mb-2">
+    <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl px-5 pt-4 pb-2 mx-6 mt-4 mb-2">
 
-      {/* ── Wavy SVG funnel ── */}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         className="w-full"
-        style={{ height: 88, display: 'block' }}
+        style={{ height: 110, display: 'block' }}
       >
         <defs>
-          <linearGradient id="fgLight" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#a5b4fc" stopOpacity="0.95" />
-            <stop offset="30%"  stopColor="#60a5fa" stopOpacity="0.90" />
-            <stop offset="68%"  stopColor="#fb923c" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#34d399" stopOpacity="0.95" />
+          <linearGradient id="fgLight" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#818cf8" stopOpacity="1"    />
+            <stop offset="33%"  stopColor="#38bdf8" stopOpacity="0.95" />
+            <stop offset="66%"  stopColor="#fb923c" stopOpacity="0.90" />
+            <stop offset="100%" stopColor="#34d399" stopOpacity="1"    />
           </linearGradient>
-          <linearGradient id="fgDark" x1="0" y1="0" x2="500" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#818cf8" stopOpacity="0.85" />
-            <stop offset="30%"  stopColor="#3b82f6" stopOpacity="0.80" />
-            <stop offset="68%"  stopColor="#f97316" stopOpacity="0.80" />
+          <linearGradient id="fgDark" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.90" />
+            <stop offset="33%"  stopColor="#0ea5e9" stopOpacity="0.85" />
+            <stop offset="66%"  stopColor="#f97316" stopOpacity="0.80" />
             <stop offset="100%" stopColor="#10b981" stopOpacity="0.90" />
           </linearGradient>
-          <filter id="fShadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#00000014" />
+          {/* Inner highlight — lighter strip along the top third */}
+          <linearGradient id="hlLight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="white" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="white" stopOpacity="0"    />
+          </linearGradient>
+          <linearGradient id="hlDark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="white" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="white" stopOpacity="0"    />
+          </linearGradient>
+          <filter id="fGlow">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
 
-        {/* Light mode */}
-        <path d={pathD} fill="url(#fgLight)" filter="url(#fShadow)" className="dark:opacity-0 transition-opacity" />
-        {/* Dark mode */}
-        <path d={pathD} fill="url(#fgDark)" filter="url(#fShadow)" className="opacity-0 dark:opacity-100 transition-opacity" />
+        {/* Main shape — light */}
+        <path d={pathD} fill="url(#fgLight)" className="dark:opacity-0 transition-opacity" />
+        {/* Main shape — dark */}
+        <path d={pathD} fill="url(#fgDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
+        {/* Highlight overlay */}
+        <path d={pathD} fill="url(#hlLight)" className="dark:opacity-0 transition-opacity" />
+        <path d={pathD} fill="url(#hlDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
 
-        {/* Soft dividers at each junction — vertical lines clipped to funnel height */}
-        {xs.slice(1, -1).map((x, i) => {
-          const h = hs[i + 1]
+        {/* Stage dividers */}
+        {Array.from({ length: n - 1 }, (_, i) => {
+          const x = (i + 1) * segW
+          const h = heightAt(x)
           return (
-            <line
-              key={i}
-              x1={x} y1={cy - h / 2}
-              x2={x} y2={cy + h / 2}
-              stroke="white" strokeOpacity="0.35" strokeWidth="1.5"
-              strokeDasharray="3 3"
+            <line key={i}
+              x1={x} y1={cy - h / 2 + 2}
+              x2={x} y2={cy + h / 2 - 2}
+              stroke="white" strokeOpacity="0.4" strokeWidth="1"
             />
           )
         })}
       </svg>
 
-      {/* ── Counts + labels ── */}
-      <div className="flex mt-2.5">
+      {/* Counts + labels */}
+      <div className="flex mt-2">
         {segs.map((seg, i) => (
-          <div key={i} className="flex-1 text-center min-w-0 px-0.5">
+          <div key={i} className="flex-1 text-center min-w-0 px-1">
             <p className="text-sm font-bold text-gray-800 dark:text-slate-100 tabular-nums">{seg.count}</p>
-            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate leading-tight">{seg.label}</p>
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 font-medium truncate">{seg.label}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Conversion rates ── */}
-      <div className="relative h-9 mt-1">
+      {/* Conversion rates */}
+      <div className="relative h-8 mt-0.5">
         {segs.slice(0, -1).map((seg, i) => {
           if (seg.convRate === null) return null
           const r = seg.convRate
           const color = r >= 60 ? 'text-emerald-500 dark:text-emerald-400'
                       : r >= 35 ? 'text-amber-500 dark:text-amber-400'
                                 : 'text-rose-500 dark:text-rose-400'
-          const dot   = r >= 60 ? 'bg-emerald-400' : r >= 35 ? 'bg-amber-400' : 'bg-rose-400'
+          const dot = r >= 60 ? 'bg-emerald-400' : r >= 35 ? 'bg-amber-400' : 'bg-rose-400'
           return (
-            <div
-              key={i}
-              className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
-              style={{ left: `${((i + 1) / n) * 100}%` }}
-            >
+            <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
+              style={{ left: `${((i + 1) / n) * 100}%` }}>
               <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
               <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
             </div>
           )
         })}
       </div>
-
     </div>
   )
 }
