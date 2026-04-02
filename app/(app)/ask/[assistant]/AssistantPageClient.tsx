@@ -206,18 +206,146 @@ function TypingIndicator() {
   )
 }
 
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+
+const ONBOARDING: Record<AssistantSlug, {
+  headline: string
+  subtext: string
+  fields: { id: string; label: string; placeholder: string; memoryKey: string }[]
+}> = {
+  andreas: {
+    headline: 'Hei! La oss bli kjent 👋',
+    subtext: 'Svar på noen raske spørsmål så kan jeg hjelpe deg med personalisert content fra første melding.',
+    fields: [
+      { id: 'niche',              label: 'Hva er nisjen din?',                          placeholder: 'F.eks. vekttap for kvinner 30+, styrketrening for menn, løping…',    memoryKey: 'niche' },
+      { id: 'target_audience',   label: 'Hvem er din ideelle klient?',                 placeholder: 'Alder, mål, hva de sliter med…',                                      memoryKey: 'target_audience' },
+      { id: 'brand_voice',       label: 'Hva er tonen din på sosiale medier?',         placeholder: 'F.eks. direkte og ærlig, motiverende, humoristisk, personlig…',       memoryKey: 'brand_voice' },
+      { id: 'what_works',        label: 'Hva er noen av dine beste klientresultater?', placeholder: 'F.eks. "klient X gikk ned 12 kg på 3 mnd"…',                          memoryKey: 'what_works' },
+      { id: 'content_challenges',label: 'Hva sliter du mest med på content-siden?',   placeholder: 'F.eks. konsistens, hooks, ideer, engagement…',                         memoryKey: 'content_challenges' },
+    ],
+  },
+  sebastian: {
+    headline: 'Hei! La oss bli kjent 👋',
+    subtext: 'Svar på noen raske spørsmål så kan jeg hjelpe deg med skreddersydde salgsskript og DM-strategier.',
+    fields: [
+      { id: 'niche',           label: 'Hva er nisjen din?',                           placeholder: 'F.eks. vekttap, styrketrening, mental helse…',                         memoryKey: 'niche' },
+      { id: 'revenue_range',   label: 'Hva er tilbudet ditt og prisen?',              placeholder: 'F.eks. 1:1 coaching 3 mnd til 15 000 kr…',                            memoryKey: 'revenue_range' },
+      { id: 'target_audience', label: 'Beskriv din ideelle klient',                   placeholder: 'Alder, livssituasjon, hva de ønsker å oppnå…',                        memoryKey: 'target_audience' },
+      { id: 'sales_challenges',label: 'Hva er de vanligste innvendingene du møter?',  placeholder: 'F.eks. "for dyrt", "må tenke meg om", "har ikke tid"…',               memoryKey: 'sales_challenges' },
+      { id: 'what_works',      label: 'Hva gjør tilbudet ditt unikt?',               placeholder: 'Din USP, beste klientresultat, hva du gjør annerledes…',              memoryKey: 'what_works' },
+    ],
+  },
+}
+
+function OnboardingScreen({
+  assistant,
+  meta,
+  onComplete,
+}: {
+  assistant: AssistantSlug
+  meta: typeof ASSISTANT_META[AssistantSlug]
+  onComplete: () => void
+}) {
+  const config = ONBOARDING[assistant]
+  const [values, setValues] = useState<Record<string, string>>(
+    () => Object.fromEntries(config.fields.map(f => [f.id, ''])),
+  )
+  const [saving, setSaving] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+
+    const memoryPayload: Record<string, string> = { assistant }
+    for (const field of config.fields) {
+      if (values[field.id]?.trim()) {
+        memoryPayload[field.memoryKey] = values[field.id].trim()
+      }
+    }
+
+    await fetch('/api/assistants/memory', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memoryPayload),
+    })
+
+    setSaving(false)
+    onComplete()
+  }
+
+  const filledCount = config.fields.filter(f => values[f.id]?.trim()).length
+
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="max-w-lg mx-auto">
+        {/* Avatar + headline */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-2xl flex-shrink-0 shadow-md`}>
+            {meta.emoji}
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900 text-base leading-tight">{config.headline}</h2>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{config.subtext}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {config.fields.map(field => (
+            <div key={field.id}>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                {field.label}
+              </label>
+              <textarea
+                value={values[field.id]}
+                onChange={e => setValues(v => ({ ...v, [field.id]: e.target.value }))}
+                placeholder={field.placeholder}
+                rows={2}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none leading-relaxed"
+              />
+            </div>
+          ))}
+
+          <div className="pt-2 flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={saving || filledCount === 0}
+              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${
+                filledCount > 0 && !saving
+                  ? `${meta.accentBg} text-white hover:opacity-90`
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {saving ? 'Lagrer…' : `Start samtale med ${meta.name} →`}
+            </button>
+            <button
+              type="button"
+              onClick={onComplete}
+              className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
+            >
+              Hopp over
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AssistantPageClient({
   assistant,
   initialMessages,
+  hasMemory,
 }: {
   assistant: AssistantSlug
   initialMessages: ChatMessage[]
+  hasMemory: boolean
 }) {
   const meta = ASSISTANT_META[assistant]
   const agents = ALL_AGENTS[assistant]
 
+  const [memoryReady, setMemoryReady] = useState(hasMemory)
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -444,8 +572,17 @@ export default function AssistantPageClient({
         </div>
       )}
 
+      {/* Onboarding — shown on first visit when no memory exists */}
+      {!memoryReady && (
+        <OnboardingScreen
+          assistant={assistant}
+          meta={meta}
+          onComplete={() => setMemoryReady(true)}
+        />
+      )}
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {memoryReady && <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {isEmpty && !streaming && (
           <div className="flex flex-col items-center justify-center h-full text-center py-16 px-6">
             <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-3xl mb-4 shadow-md`}>
@@ -478,10 +615,10 @@ export default function AssistantPageClient({
         {streaming && messages.at(-1)?.content === '' && <TypingIndicator />}
 
         <div ref={bottomRef} />
-      </div>
+      </div>}
 
-      {/* Input */}
-      <div className="px-4 py-3 border-t border-gray-100 bg-white flex-shrink-0">
+      {/* Input — hidden during onboarding */}
+      {memoryReady && <div className="px-4 py-3 border-t border-gray-100 bg-white flex-shrink-0">
         <form onSubmit={handleSubmit} className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
@@ -519,7 +656,7 @@ export default function AssistantPageClient({
             )}
           </button>
         </form>
-      </div>
+      </div>}
 
       {/* Agent modal */}
       {activeAgent && (

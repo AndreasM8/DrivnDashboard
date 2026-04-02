@@ -235,8 +235,29 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
   })
   const [showUnlockModal, setShowUnlockModal] = useState(false)
 
-  const snap = currentSnapshot
-  const last = lastMonthSnapshot
+  // ── Month navigation ──────────────────────────────────────────────────────
+  // Build ordered list of available months (current + any stored snapshots)
+  const availableMonths = [
+    currentMonth,
+    ...history.map(s => s.month).filter(m => m !== currentMonth),
+  ].sort((a, b) => b.localeCompare(a)) // newest first
+
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+
+  const selectedIdx = availableMonths.indexOf(selectedMonth)
+  const canGoBack    = selectedIdx < availableMonths.length - 1
+  const canGoForward = selectedIdx > 0
+
+  // The snapshot for the selected month
+  const snap: MonthlySnapshot | null = selectedMonth === currentMonth
+    ? currentSnapshot
+    : history.find(s => s.month === selectedMonth) ?? null
+
+  // "last month" for comparison = the snapshot immediately before selected
+  const prevMonth = availableMonths[selectedIdx + 1]
+  const last: MonthlySnapshot | null = selectedMonth === currentMonth
+    ? lastMonthSnapshot
+    : (prevMonth ? history.find(s => s.month === prevMonth) ?? null : null)
 
   function getCompare<K extends keyof MonthlySnapshot>(key: K): number | null {
     if (compareMode === 'targets') return null
@@ -248,18 +269,35 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
     return targets ? (targets[key] as number) : null
   }
 
-  const outstanding = clients
-    .filter(c => c.payment_type === 'plan')
-    .reduce((sum, c) => {
-      const clientInsts = installments.filter(i => i.client_id === c.id && !i.paid)
-      return sum + clientInsts.reduce((s, i) => s + i.amount, 0)
-    }, 0)
-
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Numbers — {formatMonth(currentMonth)}</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 gap-3 flex-wrap">
+        {/* Month navigation */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSelectedMonth(availableMonths[selectedIdx + 1])}
+            disabled={!canGoBack}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100 w-44 text-center">
+            {formatMonth(selectedMonth)}
+            {selectedMonth === currentMonth && <span className="ml-1.5 text-[10px] font-bold text-blue-500 align-middle">LIVE</span>}
+          </h1>
+          <button
+            onClick={() => setSelectedMonth(availableMonths[selectedIdx - 1])}
+            disabled={!canGoForward}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-0.5">
             <button
@@ -358,7 +396,7 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
 
         {/* ── Monthly KPIs ── */}
         <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This month — {formatMonth(currentMonth)}</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{formatMonth(selectedMonth)}</p>
 
         {/* KPI cards — row 1 */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -381,13 +419,6 @@ export default function NumbersClient({ baseCurrency, targets, currentSnapshot, 
             compareMode={compareMode}
             compareValue={getCompare('revenue_contracted')}
             color={score(snap?.revenue_contracted ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.revenue_contracted)}
-          />
-          <KpiCard
-            label="Outstanding"
-            value={outstanding}
-            displayValue={formatCurrency(outstanding, baseCurrency)}
-            compareMode={compareMode}
-            color="neutral"
           />
           <KpiCard
             label="New followers"
