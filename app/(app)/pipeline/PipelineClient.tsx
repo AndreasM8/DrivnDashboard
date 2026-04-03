@@ -129,6 +129,17 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                     gap: '2px',
                   }}
                 >
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-3)',
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1,
+                  }}>
+                    {(['Reply rate', 'Booking rate', 'Closing rate'] as const)[i]}
+                  </span>
                   {convRate !== null && (
                     <span
                       style={{

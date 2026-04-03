@@ -271,6 +271,17 @@ function SalesFunnel({ steps, leadsReplied }: { steps: FunnelStep[]; leadsReplie
             {i < boxes.length - 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 6px', flexShrink: 0 }}>
                 <p style={{
+                  fontSize: '9px',
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  color: 'var(--text-3)',
+                  marginBottom: '2px',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {(['Reply rate', 'Booking rate', 'Show-up rate', 'Closing rate'] as const)[i]}
+                </p>
+                <p style={{
                   fontSize: '13px',
                   fontWeight: 600,
                   color: rateColor(rates[i]),
@@ -893,56 +904,47 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Section 3: SALES PERFORMANCE ─────────────────────────────────── */}
+        {/* ── Section 3: IN-DEPTH METRICS ──────────────────────────────────── */}
         <div>
-          <SectionLabel>Sales performance</SectionLabel>
-          <div className="grid grid-cols-3" style={{ gap: '10px' }}>
+          <SectionLabel>In-depth metrics</SectionLabel>
+          <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+            {(() => {
+              const callsBooked  = snap?.meetings_booked ?? 0
+              const showed       = snap?.calls_held ?? 0
+              const revDue       = selectedMonth === currentMonth ? monthlyRevenueDue : (snap?.revenue_contracted ?? 0)
+              const revPerCall   = callsBooked > 0 ? revDue / callsBooked : null
+              const revPerShow   = showed > 0 ? revDue / showed : null
+              const ltvCash      = clients.length > 0 ? clients.reduce((s, c) => s + c.total_amount, 0) / clients.length : null
+              const planClients  = clients.filter(c => c.payment_type === 'plan' || c.payment_type === 'split')
+              const avgMonths    = planClients.length > 0
+                ? planClients.reduce((s, c) => s + (c.plan_months ?? 0), 0) / planClients.length
+                : null
 
-            {/* Calls booked */}
-            <KpiCard
-              label="Calls booked"
-              value={snap?.meetings_booked ?? 0}
-              displayValue={String(snap?.meetings_booked ?? 0)}
-              target={getTarget('meetings_target')}
-              targetDisplay={targets?.meetings_target ? String(targets.meetings_target) : undefined}
-              compareMode={compareMode}
-              lastValue={last?.meetings_booked ?? null}
-              lastDisplay={last?.meetings_booked != null ? String(last.meetings_booked) : undefined}
-              color={score(snap?.meetings_booked ?? 0, compareMode === 'targets' ? getTarget('meetings_target') : last?.meetings_booked)}
-              numSize={28}
-            />
+              const metric = (label: string, display: string | null, sub: string) => (
+                <div style={{
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-card)',
+                  padding: '16px 18px',
+                  boxShadow: 'var(--shadow-card)',
+                }}>
+                  <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{label}</p>
+                  <p style={{ fontSize: '26px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                    {display ?? '—'}
+                  </p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</p>
+                </div>
+              )
 
-            {/* Show-up rate */}
-            <KpiCard
-              label="Show-up rate"
-              value={snap?.show_up_rate ?? 0}
-              displayValue={`${(snap?.show_up_rate ?? 0).toFixed(1)}%`}
-              target={showUpTarget}
-              targetDisplay={showUpTarget ? `${showUpTarget}%` : undefined}
-              compareMode={compareMode}
-              lastValue={last?.show_up_rate ?? null}
-              lastDisplay={last?.show_up_rate != null ? `${last.show_up_rate.toFixed(1)}%` : undefined}
-              color={score(snap?.show_up_rate ?? 0, showUpTarget)}
-              isPercent
-              numSize={28}
-              subline={`${snap?.calls_held ?? 0} of ${snap?.meetings_booked ?? 0} calls showed up`}
-            />
-
-            {/* Close rate (most important — larger) */}
-            <KpiCard
-              label="Close rate"
-              value={snap?.close_rate ?? 0}
-              displayValue={`${(snap?.close_rate ?? 0).toFixed(1)}%`}
-              target={closeTarget}
-              targetDisplay={closeTarget ? `${closeTarget}%` : undefined}
-              compareMode={compareMode}
-              lastValue={last?.close_rate ?? null}
-              lastDisplay={last?.close_rate != null ? `${last.close_rate.toFixed(1)}%` : undefined}
-              color={score(snap?.close_rate ?? 0, closeTarget)}
-              isPercent
-              numSize={32}
-              subline={`${snap?.clients_signed ?? 0} of ${snap?.calls_held ?? 0} calls closed`}
-            />
+              return (
+                <>
+                  {metric('Revenue per call', revPerCall !== null ? fmtCurrency(revPerCall, baseCurrency) : null, `Based on ${callsBooked} call${callsBooked !== 1 ? 's' : ''} booked`)}
+                  {metric('Revenue per show', revPerShow !== null ? fmtCurrency(revPerShow, baseCurrency) : null, `Based on ${showed} call${showed !== 1 ? 's' : ''} showed up`)}
+                  {metric('LTV (cash)', ltvCash !== null ? fmtCurrency(ltvCash, baseCurrency) : null, `Across ${clients.length} active client${clients.length !== 1 ? 's' : ''}`)}
+                  {metric('LTV (months)', avgMonths !== null ? `${avgMonths.toFixed(1)} mo` : null, planClients.length > 0 ? `Avg of ${planClients.length} plan/split client${planClients.length !== 1 ? 's' : ''}` : 'No plan/split clients yet')}
+                </>
+              )
+            })()}
           </div>
         </div>
 
