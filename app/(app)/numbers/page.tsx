@@ -65,9 +65,10 @@ export default async function NumbersPage() {
     .reduce((s, c) => s + c.total_amount, 0)
 
   // Installments DUE this month — exclude PIF clients (they're counted above via total_amount)
-  type MonthInst = { amount: number; paid: boolean; client_id: string; clients: { payment_type: string }[] }
+  // NOTE: Supabase !inner join returns clients as an OBJECT, not array — access directly
+  type MonthInst = { amount: number; paid: boolean; client_id: string; clients: { payment_type: string } }
   const monthDueInsts = ((allMonthInstallments ?? []) as unknown as MonthInst[])
-    .filter(i => i.clients?.[0]?.payment_type !== 'pif')
+    .filter(i => (i.clients as { payment_type: string })?.payment_type !== 'pif')
   const cashFromDueInstallments = monthDueInsts.reduce((s, i) => s + i.amount, 0)
   const cashFromPaidInstallments = monthDueInsts.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
 
