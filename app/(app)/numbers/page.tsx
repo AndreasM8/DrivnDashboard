@@ -37,9 +37,10 @@ export default async function NumbersPage() {
     supabase.from('payment_installments').select('*, clients!inner(user_id)').eq('clients.user_id', user.id),
     // All leads created this month = new followers
     supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStartTs),
-    // All leads with a call booked OR outcome this month (regardless of when lead was created)
-    supabase.from('leads').select('call_booked_at, call_outcome, updated_at').eq('user_id', user.id)
-      .or(`call_booked_at.gte.${monthStartTs},and(call_outcome.not.is.null,updated_at.gte.${monthStartTs})`),
+    // Leads with a call booked THIS month — attribute meetings + outcomes to booking month
+    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', user.id)
+      .gte('call_booked_at', monthStartTs)
+      .lt('call_booked_at', nextMonthStart + 'T00:00:00.000Z'),
     // Installments DUE this month (paid + unpaid) — include client_id + payment_type to exclude PIF
     supabase.from('payment_installments')
       .select('amount, due_date, paid, paid_at, client_id, clients!inner(user_id, payment_type)')
@@ -77,15 +78,15 @@ export default async function NumbersPage() {
   // cashPending = installments due but not yet confirmed as paid
   const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
-  // Leads metrics — correct scoping
-  const newFollowers = (newLeads ?? []).length  // all leads created this month
-  const allBookedLeads = bookedLeads ?? []
-  const meetingsBooked = allBookedLeads.filter((l: { call_booked_at: string | null }) => l.call_booked_at && l.call_booked_at >= monthStartTs).length
-  const outcomes = allBookedLeads.filter((l: { call_outcome: string | null }) => l.call_outcome)
-  const showed = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'showed').length
-  const noShow = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'no_show').length
-  const canceled = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'canceled').length
-  const totalOutcomes = outcomes.length
+  // Leads metrics — meetings attributed to the month they were BOOKED
+  const newFollowers  = (newLeads ?? []).length
+  const allBookedLeads = (bookedLeads ?? []) as { call_booked_at: string; call_outcome: string | null }[]
+  const meetingsBooked = allBookedLeads.length
+  const withOutcome   = allBookedLeads.filter(l => l.call_outcome)
+  const showed        = withOutcome.filter(l => l.call_outcome === 'showed').length
+  const noShow        = withOutcome.filter(l => l.call_outcome === 'no_show').length
+  const canceled      = withOutcome.filter(l => l.call_outcome === 'canceled').length
+  const totalOutcomes = withOutcome.length
   const clientsSigned = monthClients.length
 
   const showUpRate = totalOutcomes > 0 ? (showed / totalOutcomes) * 100 : 0

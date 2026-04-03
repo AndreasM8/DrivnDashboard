@@ -230,7 +230,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
         <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Revenue', 'New contracts', 'Followers', 'Meetings', 'Show-up', 'Close rate', 'Signed'].map((h, i) => (
+              {['Month', 'Revenue', 'Clients signed', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Signed'].map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -595,10 +595,10 @@ export default function NumbersClient({
           <p className="label-caps" style={{ marginBottom: '10px' }}>Current business</p>
           <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: '10px' }}>
             {[
-              { label: 'Active clients',    value: String(totalActiveClients),                   accent: 'var(--accent)' },
-              { label: 'Total contracted',  value: formatCurrency(totalContracted, baseCurrency), accent: 'var(--success)' },
-              { label: 'Cash collected',    value: formatCurrency(totalCashCollected, baseCurrency), accent: 'var(--success)' },
-              { label: 'Outstanding',       value: formatCurrency(totalOutstanding, baseCurrency), accent: totalOutstanding > 0 ? 'var(--warning)' : 'var(--border-strong)' },
+              { label: 'Active clients',    value: String(totalActiveClients),                       accent: 'var(--accent)' },
+              { label: 'Contract value',    value: formatCurrency(totalContracted, baseCurrency),    accent: 'var(--success)' },
+              { label: 'Collected',         value: formatCurrency(totalCashCollected, baseCurrency), accent: 'var(--success)' },
+              { label: 'To collect',        value: formatCurrency(totalOutstanding, baseCurrency),   accent: totalOutstanding > 0 ? 'var(--warning)' : 'var(--border-strong)' },
             ].map(s => (
               <div
                 key={s.label}
@@ -623,7 +623,7 @@ export default function NumbersClient({
           {/* Primary KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '10px', marginBottom: '10px' }}>
             <KpiCard
-              label="Monthly revenue"
+              label="Revenue this month"
               value={snap?.cash_collected ?? 0}
               displayValue={formatCurrency(snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}
@@ -632,24 +632,24 @@ export default function NumbersClient({
               compareValue={getCompare('cash_collected')}
               color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
               subline={selectedMonth === currentMonth && cashPending > 0
-                ? `${formatCurrency((snap?.cash_collected ?? 0) - cashPending, baseCurrency)} confirmed · ${formatCurrency(cashPending, baseCurrency)} pending`
+                ? `${formatCurrency((snap?.cash_collected ?? 0) - cashPending, baseCurrency)} collected · ${formatCurrency(cashPending, baseCurrency)} pending`
                 : selectedMonth === currentMonth && snap?.cash_collected === 0
-                  ? 'No installments due this month'
+                  ? 'No revenue due this month'
                   : undefined}
             />
             <KpiCard
-              label="New contracts"
-              value={snap?.revenue_contracted ?? 0}
-              displayValue={formatCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
+              label="Clients signed"
+              value={snap?.clients_signed ?? 0}
+              displayValue={String(snap?.clients_signed ?? 0)}
               target={getTarget('revenue_target')}
               targetDisplay={targets?.revenue_target ? formatCurrency(targets.revenue_target, baseCurrency) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('revenue_contracted')}
-              color={score(snap?.revenue_contracted ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.revenue_contracted)}
-              subline="New clients signed this month"
+              compareValue={getCompare('clients_signed')}
+              color={score(snap?.clients_signed ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.clients_signed)}
+              subline={snap?.revenue_contracted ? `${formatCurrency(snap.revenue_contracted, baseCurrency)} contracted` : 'No new clients this month'}
             />
             <KpiCard
-              label="New followers"
+              label="New leads"
               value={snap?.new_followers ?? 0}
               displayValue={String(snap?.new_followers ?? 0)}
               target={getTarget('followers_target')}
@@ -659,7 +659,7 @@ export default function NumbersClient({
               color={score(snap?.new_followers ?? 0, compareMode === 'targets' ? targets?.followers_target : last?.new_followers)}
             />
             <KpiCard
-              label="Meetings booked"
+              label="Calls booked"
               value={snap?.meetings_booked ?? 0}
               displayValue={String(snap?.meetings_booked ?? 0)}
               target={getTarget('meetings_target')}
@@ -684,7 +684,7 @@ export default function NumbersClient({
           {/* Supporting KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-3" style={{ gap: '10px' }}>
             <KpiCard
-              label="Show-up rate"
+              label="Show rate"
               value={snap?.show_up_rate ?? 0}
               displayValue={`${(snap?.show_up_rate ?? 0).toFixed(1)}%`}
               target={getTarget('show_up_target')}
@@ -695,7 +695,7 @@ export default function NumbersClient({
               color={score(snap?.show_up_rate ?? 0, compareMode === 'targets' ? targets?.show_up_target : last?.show_up_rate)}
             />
             <KpiCard
-              label="No-show rate"
+              label="No-shows"
               value={snap?.no_show_rate ?? 0}
               displayValue={`${(snap?.no_show_rate ?? 0).toFixed(1)}%`}
               compareMode={compareMode}
