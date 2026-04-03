@@ -18,11 +18,9 @@ interface Props {
   currentMonth: string
   expenses: Expense[]
   adSpendTotal: number
-  totalActiveClients: number
-  totalContracted: number
-  totalCashCollected: number
   totalOutstanding: number
   cashPending: number
+  leadsReplied: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -30,11 +28,11 @@ type ScoreColor  = 'green' | 'amber' | 'red' | 'neutral'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatCurrency(amount: number, currency: string) {
+function fmtCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
 }
 
-function formatMonth(month: string) {
+function fmtMonth(month: string) {
   const [y, m] = month.split('-')
   return new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'long', year: 'numeric' })
 }
@@ -66,80 +64,120 @@ const SCORE_TEXT: Record<ScoreColor, string> = {
   neutral: 'var(--text-3)',
 }
 
+// ─── Comparison text helper ───────────────────────────────────────────────────
+
+function comparisonText(
+  value: number,
+  compareMode: CompareMode,
+  target: number | null | undefined,
+  lastValue: number | null | undefined,
+  isCurrency: boolean,
+  currency: string,
+  isPercent: boolean,
+  color: ScoreColor,
+): string | null {
+  if (compareMode === 'targets') {
+    if (!target) return null
+    const ratio = value / target
+    const pctAbove = Math.round((ratio - 1) * 100)
+    const pctToGo  = Math.round((1 - ratio) * 100)
+    if (ratio >= 1)   return `↑ ${Math.abs(pctAbove)}% above target`
+    if (color === 'green') return `On track — ${pctToGo}% to go`
+    if (color === 'amber') return `${pctToGo}% below target — close`
+    return `Well below target — focus here`
+  } else {
+    if (lastValue == null) return null
+    const diff = value - lastValue
+    if (isCurrency) {
+      const sign = diff >= 0 ? '↑' : '↓'
+      return `${sign} ${fmtCurrency(Math.abs(diff), currency)} vs last month`
+    }
+    if (isPercent) {
+      const sign = diff >= 0 ? '↑' : '↓'
+      return `${sign} ${Math.abs(diff).toFixed(1)}% vs last month`
+    }
+    const sign = diff >= 0 ? '↑' : '↓'
+    return `${sign} ${Math.abs(diff).toFixed(diff % 1 === 0 ? 0 : 1)} vs last month`
+  }
+}
+
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({
-  label, value, displayValue, target, targetDisplay, compareMode, compareValue,
-  unit = '', color = 'neutral', subline,
-}: {
+interface KpiCardProps {
   label: string
   value: number
   displayValue: string
   target?: number | null
   targetDisplay?: string
   compareMode: CompareMode
-  compareValue?: number | null
-  unit?: string
+  lastValue?: number | null
+  lastDisplay?: string
   color?: ScoreColor
+  overrideAccent?: string  // for fixed-color cards (purple, blue)
   subline?: string
-}) {
-  const accent = SCORE_ACCENT[color]
-  const textColor = SCORE_TEXT[color]
-  const pct = target ? Math.min((value / target) * 100, 100) : 0
-  const showComparison = target || compareValue != null
+  isCurrency?: boolean
+  currency?: string
+  isPercent?: boolean
+  hero?: boolean           // Section 1 hero style (larger number, more padding)
+  numSize?: number         // override font size for number
+}
 
-  const diff = compareMode === 'targets'
-    ? target ? `${Math.round((value / target) * 100)}% of target` : null
-    : compareValue != null
-      ? (value > compareValue
-          ? `+${(value - compareValue).toFixed(1)}${unit} vs last month`
-          : `${(value - compareValue).toFixed(1)}${unit} vs last month`)
-      : null
+function KpiCard({
+  label, value, displayValue, target, targetDisplay,
+  compareMode, lastValue, lastDisplay,
+  color = 'neutral', overrideAccent, subline,
+  isCurrency = false, currency = 'NOK', isPercent = false,
+  hero = false, numSize,
+}: KpiCardProps) {
+  const accent    = overrideAccent ?? SCORE_ACCENT[color]
+  const textColor = overrideAccent ? overrideAccent : SCORE_TEXT[color]
+  const pct       = target ? Math.min((value / target) * 100, 100) : 0
+
+  const showProgressBar = compareMode === 'targets' && !!target
+  const diffText = comparisonText(value, compareMode, target, lastValue, isCurrency, currency, isPercent, color)
+
+  const resolvedNumSize = numSize ?? (hero ? 30 : 28)
+  const padding         = hero ? '20px 18px' : '14px 16px'
 
   return (
     <div
       style={{
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        borderLeft: `3px solid ${accent}`,
+        background:   'var(--surface-1)',
+        border:       '1px solid var(--border)',
+        borderLeft:   `3px solid ${accent}`,
         borderRadius: 'var(--radius-card)',
-        padding: '14px 16px',
-        boxShadow: 'var(--shadow-card)',
+        padding,
+        boxShadow:    'var(--shadow-card)',
+        display:      'flex',
+        flexDirection:'column',
       }}
     >
-      <p className="label-caps" style={{ marginBottom: '6px' }}>{label}</p>
-      <p className="hero-num" style={{ marginBottom: subline ? '4px' : showComparison ? '8px' : 0 }}>{displayValue}</p>
+      <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>
+        {label}
+      </p>
+      <p style={{ fontSize: `${resolvedNumSize}px`, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', marginBottom: subline ? '4px' : diffText ? '8px' : 0, lineHeight: 1.1 }}>
+        {displayValue}
+      </p>
       {subline && (
-        <p style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: showComparison ? '4px' : 0 }}>
+        <p style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: diffText ? '6px' : 0 }}>
           {subline}
         </p>
       )}
-
-      {showComparison && (
-        <>
-          {diff && (
-            <p style={{ fontSize: '11px', fontWeight: '500', color: textColor, marginBottom: '6px' }}>{diff}</p>
-          )}
-          {target && (
-            <div
-              style={{
-                width: '100%',
-                height: '3px',
-                background: 'var(--surface-3)',
-                borderRadius: '99px',
-                overflow: 'hidden',
-                marginBottom: '5px',
-              }}
-            >
-              <div style={{ height: '100%', borderRadius: '99px', background: accent, width: `${pct}%`, transition: 'width 400ms ease' }} />
-            </div>
-          )}
-          {targetDisplay && (
-            <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>
-              {compareMode === 'targets' ? `Target: ${targetDisplay}` : `Last month: ${targetDisplay}`}
-            </p>
-          )}
-        </>
+      {diffText && (
+        <p style={{ fontSize: '11px', fontWeight: 500, color: textColor, marginBottom: showProgressBar ? '6px' : targetDisplay ? '5px' : 0 }}>
+          {diffText}
+        </p>
+      )}
+      {showProgressBar && (
+        <div style={{ width: '100%', height: '3px', background: 'var(--surface-3)', borderRadius: '99px', overflow: 'hidden', marginBottom: targetDisplay ? '5px' : 0 }}>
+          <div style={{ height: '100%', borderRadius: '99px', background: accent, width: `${pct}%`, transition: 'width 400ms ease' }} />
+        </div>
+      )}
+      {targetDisplay && compareMode === 'targets' && (
+        <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>Target: {targetDisplay}</p>
+      )}
+      {lastDisplay && compareMode === 'last_month' && (
+        <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>Last month: {lastDisplay}</p>
       )}
     </div>
   )
@@ -177,7 +215,7 @@ function PaymentTracker({ clients, installments, baseCurrency }: { clients: Clie
                 <p style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {client.full_name || client.ig_username}
                 </p>
-                <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{formatCurrency(collected, baseCurrency)} collected</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{fmtCurrency(collected, baseCurrency)} collected</p>
               </div>
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', flex: 1 }}>
                 {clientInsts.map(inst => {
@@ -223,45 +261,52 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
     )
   }
 
+  const columns = ['Month', 'Cash in', 'Contracted', 'Clients signed', 'Calls booked', 'Show-up %', 'Close %', 'Avg deal size']
+
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-panel)', padding: '20px', boxShadow: 'var(--shadow-card)' }}>
       <h2 className="section-title" style={{ marginBottom: '16px' }}>Monthly history</h2>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', minWidth: '720px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Cash collected', 'New revenue', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Clients'].map((h, i) => (
+              {columns.map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {history.map(s => (
-              <tr
-                key={s.month}
-                style={{
-                  background: s.month === currentMonth ? 'rgba(37,99,235,0.04)' : 'transparent',
-                  borderBottom: '1px solid var(--border)',
-                  transition: 'background 80ms ease',
-                }}
-                onMouseEnter={e => { if (s.month !== currentMonth) (e.currentTarget as HTMLTableRowElement).style.background = 'var(--surface-2)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = s.month === currentMonth ? 'rgba(37,99,235,0.04)' : 'transparent' }}
-              >
-                <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', fontWeight: '500', color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                  {formatMonth(s.month)}
-                  {s.month === currentMonth && (
-                    <span className="badge" style={{ background: 'rgba(37,99,235,0.1)', color: 'var(--accent)', fontSize: '9px', marginLeft: '6px' }}>LIVE</span>
-                  )}
-                </td>
-                <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{formatCurrency(s.cash_collected, baseCurrency)}</td>
-                <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{formatCurrency(s.revenue_contracted, baseCurrency)}</td>
-                <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{s.new_followers}</td>
-                <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{s.meetings_booked}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pill(s.show_up_rate, 70, 50)}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pill(s.close_rate, 30, 15)}</td>
-                <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-1)', textAlign: 'right' }}>{s.clients_signed}</td>
-              </tr>
-            ))}
+            {history.map(s => {
+              const isCurrent = s.month === currentMonth
+              const avgDeal = s.clients_signed > 0 ? fmtCurrency(s.revenue_contracted / s.clients_signed, baseCurrency) : '—'
+              return (
+                <tr
+                  key={s.month}
+                  style={{
+                    background:   isCurrent ? 'rgba(37,99,235,0.04)' : 'transparent',
+                    borderBottom: '1px solid var(--border)',
+                    transition:   'background 80ms ease',
+                    fontWeight:   isCurrent ? '600' : '400',
+                  }}
+                  onMouseEnter={e => { if (!isCurrent) (e.currentTarget as HTMLTableRowElement).style.background = 'var(--surface-2)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = isCurrent ? 'rgba(37,99,235,0.04)' : 'transparent' }}
+                >
+                  <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                    {fmtMonth(s.month)}
+                    {isCurrent && (
+                      <span className="badge" style={{ background: 'rgba(37,99,235,0.1)', color: 'var(--accent)', fontSize: '9px', marginLeft: '6px' }}>LIVE</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{fmtCurrency(s.cash_collected, baseCurrency)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{fmtCurrency(s.revenue_contracted, baseCurrency)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{s.clients_signed}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{s.meetings_booked}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pill(s.show_up_rate, 70, 50)}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>{pill(s.close_rate, 30, 15)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-1)', textAlign: 'right' }}>{avgDeal}</td>
+                </tr>
+              )
+            })}
             {history.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ padding: '32px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>
@@ -281,8 +326,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
 export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
   clients, installments, currentMonth, expenses, adSpendTotal,
-  totalActiveClients, totalContracted, totalCashCollected, totalOutstanding,
-  cashPending,
+  totalOutstanding, cashPending, leadsReplied,
 }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
@@ -312,11 +356,6 @@ export default function NumbersClient({
     ? lastMonthSnapshot
     : (prevMonth ? history.find(s => s.month === prevMonth) ?? null : null)
 
-  function getCompare<K extends keyof MonthlySnapshot>(key: K): number | null {
-    if (compareMode === 'targets') return null
-    return last ? (last[key] as number) : null
-  }
-
   function getTarget<K extends keyof KpiTargets>(key: K): number | null {
     if (compareMode === 'last_month') return null
     return targets ? (targets[key] as number) : null
@@ -331,9 +370,9 @@ export default function NumbersClient({
     if (touchStartX.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     touchStartX.current = null
-    if (Math.abs(dx) < 40) return // too short, ignore
-    if (dx < 0 && canGoBack) setSelectedMonth(availableMonths[selectedIdx + 1])   // swipe left → older
-    if (dx > 0 && canGoForward) setSelectedMonth(availableMonths[selectedIdx - 1]) // swipe right → newer
+    if (Math.abs(dx) < 40) return
+    if (dx < 0 && canGoBack) setSelectedMonth(availableMonths[selectedIdx + 1])
+    if (dx > 0 && canGoForward) setSelectedMonth(availableMonths[selectedIdx - 1])
   }
 
   const NAV_BTN_STYLE = {
@@ -349,6 +388,19 @@ export default function NumbersClient({
     color: 'var(--text-2)',
     transition: 'background 120ms ease, color 120ms ease',
   } as const
+
+  // ── Derived values ─────────────────────────────────────────────────────────
+  const avgDeal     = snap?.clients_signed ? (snap.revenue_contracted / snap.clients_signed) : 0
+  const lastAvgDeal = last?.clients_signed ? (last.revenue_contracted / last.clients_signed) : null
+
+  const activePlanCount = clients.filter(c => c.payment_type === 'plan' || c.payment_type === 'split').length
+
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
+
+  // ROAS values
+  const cashRoas    = adSpendTotal > 0 ? (snap?.cash_collected ?? 0) / adSpendTotal : null
+  const revenueRoas = adSpendTotal > 0 ? (snap?.revenue_contracted ?? 0) / adSpendTotal : null
+  const profitRoas  = adSpendTotal > 0 ? ((snap?.cash_collected ?? 0) - (totalExpenses + adSpendTotal)) / adSpendTotal : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
@@ -370,7 +422,7 @@ export default function NumbersClient({
           zIndex: 10,
         }}
       >
-        {/* Month navigation — arrows + tap month label to get dropdown, swipe on mobile */}
+        {/* Month navigation */}
         <div
           style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           onTouchStart={handleTouchStart}
@@ -389,29 +441,19 @@ export default function NumbersClient({
             </svg>
           </button>
 
-          {/* Month label — click to show select dropdown */}
           <div style={{ position: 'relative' }}>
             <select
               value={selectedMonth}
               onChange={e => setSelectedMonth(e.target.value)}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                opacity: 0,
-                cursor: 'pointer',
-                width: '100%',
-                height: '100%',
-              }}
+              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
               aria-label="Jump to month"
             >
               {availableMonths.map(m => (
-                <option key={m} value={m}>{formatMonth(m)}</option>
+                <option key={m} value={m}>{fmtMonth(m)}</option>
               ))}
             </select>
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              display: 'flex', alignItems: 'center', gap: '6px',
               padding: '5px 10px',
               background: 'var(--surface-2)',
               border: '1px solid var(--border)',
@@ -422,7 +464,7 @@ export default function NumbersClient({
               justifyContent: 'center',
             }}>
               <span style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-1)' }}>
-                {formatMonth(selectedMonth)}
+                {fmtMonth(selectedMonth)}
               </span>
               {selectedMonth === currentMonth && (
                 <span className="badge" style={{ background: 'rgba(37,99,235,0.1)', color: 'var(--accent)', fontSize: '9px' }}>LIVE</span>
@@ -448,16 +490,7 @@ export default function NumbersClient({
         </div>
 
         {/* Compare mode switcher */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2px',
-            background: 'var(--surface-2)',
-            borderRadius: 'var(--radius-btn)',
-            padding: '3px',
-          }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
           <button
             onClick={() => setCompareMode('targets')}
             style={{
@@ -523,20 +556,8 @@ export default function NumbersClient({
 
       {/* ── Unlock modal ──────────────────────────────────────────────────── */}
       {showUnlockModal && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 50,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.5)', padding: '16px',
-          }}
-        >
-          <div
-            className="modal-enter"
-            style={{
-              background: 'var(--surface-1)', borderRadius: 'var(--radius-panel)',
-              boxShadow: 'var(--shadow-dropdown)', width: '100%', maxWidth: '360px', padding: '24px',
-            }}
-          >
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: '16px' }}>
+          <div className="modal-enter" style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-panel)', boxShadow: 'var(--shadow-dropdown)', width: '100%', maxWidth: '360px', padding: '24px' }}>
             <h2 className="section-title" style={{ marginBottom: '8px' }}>Unlock month-on-month comparison</h2>
             <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '20px' }}>
               Have you already tracked your numbers from last month manually? If so, tap Confirm and we&apos;ll let you compare.
@@ -570,19 +591,7 @@ export default function NumbersClient({
 
         {/* No last month data notice */}
         {compareMode === 'last_month' && last === null && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              padding: '12px 14px',
-              background: 'rgba(37,99,235,0.05)',
-              border: '1px solid rgba(37,99,235,0.15)',
-              borderRadius: 'var(--radius-card)',
-              fontSize: '13px',
-              color: 'var(--accent)',
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px', background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.15)', borderRadius: 'var(--radius-card)', fontSize: '13px', color: 'var(--accent)' }}>
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style={{ flexShrink: 0, marginTop: '2px' }}>
               <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" />
             </svg>
@@ -590,76 +599,82 @@ export default function NumbersClient({
           </div>
         )}
 
-        {/* ── Current business overview ─────────────────────────────────── */}
+        {/* ── Section 1: Money ──────────────────────────────────────────── */}
         <div>
-          <p className="label-caps" style={{ marginBottom: '10px' }}>Current business</p>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>Money</p>
           <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: '10px' }}>
-            {[
-              { label: 'Active clients',    value: String(totalActiveClients),                       accent: 'var(--accent)' },
-              { label: 'Contract value',    value: formatCurrency(totalContracted, baseCurrency),    accent: 'var(--success)' },
-              { label: 'Collected',         value: formatCurrency(totalCashCollected, baseCurrency), accent: 'var(--success)' },
-              { label: 'To collect',        value: formatCurrency(totalOutstanding, baseCurrency),   accent: totalOutstanding > 0 ? 'var(--warning)' : 'var(--border-strong)' },
-            ].map(s => (
-              <div
-                key={s.label}
-                style={{
-                  background: 'var(--surface-2)',
-                  borderRadius: 'var(--radius-card)',
-                  padding: '12px 14px',
-                  borderLeft: `3px solid ${s.accent}`,
-                }}
-              >
-                <p className="label-caps" style={{ marginBottom: '4px' }}>{s.label}</p>
-                <p className="hero-num" style={{ fontSize: '20px' }}>{s.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* ── Monthly KPIs ──────────────────────────────────────────────── */}
-        <div>
-          <p className="label-caps" style={{ marginBottom: '10px' }}>{formatMonth(selectedMonth)}</p>
-
-          {/* Primary KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '10px', marginBottom: '10px' }}>
+            {/* Cash collected */}
             <KpiCard
               label="Cash collected"
               value={snap?.cash_collected ?? 0}
-              displayValue={formatCurrency(snap?.cash_collected ?? 0, baseCurrency)}
+              displayValue={fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}
-              targetDisplay={targets?.cash_target ? formatCurrency(targets.cash_target, baseCurrency) : undefined}
+              targetDisplay={targets?.cash_target ? fmtCurrency(targets.cash_target, baseCurrency) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('cash_collected')}
+              lastValue={last?.cash_collected ?? null}
+              lastDisplay={last?.cash_collected != null ? fmtCurrency(last.cash_collected, baseCurrency) : undefined}
               color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
+              isCurrency
+              currency={baseCurrency}
+              hero
               subline={selectedMonth === currentMonth && cashPending > 0
-                ? `+ ${formatCurrency(cashPending, baseCurrency)} still pending this month`
-                : selectedMonth === currentMonth && snap?.cash_collected === 0 && cashPending === 0
-                  ? 'No payments due this month'
-                  : undefined}
+                ? `+ ${fmtCurrency(cashPending, baseCurrency)} still pending`
+                : undefined}
             />
+
+            {/* Contract value */}
             <KpiCard
-              label="New revenue"
+              label="Contract value"
               value={snap?.revenue_contracted ?? 0}
-              displayValue={formatCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
+              displayValue={fmtCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
               target={getTarget('revenue_target')}
-              targetDisplay={targets?.revenue_target ? formatCurrency(targets.revenue_target, baseCurrency) : undefined}
+              targetDisplay={targets?.revenue_target ? fmtCurrency(targets.revenue_target, baseCurrency) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('revenue_contracted')}
+              lastValue={last?.revenue_contracted ?? null}
+              lastDisplay={last?.revenue_contracted != null ? fmtCurrency(last.revenue_contracted, baseCurrency) : undefined}
               color={score(snap?.revenue_contracted ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.revenue_contracted)}
-              subline={snap?.clients_signed
-                ? `${snap.clients_signed} new client${snap.clients_signed !== 1 ? 's' : ''} signed`
-                : 'No new clients this month'}
+              overrideAccent="#8B5CF6"
+              isCurrency
+              currency={baseCurrency}
+              hero
             />
+
+            {/* Clients closed */}
             <KpiCard
-              label="New leads"
-              value={snap?.new_followers ?? 0}
-              displayValue={String(snap?.new_followers ?? 0)}
-              target={getTarget('followers_target')}
-              targetDisplay={targets?.followers_target ? String(targets.followers_target) : undefined}
+              label="Clients closed"
+              value={snap?.clients_signed ?? 0}
+              displayValue={String(snap?.clients_signed ?? 0)}
+              target={getTarget('clients_target')}
+              targetDisplay={targets?.clients_target ? String(targets.clients_target) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('new_followers')}
-              color={score(snap?.new_followers ?? 0, compareMode === 'targets' ? targets?.followers_target : last?.new_followers)}
+              lastValue={last?.clients_signed ?? null}
+              lastDisplay={last?.clients_signed != null ? String(last.clients_signed) : undefined}
+              color={score(snap?.clients_signed ?? 0, compareMode === 'targets' ? targets?.clients_target : last?.clients_signed)}
+              hero
             />
+
+            {/* Outstanding */}
+            <KpiCard
+              label="Outstanding"
+              value={totalOutstanding}
+              displayValue={fmtCurrency(totalOutstanding, baseCurrency)}
+              compareMode={compareMode}
+              overrideAccent="var(--accent)"
+              isCurrency
+              currency={baseCurrency}
+              hero
+              subline={`from ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}`}
+            />
+          </div>
+        </div>
+
+        {/* ── Section 2: Sales performance ──────────────────────────────── */}
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>Sales performance</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3" style={{ gap: '10px' }}>
+
+            {/* Calls booked */}
             <KpiCard
               label="Calls booked"
               value={snap?.meetings_booked ?? 0}
@@ -667,9 +682,26 @@ export default function NumbersClient({
               target={getTarget('meetings_target')}
               targetDisplay={targets?.meetings_target ? String(targets.meetings_target) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('meetings_booked')}
+              lastValue={last?.meetings_booked ?? null}
+              lastDisplay={last?.meetings_booked != null ? String(last.meetings_booked) : undefined}
               color={score(snap?.meetings_booked ?? 0, compareMode === 'targets' ? targets?.meetings_target : last?.meetings_booked)}
             />
+
+            {/* Show-up rate */}
+            <KpiCard
+              label="Show-up rate"
+              value={snap?.show_up_rate ?? 0}
+              displayValue={`${(snap?.show_up_rate ?? 0).toFixed(1)}%`}
+              target={getTarget('show_up_target')}
+              targetDisplay={targets?.show_up_target ? `${targets.show_up_target}%` : undefined}
+              compareMode={compareMode}
+              lastValue={last?.show_up_rate ?? null}
+              lastDisplay={last?.show_up_rate != null ? `${last.show_up_rate.toFixed(1)}%` : undefined}
+              color={score(snap?.show_up_rate ?? 0, compareMode === 'targets' ? targets?.show_up_target : last?.show_up_rate)}
+              isPercent
+            />
+
+            {/* Close rate */}
             <KpiCard
               label="Close rate"
               value={snap?.close_rate ?? 0}
@@ -677,47 +709,105 @@ export default function NumbersClient({
               target={getTarget('close_rate_target')}
               targetDisplay={targets?.close_rate_target ? `${targets.close_rate_target}%` : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('close_rate')}
-              unit="%"
+              lastValue={last?.close_rate ?? null}
+              lastDisplay={last?.close_rate != null ? `${last.close_rate.toFixed(1)}%` : undefined}
               color={score(snap?.close_rate ?? 0, compareMode === 'targets' ? targets?.close_rate_target : last?.close_rate)}
-            />
-          </div>
-
-          {/* Supporting KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-3" style={{ gap: '10px' }}>
-            <KpiCard
-              label="Show rate"
-              value={snap?.show_up_rate ?? 0}
-              displayValue={`${(snap?.show_up_rate ?? 0).toFixed(1)}%`}
-              target={getTarget('show_up_target')}
-              targetDisplay={targets?.show_up_target ? `${targets.show_up_target}%` : undefined}
-              compareMode={compareMode}
-              compareValue={getCompare('show_up_rate')}
-              unit="%"
-              color={score(snap?.show_up_rate ?? 0, compareMode === 'targets' ? targets?.show_up_target : last?.show_up_rate)}
-            />
-            <KpiCard
-              label="No-shows"
-              value={snap?.no_show_rate ?? 0}
-              displayValue={`${(snap?.no_show_rate ?? 0).toFixed(1)}%`}
-              compareMode={compareMode}
-              compareValue={getCompare('no_show_rate')}
-              unit="%"
-              color="neutral"
-            />
-            <KpiCard
-              label="Cancellation rate"
-              value={snap?.cancellation_rate ?? 0}
-              displayValue={`${(snap?.cancellation_rate ?? 0).toFixed(1)}%`}
-              compareMode={compareMode}
-              compareValue={getCompare('cancellation_rate')}
-              unit="%"
-              color="neutral"
+              isPercent
+              numSize={30}
             />
           </div>
         </div>
 
-        {/* ── Revenue chart ──────────────────────────────────────────────── */}
+        {/* ── Section 3: Growth ─────────────────────────────────────────── */}
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>Growth</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3" style={{ gap: '10px' }}>
+
+            {/* New followers */}
+            <KpiCard
+              label="New followers"
+              value={snap?.new_followers ?? 0}
+              displayValue={String(snap?.new_followers ?? 0)}
+              target={getTarget('followers_target')}
+              targetDisplay={targets?.followers_target ? String(targets.followers_target) : undefined}
+              compareMode={compareMode}
+              lastValue={last?.new_followers ?? null}
+              lastDisplay={last?.new_followers != null ? String(last.new_followers) : undefined}
+              color={score(snap?.new_followers ?? 0, compareMode === 'targets' ? targets?.followers_target : last?.new_followers)}
+            />
+
+            {/* Leads replied */}
+            <KpiCard
+              label="Leads replied"
+              value={leadsReplied}
+              displayValue={String(leadsReplied)}
+              compareMode={compareMode}
+              color="neutral"
+            />
+
+            {/* Avg deal size */}
+            <KpiCard
+              label="Avg deal size"
+              value={avgDeal}
+              displayValue={avgDeal > 0 ? fmtCurrency(avgDeal, baseCurrency) : '—'}
+              compareMode={compareMode}
+              lastValue={lastAvgDeal}
+              lastDisplay={lastAvgDeal != null ? fmtCurrency(lastAvgDeal, baseCurrency) : undefined}
+              color="neutral"
+              isCurrency
+              currency={baseCurrency}
+            />
+          </div>
+        </div>
+
+        {/* ── ROAS ──────────────────────────────────────────────────────── */}
+        <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '20px 18px', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '14px' }}>ROAS</p>
+
+          {adSpendTotal === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+              Add your ad spend in Settings to see your ROAS
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+              {[
+                {
+                  label: 'Cash ROAS',
+                  value: cashRoas,
+                  formula: 'cash_collected / ad_spend',
+                },
+                {
+                  label: 'Revenue ROAS',
+                  value: revenueRoas,
+                  formula: 'revenue_contracted / ad_spend',
+                },
+                {
+                  label: 'Profit ROAS',
+                  value: profitRoas,
+                  formula: '(cash − expenses) / ad_spend',
+                },
+              ].map((col, i) => (
+                <div
+                  key={col.label}
+                  style={{
+                    padding: '0 16px',
+                    borderRight: i < 2 ? '1px solid var(--border)' : 'none',
+                    borderLeft: i === 0 ? 'none' : undefined,
+                    paddingLeft: i === 0 ? 0 : '16px',
+                  }}
+                >
+                  <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{col.label}</p>
+                  <p style={{ fontSize: '36px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1 }}>
+                    {col.value != null ? `${col.value.toFixed(2)}x` : '—'}
+                  </p>
+                  <p style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-3)', marginTop: '6px' }}>{col.formula}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Revenue chart ─────────────────────────────────────────────── */}
         <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-panel)', padding: '20px', boxShadow: 'var(--shadow-card)' }}>
           <h2 className="section-title" style={{ marginBottom: '16px' }}>Performance over time</h2>
           <RevenueChart
@@ -729,7 +819,7 @@ export default function NumbersClient({
           />
         </div>
 
-        {/* ── Monthly history ────────────────────────────────────────────── */}
+        {/* ── Monthly history ───────────────────────────────────────────── */}
         <HistoryTable
           history={[
             ...(currentSnapshot ? [currentSnapshot] : []),
@@ -739,10 +829,10 @@ export default function NumbersClient({
           baseCurrency={baseCurrency}
         />
 
-        {/* ── Payment tracker ────────────────────────────────────────────── */}
+        {/* ── Payment tracker ───────────────────────────────────────────── */}
         <PaymentTracker clients={clients} installments={installments} baseCurrency={baseCurrency} />
 
-        {/* ── Expenses & profit ──────────────────────────────────────────── */}
+        {/* ── Expenses & profit ─────────────────────────────────────────── */}
         <ExpensesSection
           expenses={expenses}
           adSpendTotal={adSpendTotal}

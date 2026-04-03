@@ -28,6 +28,7 @@ export default async function NumbersPage() {
     { data: allMonthInstallments },
     { data: expenses },
     { data: adSpend },
+    { data: repliedLeads },
   ] = await Promise.all([
     supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
@@ -51,6 +52,10 @@ export default async function NumbersPage() {
     supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
     // Ad spend log for current month
     supabase.from('ad_spend_log').select('actual_amount').eq('user_id', user.id).eq('month', currentMonth),
+    // Leads replied this month = leads created this month NOT still in 'follower' stage
+    supabase.from('leads').select('id').eq('user_id', user.id)
+      .neq('stage', 'follower')
+      .gte('created_at', monthStartTs),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────
@@ -94,6 +99,8 @@ export default async function NumbersPage() {
   const cancellationRate = totalOutcomes > 0 ? (canceled / totalOutcomes) * 100 : 0
   const closeRate = meetingsBooked > 0 ? (clientsSigned / meetingsBooked) * 100 : 0
 
+  const leadsReplied = (repliedLeads ?? []).length
+
   const liveSnapshot: MonthlySnapshot = {
     id: 'live',
     user_id: user.id,
@@ -119,8 +126,6 @@ export default async function NumbersPage() {
   // ── All-time / current business overview (all active clients, not just this month) ──
   const allClients = (clients ?? []) as Client[]
   const allInstallments = (installments ?? []) as PaymentInstallment[]
-  const totalActiveClients = allClients.length
-  const totalContracted = allClients.reduce((s, c) => s + c.total_amount, 0)
 
   // PIF clients paid upfront — track via total_amount only (no installments should exist for them)
   // Plan/split clients — track exclusively via their installment records
@@ -128,10 +133,6 @@ export default async function NumbersPage() {
   const pifClientIds = new Set(allClients.filter(c => c.payment_type === 'pif').map(c => c.id))
   const planSplitInstallments = allInstallments.filter(i => !pifClientIds.has(i.client_id))
 
-  const totalCashCollected = allClients
-    .filter(c => c.payment_type === 'pif')
-    .reduce((s, c) => s + c.total_amount, 0)
-    + planSplitInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
   const totalOutstanding = planSplitInstallments
     .filter(i => !i.paid)
     .reduce((s, i) => s + i.amount, 0)
@@ -148,11 +149,9 @@ export default async function NumbersPage() {
       currentMonth={currentMonth}
       expenses={(expenses as Expense[]) ?? []}
       adSpendTotal={adSpendTotal}
-      totalActiveClients={totalActiveClients}
-      totalContracted={totalContracted}
-      totalCashCollected={totalCashCollected}
       totalOutstanding={totalOutstanding}
       cashPending={cashPending}
+      leadsReplied={leadsReplied}
     />
   )
 }
