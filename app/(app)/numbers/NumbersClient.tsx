@@ -230,7 +230,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
         <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Cash in', 'Clients signed', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Signed'].map((h, i) => (
+              {['Month', 'Cash collected', 'New revenue', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Clients'].map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -638,15 +638,17 @@ export default function NumbersClient({
                   : undefined}
             />
             <KpiCard
-              label="Clients signed"
-              value={snap?.clients_signed ?? 0}
-              displayValue={String(snap?.clients_signed ?? 0)}
+              label="New revenue"
+              value={snap?.revenue_contracted ?? 0}
+              displayValue={formatCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
               target={getTarget('revenue_target')}
               targetDisplay={targets?.revenue_target ? formatCurrency(targets.revenue_target, baseCurrency) : undefined}
               compareMode={compareMode}
-              compareValue={getCompare('clients_signed')}
-              color={score(snap?.clients_signed ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.clients_signed)}
-              subline={snap?.revenue_contracted ? `${formatCurrency(snap.revenue_contracted, baseCurrency)} contracted` : 'No new clients this month'}
+              compareValue={getCompare('revenue_contracted')}
+              color={score(snap?.revenue_contracted ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.revenue_contracted)}
+              subline={snap?.clients_signed
+                ? `${snap.clients_signed} new client${snap.clients_signed !== 1 ? 's' : ''} signed`
+                : 'No new clients this month'}
             />
             <KpiCard
               label="New leads"
