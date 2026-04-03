@@ -80,6 +80,9 @@ export default async function NumbersPage() {
 
   // cashCollected = actual money received: PIF new clients + PAID installments only
   const cashCollected = cashFromPIF + cashFromPaidInstallments
+  // monthlyRevenueDue = total expected cash this month (paid + pending installments + PIF starts)
+  // Cash collected can NEVER exceed this — it's the revenue ceiling for the month
+  const monthlyRevenueDue = cashFromPIF + cashFromDueInstallments
   // cashPending = installments due this month but not yet marked as paid
   const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
@@ -133,6 +136,11 @@ export default async function NumbersPage() {
   const pifClientIds = new Set(allClients.filter(c => c.payment_type === 'pif').map(c => c.id))
   const planSplitInstallments = allInstallments.filter(i => !pifClientIds.has(i.client_id))
 
+  const totalContracted = allClients.reduce((s, c) => s + c.total_amount, 0)
+  const totalCashCollected = allClients
+    .filter(c => c.payment_type === 'pif')
+    .reduce((s, c) => s + c.total_amount, 0)
+    + planSplitInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
   const totalOutstanding = planSplitInstallments
     .filter(i => !i.paid)
     .reduce((s, i) => s + i.amount, 0)
@@ -149,6 +157,9 @@ export default async function NumbersPage() {
       currentMonth={currentMonth}
       expenses={(expenses as Expense[]) ?? []}
       adSpendTotal={adSpendTotal}
+      monthlyRevenueDue={monthlyRevenueDue}
+      totalContracted={totalContracted}
+      totalCashCollected={totalCashCollected}
       totalOutstanding={totalOutstanding}
       cashPending={cashPending}
       leadsReplied={leadsReplied}

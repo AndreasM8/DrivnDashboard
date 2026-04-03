@@ -18,6 +18,9 @@ interface Props {
   currentMonth: string
   expenses: Expense[]
   adSpendTotal: number
+  monthlyRevenueDue: number
+  totalContracted: number
+  totalCashCollected: number
   totalOutstanding: number
   cashPending: number
   leadsReplied: number
@@ -326,6 +329,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
 export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
   clients, installments, currentMonth, expenses, adSpendTotal,
+  monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied,
 }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
@@ -599,35 +603,75 @@ export default function NumbersClient({
           </div>
         )}
 
-        {/* ── Section 1: Money ──────────────────────────────────────────── */}
+        {/* ── Section 1: This month's money ─────────────────────────────── */}
+        {/*
+          Revenue Due  = all installments DUE this month (what you expect to receive)
+          Cash Collected = installments actually PAID (always ≤ Revenue Due)
+          Pending      = Revenue Due − Cash Collected (still to chase up)
+          New Deals    = contract value of new clients signed this month (separate from recurring)
+        */}
         <div>
-          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>Money</p>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>
+            {fmtMonth(selectedMonth)}
+          </p>
           <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: '10px' }}>
 
-            {/* Cash collected */}
+            {/* Revenue due — the "expected" number for this month */}
             <KpiCard
-              label="Cash collected"
-              value={snap?.cash_collected ?? 0}
-              displayValue={fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)}
+              label="Revenue"
+              value={selectedMonth === currentMonth ? monthlyRevenueDue : snap?.cash_collected ?? 0}
+              displayValue={fmtCurrency(selectedMonth === currentMonth ? monthlyRevenueDue : snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}
               targetDisplay={targets?.cash_target ? fmtCurrency(targets.cash_target, baseCurrency) : undefined}
               compareMode={compareMode}
               lastValue={last?.cash_collected ?? null}
               lastDisplay={last?.cash_collected != null ? fmtCurrency(last.cash_collected, baseCurrency) : undefined}
-              color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
+              color={score(selectedMonth === currentMonth ? monthlyRevenueDue : snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
+              overrideAccent="var(--success)"
+              isCurrency
+              currency={baseCurrency}
+              hero
+              subline="Total expected this month"
+            />
+
+            {/* Cash collected — what's actually been received */}
+            <KpiCard
+              label="Cash collected"
+              value={snap?.cash_collected ?? 0}
+              displayValue={fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)}
+              compareMode={compareMode}
+              lastValue={last?.cash_collected ?? null}
+              overrideAccent="#3B82F6"
+              isCurrency
+              currency={baseCurrency}
+              hero
+              subline={selectedMonth === currentMonth
+                ? `${monthlyRevenueDue > 0 ? Math.round(((snap?.cash_collected ?? 0) / monthlyRevenueDue) * 100) : 0}% of revenue received`
+                : 'Collected this month'}
+            />
+
+            {/* Pending — still to be marked paid */}
+            <KpiCard
+              label="Pending"
+              value={selectedMonth === currentMonth ? cashPending : 0}
+              displayValue={selectedMonth === currentMonth && cashPending > 0
+                ? fmtCurrency(cashPending, baseCurrency)
+                : '—'}
+              compareMode={compareMode}
+              overrideAccent={selectedMonth === currentMonth && cashPending > 0 ? 'var(--warning)' : 'var(--border-strong)'}
               isCurrency
               currency={baseCurrency}
               hero
               subline={selectedMonth === currentMonth && cashPending > 0
-                ? `+ ${fmtCurrency(cashPending, baseCurrency)} still pending`
-                : undefined}
+                ? 'Still to collect this month'
+                : selectedMonth === currentMonth ? 'All payments received ✓' : 'Month closed'}
             />
 
-            {/* Contract value */}
+            {/* New deals — contract value of clients signed this month */}
             <KpiCard
-              label="Contract value"
+              label="New deals"
               value={snap?.revenue_contracted ?? 0}
-              displayValue={fmtCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
+              displayValue={snap?.revenue_contracted ? fmtCurrency(snap.revenue_contracted, baseCurrency) : '—'}
               target={getTarget('revenue_target')}
               targetDisplay={targets?.revenue_target ? fmtCurrency(targets.revenue_target, baseCurrency) : undefined}
               compareMode={compareMode}
@@ -638,34 +682,40 @@ export default function NumbersClient({
               isCurrency
               currency={baseCurrency}
               hero
+              subline={snap?.clients_signed
+                ? `${snap.clients_signed} new client${snap.clients_signed !== 1 ? 's' : ''} signed`
+                : 'No new clients this month'}
             />
+          </div>
+        </div>
 
-            {/* Clients closed */}
-            <KpiCard
-              label="Clients closed"
-              value={snap?.clients_signed ?? 0}
-              displayValue={String(snap?.clients_signed ?? 0)}
-              target={getTarget('clients_target')}
-              targetDisplay={targets?.clients_target ? String(targets.clients_target) : undefined}
-              compareMode={compareMode}
-              lastValue={last?.clients_signed ?? null}
-              lastDisplay={last?.clients_signed != null ? String(last.clients_signed) : undefined}
-              color={score(snap?.clients_signed ?? 0, compareMode === 'targets' ? targets?.clients_target : last?.clients_signed)}
-              hero
-            />
-
-            {/* Outstanding */}
-            <KpiCard
-              label="Outstanding"
-              value={totalOutstanding}
-              displayValue={fmtCurrency(totalOutstanding, baseCurrency)}
-              compareMode={compareMode}
-              overrideAccent="var(--accent)"
-              isCurrency
-              currency={baseCurrency}
-              hero
-              subline={`from ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}`}
-            />
+        {/* ── All-time overview (static — shows current state of the business) */}
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>
+            All time
+          </p>
+          <div className="grid grid-cols-3" style={{ gap: '10px' }}>
+            {([
+              { label: 'Total contracted', value: totalContracted,    accent: 'var(--success)',      sub: `${clients.filter(c => c.active !== false).length} active clients` },
+              { label: 'Total collected',  value: totalCashCollected, accent: '#3B82F6',             sub: `${totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0}% of contracted` },
+              { label: 'Outstanding',      value: totalOutstanding,   accent: 'var(--warning)',      sub: `from ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}` },
+            ] as { label: string; value: number; accent: string; sub: string }[]).map(s => (
+              <div
+                key={s.label}
+                style={{
+                  background: 'var(--surface-1)',
+                  border: '1px solid var(--border)',
+                  borderLeft: `3px solid ${s.accent}`,
+                  borderRadius: 'var(--radius-card)',
+                  padding: '14px 16px',
+                  boxShadow: 'var(--shadow-card)',
+                }}
+              >
+                <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
+                <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px' }}>{fmtCurrency(s.value, baseCurrency)}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
+              </div>
+            ))}
           </div>
         </div>
 
