@@ -850,7 +850,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
               }}
             >
               {f === 'all' ? 'All' : `T${f}`}
-              {' '}<span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+              {' '}<span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>({count})</span>
             </button>
           )
         })}

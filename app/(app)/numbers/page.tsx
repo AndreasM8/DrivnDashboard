@@ -14,6 +14,7 @@ export default async function NumbersPage() {
   const monthStart = `${currentMonth}-01`
   // monthStartTs as full ISO for Supabase timestamptz field queries
   const monthStartTs = `${currentMonth}-01T00:00:00.000Z`
+  const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10)
   const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1)).toISOString().slice(0, 7)
 
   const [
@@ -39,9 +40,12 @@ export default async function NumbersPage() {
     // All leads with a call booked OR outcome this month (regardless of when lead was created)
     supabase.from('leads').select('call_booked_at, call_outcome, updated_at').eq('user_id', user.id)
       .or(`call_booked_at.gte.${monthStartTs},and(call_outcome.not.is.null,updated_at.gte.${monthStartTs})`),
-    // Installments paid this month — joined through clients for explicit user scoping
-    supabase.from('payment_installments').select('amount, paid_at, clients!inner(user_id)')
-      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStartTs),
+    // Installments DUE this month (paid + unpaid) — joined through clients for explicit user scoping
+    supabase.from('payment_installments')
+      .select('amount, due_date, paid, paid_at, clients!inner(user_id)')
+      .eq('clients.user_id', user.id)
+      .gte('due_date', monthStart)
+      .lt('due_date', nextMonthStart),
     // Expenses for current month
     supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
     // Ad spend log for current month
@@ -55,12 +59,20 @@ export default async function NumbersPage() {
 
   const revenueContracted = monthClients.reduce((s, c) => s + c.total_amount, 0)
 
-  // Cash collected = PIF/split clients started this month + installments paid this month
-  const cashFromNewClients = monthClients
-    .filter(c => c.payment_type !== 'plan')
+  // PIF clients who started this month — their full amount is collected upfront (no installments)
+  const cashFromPIF = monthClients
+    .filter(c => c.payment_type === 'pif')
     .reduce((s, c) => s + c.total_amount, 0)
-  const cashFromInstallments = (allMonthInstallments ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0)
-  const cashCollected = cashFromNewClients + cashFromInstallments
+
+  // All installments DUE this month (plan + split clients)
+  const monthDueInsts = (allMonthInstallments ?? []) as { amount: number; paid: boolean }[]
+  const cashFromDueInstallments = monthDueInsts.reduce((s, i) => s + i.amount, 0)
+  const cashFromPaidInstallments = monthDueInsts.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
+
+  // cashCollected = total revenue due this month (PIF + all installments due)
+  const cashCollected = cashFromPIF + cashFromDueInstallments
+  // cashPending = installments due but not yet confirmed
+  const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
   // Leads metrics — correct scoping
   const newFollowers = (newLeads ?? []).length  // all leads created this month
@@ -129,6 +141,7 @@ export default async function NumbersPage() {
       totalContracted={totalContracted}
       totalCashCollected={totalCashCollected}
       totalOutstanding={totalOutstanding}
+      cashPending={cashPending}
     />
   )
 }

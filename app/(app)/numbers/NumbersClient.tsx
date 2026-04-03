@@ -22,6 +22,7 @@ interface Props {
   totalContracted: number
   totalCashCollected: number
   totalOutstanding: number
+  cashPending: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -69,7 +70,7 @@ const SCORE_TEXT: Record<ScoreColor, string> = {
 
 function KpiCard({
   label, value, displayValue, target, targetDisplay, compareMode, compareValue,
-  unit = '', color = 'neutral',
+  unit = '', color = 'neutral', subline,
 }: {
   label: string
   value: number
@@ -80,6 +81,7 @@ function KpiCard({
   compareValue?: number | null
   unit?: string
   color?: ScoreColor
+  subline?: string
 }) {
   const accent = SCORE_ACCENT[color]
   const textColor = SCORE_TEXT[color]
@@ -106,7 +108,12 @@ function KpiCard({
       }}
     >
       <p className="label-caps" style={{ marginBottom: '6px' }}>{label}</p>
-      <p className="hero-num" style={{ marginBottom: showComparison ? '8px' : 0 }}>{displayValue}</p>
+      <p className="hero-num" style={{ marginBottom: subline ? '4px' : showComparison ? '8px' : 0 }}>{displayValue}</p>
+      {subline && (
+        <p style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: showComparison ? '4px' : 0 }}>
+          {subline}
+        </p>
+      )}
 
       {showComparison && (
         <>
@@ -275,6 +282,7 @@ export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
   clients, installments, currentMonth, expenses, adSpendTotal,
   totalActiveClients, totalContracted, totalCashCollected, totalOutstanding,
+  cashPending,
 }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
@@ -343,7 +351,7 @@ export default function NumbersClient({
   } as const
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
 
       {/* ── Top bar ───────────────────────────────────────────────────────── */}
       <div
@@ -357,6 +365,9 @@ export default function NumbersClient({
           gap: '12px',
           flexWrap: 'wrap',
           flexShrink: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}
       >
         {/* Month navigation — arrows + tap month label to get dropdown, swipe on mobile */}
@@ -555,7 +566,7 @@ export default function NumbersClient({
       )}
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* No last month data notice */}
         {compareMode === 'last_month' && last === null && (
@@ -610,7 +621,7 @@ export default function NumbersClient({
           <p className="label-caps" style={{ marginBottom: '10px' }}>{formatMonth(selectedMonth)}</p>
 
           {/* Primary KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }} className="lg:grid-cols-3">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }} className="md:grid-cols-3 xl:grid-cols-5">
             <KpiCard
               label="Cash collected"
               value={snap?.cash_collected ?? 0}
@@ -620,6 +631,9 @@ export default function NumbersClient({
               compareMode={compareMode}
               compareValue={getCompare('cash_collected')}
               color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
+              subline={selectedMonth === currentMonth && cashPending > 0
+                ? `${formatCurrency((snap?.cash_collected ?? 0) - cashPending, baseCurrency)} confirmed · ${formatCurrency(cashPending, baseCurrency)} pending`
+                : undefined}
             />
             <KpiCard
               label="Revenue contracted"
