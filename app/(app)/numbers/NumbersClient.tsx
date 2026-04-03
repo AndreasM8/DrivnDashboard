@@ -230,7 +230,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
         <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Cash in', 'New contracts', 'Followers', 'Meetings', 'Show-up', 'Close rate', 'Signed'].map((h, i) => (
+              {['Month', 'Revenue', 'New contracts', 'Followers', 'Meetings', 'Show-up', 'Close rate', 'Signed'].map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -623,7 +623,7 @@ export default function NumbersClient({
           {/* Primary KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '10px', marginBottom: '10px' }}>
             <KpiCard
-              label="Cash collected"
+              label="Monthly revenue"
               value={snap?.cash_collected ?? 0}
               displayValue={formatCurrency(snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}
@@ -633,7 +633,9 @@ export default function NumbersClient({
               color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
               subline={selectedMonth === currentMonth && cashPending > 0
                 ? `${formatCurrency((snap?.cash_collected ?? 0) - cashPending, baseCurrency)} confirmed · ${formatCurrency(cashPending, baseCurrency)} pending`
-                : undefined}
+                : selectedMonth === currentMonth && snap?.cash_collected === 0
+                  ? 'No installments due this month'
+                  : undefined}
             />
             <KpiCard
               label="New contracts"
