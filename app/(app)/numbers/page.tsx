@@ -10,8 +10,11 @@ export default async function NumbersPage() {
 
   const now = new Date()
   const currentMonth = now.toISOString().slice(0, 7)
+  // monthStart as date-only string (for DATE fields like started_at)
   const monthStart = `${currentMonth}-01`
-  const lastMonth = new Date(new Date().setMonth(now.getMonth() - 1)).toISOString().slice(0, 7)
+  // monthStartTs as full ISO for Supabase timestamptz field queries
+  const monthStartTs = `${currentMonth}-01T00:00:00.000Z`
+  const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1)).toISOString().slice(0, 7)
 
   const [
     { data: profile },
@@ -32,13 +35,13 @@ export default async function NumbersPage() {
     // Join through clients so RLS + explicit user filter both apply
     supabase.from('payment_installments').select('*, clients!inner(user_id)').eq('clients.user_id', user.id),
     // All leads created this month = new followers
-    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
+    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStartTs),
     // All leads with a call booked OR outcome this month (regardless of when lead was created)
-    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', user.id)
-      .or(`call_booked_at.gte.${monthStart},and(call_outcome.not.is.null,updated_at.gte.${monthStart})`),
+    supabase.from('leads').select('call_booked_at, call_outcome, updated_at').eq('user_id', user.id)
+      .or(`call_booked_at.gte.${monthStartTs},and(call_outcome.not.is.null,updated_at.gte.${monthStartTs})`),
     // Installments paid this month — joined through clients for explicit user scoping
     supabase.from('payment_installments').select('amount, paid_at, clients!inner(user_id)')
-      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
+      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStartTs),
     // Expenses for current month
     supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
     // Ad spend log for current month
@@ -62,7 +65,7 @@ export default async function NumbersPage() {
   // Leads metrics — correct scoping
   const newFollowers = (newLeads ?? []).length  // all leads created this month
   const allBookedLeads = bookedLeads ?? []
-  const meetingsBooked = allBookedLeads.filter((l: { call_booked_at: string | null }) => l.call_booked_at && l.call_booked_at >= monthStart).length
+  const meetingsBooked = allBookedLeads.filter((l: { call_booked_at: string | null }) => l.call_booked_at && l.call_booked_at >= monthStartTs).length
   const outcomes = allBookedLeads.filter((l: { call_outcome: string | null }) => l.call_outcome)
   const showed = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'showed').length
   const noShow = outcomes.filter((l: { call_outcome: string }) => l.call_outcome === 'no_show').length

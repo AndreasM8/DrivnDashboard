@@ -701,11 +701,24 @@ export default function NumbersClient({
         {/* ── Revenue chart ──────────────────────────────────────────────── */}
         <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-panel)', padding: '20px', boxShadow: 'var(--shadow-card)' }}>
           <h2 className="section-title" style={{ marginBottom: '16px' }}>Performance over time</h2>
-          <RevenueChart history={history} baseCurrency={baseCurrency} />
+          <RevenueChart
+            history={[
+              ...history.filter(s => s.month !== currentMonth),
+              ...(currentSnapshot ? [currentSnapshot] : []),
+            ]}
+            baseCurrency={baseCurrency}
+          />
         </div>
 
         {/* ── Monthly history ────────────────────────────────────────────── */}
-        <HistoryTable history={history} currentMonth={currentMonth} baseCurrency={baseCurrency} />
+        <HistoryTable
+          history={[
+            ...(currentSnapshot ? [currentSnapshot] : []),
+            ...history.filter(s => s.month !== currentMonth),
+          ]}
+          currentMonth={currentMonth}
+          baseCurrency={baseCurrency}
+        />
 
         {/* ── Payment tracker ────────────────────────────────────────────── */}
         <PaymentTracker clients={clients} installments={installments} baseCurrency={baseCurrency} />
