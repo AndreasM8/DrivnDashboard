@@ -603,13 +603,27 @@ export default function NumbersClient({
           </div>
         )}
 
+        {/* ── All-time overview (static — shows current state of the business) */}
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>
+            All time
+          </p>
+          <div className="grid grid-cols-3" style={{ gap: '10px' }}>
+            {([
+              { label: 'Total contracted', value: totalContracted,    accent: 'var(--success)',  sub: `${clients.filter(c => c.active !== false).length} active clients` },
+              { label: 'Total collected',  value: totalCashCollected, accent: '#3B82F6',         sub: `${totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0}% of contracted` },
+              { label: 'Outstanding',      value: totalOutstanding,   accent: 'var(--warning)',  sub: `from ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}` },
+            ] as { label: string; value: number; accent: string; sub: string }[]).map(s => (
+              <div key={s.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderLeft: `3px solid ${s.accent}`, borderRadius: 'var(--radius-card)', padding: '14px 16px', boxShadow: 'var(--shadow-card)' }}>
+                <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
+                <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px' }}>{fmtCurrency(s.value, baseCurrency)}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ── Section 1: This month's money ─────────────────────────────── */}
-        {/*
-          Revenue Due  = all installments DUE this month (what you expect to receive)
-          Cash Collected = installments actually PAID (always ≤ Revenue Due)
-          Pending      = Revenue Due − Cash Collected (still to chase up)
-          New Deals    = contract value of new clients signed this month (separate from recurring)
-        */}
         <div>
           <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>
             {fmtMonth(selectedMonth)}
@@ -686,36 +700,6 @@ export default function NumbersClient({
                 ? `${snap.clients_signed} new client${snap.clients_signed !== 1 ? 's' : ''} signed`
                 : 'No new clients this month'}
             />
-          </div>
-        </div>
-
-        {/* ── All-time overview (static — shows current state of the business) */}
-        <div>
-          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '10px' }}>
-            All time
-          </p>
-          <div className="grid grid-cols-3" style={{ gap: '10px' }}>
-            {([
-              { label: 'Total contracted', value: totalContracted,    accent: 'var(--success)',      sub: `${clients.filter(c => c.active !== false).length} active clients` },
-              { label: 'Total collected',  value: totalCashCollected, accent: '#3B82F6',             sub: `${totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0}% of contracted` },
-              { label: 'Outstanding',      value: totalOutstanding,   accent: 'var(--warning)',      sub: `from ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}` },
-            ] as { label: string; value: number; accent: string; sub: string }[]).map(s => (
-              <div
-                key={s.label}
-                style={{
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  borderLeft: `3px solid ${s.accent}`,
-                  borderRadius: 'var(--radius-card)',
-                  padding: '14px 16px',
-                  boxShadow: 'var(--shadow-card)',
-                }}
-              >
-                <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
-                <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px' }}>{fmtCurrency(s.value, baseCurrency)}</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
-              </div>
-            ))}
           </div>
         </div>
 
