@@ -5,17 +5,18 @@ import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
-  Tooltip,
+  Tooltip, Legend,
 } from 'chart.js'
-import type { MonthlySnapshot } from '@/types'
+import type { MonthlySnapshot, KpiTargets } from '@/types'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 type Tab = 'revenue' | 'sales' | 'growth'
 
 interface Props {
   history: MonthlySnapshot[]
   baseCurrency: string
+  targets?: KpiTargets | null
 }
 
 function shortMonth(month: string) {
@@ -29,7 +30,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'growth',  label: 'Growth'  },
 ]
 
-export default function RevenueChart({ history }: Props) {
+export default function RevenueChart({ history, targets }: Props) {
   const [tab, setTab] = useState<Tab>('revenue')
 
   if (history.length === 0) {
@@ -51,50 +52,77 @@ export default function RevenueChart({ history }: Props) {
     borderWidth: 2,
   }
 
+  const showUpTarget  = targets?.show_up_target ?? 75
+  const closeTarget   = targets?.close_rate_target ?? 25
+
   const datasets = tab === 'revenue' ? [
     {
       ...BASE_DATASET,
       label: 'Cash collected',
       data: sorted.map(s => s.cash_collected),
-      borderColor: '#3B82F6',
-      pointHoverBackgroundColor: '#3B82F6',
+      borderColor: '#16A34A',
+      pointHoverBackgroundColor: '#16A34A',
+      borderDash: undefined as number[] | undefined,
     },
     {
       ...BASE_DATASET,
-      label: 'Revenue contracted',
+      label: 'Contracted value',
       data: sorted.map(s => s.revenue_contracted),
-      borderColor: '#8B5CF6',
-      pointHoverBackgroundColor: '#8B5CF6',
+      borderColor: '#7C3AED',
+      pointHoverBackgroundColor: '#7C3AED',
+      borderDash: [5, 3] as number[],
     },
   ] : tab === 'sales' ? [
     {
       ...BASE_DATASET,
       label: 'Show-up rate',
       data: sorted.map(s => s.show_up_rate),
-      borderColor: '#10B981',
-      pointHoverBackgroundColor: '#10B981',
+      borderColor: '#2563EB',
+      pointHoverBackgroundColor: '#2563EB',
+      borderDash: undefined as number[] | undefined,
     },
     {
       ...BASE_DATASET,
       label: 'Close rate',
       data: sorted.map(s => s.close_rate),
-      borderColor: '#6366F1',
-      pointHoverBackgroundColor: '#6366F1',
+      borderColor: '#16A34A',
+      pointHoverBackgroundColor: '#16A34A',
+      borderDash: undefined as number[] | undefined,
     },
+    ...(showUpTarget ? [{
+      ...BASE_DATASET,
+      label: 'Show-up target',
+      data: sorted.map(() => showUpTarget),
+      borderColor: 'rgba(37,99,235,0.25)',
+      pointHoverBackgroundColor: 'rgba(37,99,235,0.25)',
+      borderDash: [4, 4] as number[],
+      borderWidth: 1,
+    }] : []),
+    ...(closeTarget ? [{
+      ...BASE_DATASET,
+      label: 'Close target',
+      data: sorted.map(() => closeTarget),
+      borderColor: 'rgba(22,163,74,0.25)',
+      pointHoverBackgroundColor: 'rgba(22,163,74,0.25)',
+      borderDash: [4, 4] as number[],
+      borderWidth: 1,
+    }] : []),
   ] : [
     {
       ...BASE_DATASET,
       label: 'New followers',
       data: sorted.map(s => s.new_followers),
-      borderColor: '#34D399',
-      pointHoverBackgroundColor: '#34D399',
+      borderColor: '#0D9488',
+      pointHoverBackgroundColor: '#0D9488',
+      borderDash: undefined as number[] | undefined,
     },
     {
       ...BASE_DATASET,
-      label: 'Clients signed',
-      data: sorted.map(s => s.clients_signed),
-      borderColor: '#F59E0B',
-      pointHoverBackgroundColor: '#F59E0B',
+      label: 'Leads replied',
+      data: sorted.map(() => 0), // No leads replied in snapshot — placeholder
+      borderColor: '#D97706',
+      pointHoverBackgroundColor: '#D97706',
+      borderDash: undefined as number[] | undefined,
     },
   ]
 
@@ -123,7 +151,7 @@ export default function RevenueChart({ history }: Props) {
         ))}
       </div>
 
-      <div style={{ height: '200px' }}>
+      <div style={{ height: '180px' }}>
         <Line
           data={{ labels, datasets }}
           options={{
@@ -145,7 +173,7 @@ export default function RevenueChart({ history }: Props) {
                 ticks: { color: '#9CA3AF', font: { size: 11 } },
               },
               y: {
-                grid: { color: 'rgba(0,0,0,0.06)' },
+                grid: { color: 'rgba(0,0,0,0.05)' },
                 ticks: { color: '#9CA3AF', font: { size: 11 } },
               },
             },
