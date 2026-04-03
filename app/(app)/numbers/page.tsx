@@ -40,9 +40,9 @@ export default async function NumbersPage() {
     // All leads with a call booked OR outcome this month (regardless of when lead was created)
     supabase.from('leads').select('call_booked_at, call_outcome, updated_at').eq('user_id', user.id)
       .or(`call_booked_at.gte.${monthStartTs},and(call_outcome.not.is.null,updated_at.gte.${monthStartTs})`),
-    // Installments DUE this month (paid + unpaid) — joined through clients for explicit user scoping
+    // Installments DUE this month (paid + unpaid) — include client_id + payment_type to exclude PIF
     supabase.from('payment_installments')
-      .select('amount, due_date, paid, paid_at, clients!inner(user_id)')
+      .select('amount, due_date, paid, paid_at, client_id, clients!inner(user_id, payment_type)')
       .eq('clients.user_id', user.id)
       .gte('due_date', monthStart)
       .lt('due_date', nextMonthStart),
@@ -59,19 +59,21 @@ export default async function NumbersPage() {
 
   const revenueContracted = monthClients.reduce((s, c) => s + c.total_amount, 0)
 
-  // PIF clients who started this month — their full amount is collected upfront (no installments)
+  // PIF clients who started this month — paid upfront, no installments
   const cashFromPIF = monthClients
     .filter(c => c.payment_type === 'pif')
     .reduce((s, c) => s + c.total_amount, 0)
 
-  // All installments DUE this month (plan + split clients)
-  const monthDueInsts = (allMonthInstallments ?? []) as { amount: number; paid: boolean }[]
+  // Installments DUE this month — exclude PIF clients (they're counted above via total_amount)
+  type MonthInst = { amount: number; paid: boolean; client_id: string; clients: { payment_type: string }[] }
+  const monthDueInsts = ((allMonthInstallments ?? []) as unknown as MonthInst[])
+    .filter(i => i.clients?.[0]?.payment_type !== 'pif')
   const cashFromDueInstallments = monthDueInsts.reduce((s, i) => s + i.amount, 0)
   const cashFromPaidInstallments = monthDueInsts.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
 
-  // cashCollected = total revenue due this month (PIF + all installments due)
+  // cashCollected = PIF new clients + all plan/split installments due this month
   const cashCollected = cashFromPIF + cashFromDueInstallments
-  // cashPending = installments due but not yet confirmed
+  // cashPending = installments due but not yet confirmed as paid
   const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
   // Leads metrics — correct scoping
@@ -117,14 +119,18 @@ export default async function NumbersPage() {
   const allInstallments = (installments ?? []) as PaymentInstallment[]
   const totalActiveClients = allClients.length
   const totalContracted = allClients.reduce((s, c) => s + c.total_amount, 0)
-  // PIF clients: paid in full upfront, no installments — count their total_amount directly
-  // Split + plan clients: revenue comes entirely from their installments (paid or unpaid)
-  // Never mix total_amount + installments for the same client — that double-counts
+
+  // PIF clients paid upfront — track via total_amount only (no installments should exist for them)
+  // Plan/split clients — track exclusively via their installment records
+  // Explicitly exclude PIF client installments to prevent double-counting even if stale data exists
+  const pifClientIds = new Set(allClients.filter(c => c.payment_type === 'pif').map(c => c.id))
+  const planSplitInstallments = allInstallments.filter(i => !pifClientIds.has(i.client_id))
+
   const totalCashCollected = allClients
     .filter(c => c.payment_type === 'pif')
     .reduce((s, c) => s + c.total_amount, 0)
-    + allInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
-  const totalOutstanding = allInstallments
+    + planSplitInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
+  const totalOutstanding = planSplitInstallments
     .filter(i => !i.paid)
     .reduce((s, i) => s + i.amount, 0)
 
