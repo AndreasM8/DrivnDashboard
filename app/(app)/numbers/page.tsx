@@ -73,9 +73,9 @@ export default async function NumbersPage() {
   const cashFromDueInstallments = monthDueInsts.reduce((s, i) => s + i.amount, 0)
   const cashFromPaidInstallments = monthDueInsts.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
 
-  // cashCollected = PIF new clients + all plan/split installments due this month
-  const cashCollected = cashFromPIF + cashFromDueInstallments
-  // cashPending = installments due but not yet confirmed as paid
+  // cashCollected = actual money received: PIF new clients + PAID installments only
+  const cashCollected = cashFromPIF + cashFromPaidInstallments
+  // cashPending = installments due this month but not yet marked as paid
   const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
   // Leads metrics — meetings attributed to the month they were BOOKED

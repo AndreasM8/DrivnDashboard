@@ -230,7 +230,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
         <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Revenue', 'Clients signed', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Signed'].map((h, i) => (
+              {['Month', 'Cash in', 'Clients signed', 'New leads', 'Calls', 'Show rate', 'Close rate', 'Signed'].map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -623,7 +623,7 @@ export default function NumbersClient({
           {/* Primary KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '10px', marginBottom: '10px' }}>
             <KpiCard
-              label="Revenue this month"
+              label="Cash collected"
               value={snap?.cash_collected ?? 0}
               displayValue={formatCurrency(snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}
@@ -632,9 +632,9 @@ export default function NumbersClient({
               compareValue={getCompare('cash_collected')}
               color={score(snap?.cash_collected ?? 0, compareMode === 'targets' ? targets?.cash_target : last?.cash_collected)}
               subline={selectedMonth === currentMonth && cashPending > 0
-                ? `${formatCurrency((snap?.cash_collected ?? 0) - cashPending, baseCurrency)} collected · ${formatCurrency(cashPending, baseCurrency)} pending`
-                : selectedMonth === currentMonth && snap?.cash_collected === 0
-                  ? 'No revenue due this month'
+                ? `+ ${formatCurrency(cashPending, baseCurrency)} still pending this month`
+                : selectedMonth === currentMonth && snap?.cash_collected === 0 && cashPending === 0
+                  ? 'No payments due this month'
                   : undefined}
             />
             <KpiCard
