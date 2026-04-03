@@ -555,7 +555,7 @@ export default function NumbersClient({
       )}
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '900px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* No last month data notice */}
         {compareMode === 'last_month' && last === null && (
