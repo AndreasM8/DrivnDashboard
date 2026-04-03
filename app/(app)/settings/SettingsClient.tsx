@@ -23,6 +23,61 @@ interface Props {
 
 type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance'
 
+// ─── Shared primitives ────────────────────────────────────────────────────────
+
+const CARD: React.CSSProperties = {
+  background: 'var(--surface-1)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius-card)',
+  padding: 20,
+}
+
+function StatusDot({ on }: { on: boolean }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: on ? 'var(--success)' : 'var(--border-strong)',
+      flexShrink: 0,
+    }} />
+  )
+}
+
+function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        background: on ? 'var(--accent)' : 'var(--surface-3)',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'background 150ms ease',
+        flexShrink: 0,
+        padding: 0,
+      }}
+    >
+      <span style={{
+        position: 'absolute',
+        top: 4,
+        width: 16,
+        height: 16,
+        borderRadius: '50%',
+        background: '#fff',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+        transition: 'transform 150ms ease',
+        transform: on ? 'translateX(24px)' : 'translateX(4px)',
+      }} />
+    </button>
+  )
+}
+
 // ─── Section: KPI Targets ─────────────────────────────────────────────────────
 
 function TargetsSection({ userId, targets }: { userId: string; targets: KpiTargets | null }) {
@@ -91,23 +146,24 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
   ] as { title: string; fields: { key: keyof typeof values; label: string; unit: string }[] }[]
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {groups.map(g => (
-        <div key={g.title} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">{g.title}</h3>
-          <div className="space-y-4">
+        <div key={g.title} style={CARD}>
+          <p className="section-title" style={{ marginBottom: 16 }}>{g.title}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {g.fields.map(f => (
-              <div key={f.key} className="flex items-center gap-4">
-                <label className="flex-1 text-sm text-gray-700 dark:text-slate-300">{f.label}</label>
-                <div className="flex items-center gap-2">
+              <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <label style={{ flex: 1, fontSize: 13, color: 'var(--text-1)' }}>{f.label}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="number"
                     value={values[f.key]}
                     onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
                     placeholder="—"
-                    className="w-28 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-base"
+                    style={{ width: 96, textAlign: 'right' }}
                   />
-                  <span className="text-xs text-gray-400 dark:text-slate-500 w-16">{f.unit}</span>
+                  <span className="label-caps" style={{ width: 56, textAlign: 'left' }}>{f.unit}</span>
                 </div>
               </div>
             ))}
@@ -116,15 +172,16 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
       ))}
 
       {saveError && (
-        <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{saveError}</p>
+        <p style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(220,38,38,0.06)', borderRadius: 'var(--radius-btn)', padding: '8px 12px' }}>
+          {saveError}
+        </p>
       )}
-      <div className="flex justify-end">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
           onClick={handleSave}
           disabled={saving}
-          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            saved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-          } disabled:opacity-50`}
+          className="btn-primary"
+          style={saved ? { background: 'var(--success)' } : undefined}
         >
           {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save targets'}
         </button>
@@ -170,22 +227,34 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-      <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Your team</h3>
+    <div style={CARD}>
+      <p className="section-title" style={{ marginBottom: 16 }}>Your team</p>
 
-      <div className="space-y-3 mb-5">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
         {setters.map(s => (
-          <div key={s.id} className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Avatar */}
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(37,99,235,0.1)', color: 'var(--accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, flexShrink: 0,
+            }}>
               {s.name.charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{s.name}{s.is_self && <span className="ml-1 text-xs text-gray-400 dark:text-slate-500">(you)</span>}</p>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>
+                {s.name}
+                {s.is_self && (
+                  <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--text-3)' }}>(you)</span>
+                )}
+              </span>
             </div>
             <select
               value={s.role}
               onChange={e => updateRole(s.id, e.target.value as SetterRole)}
-              className="px-3 py-1.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
+              style={{ width: 'auto', fontSize: 12 }}
             >
               <option value="setter">Setter</option>
               <option value="closer">Closer</option>
@@ -193,17 +262,29 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
             </select>
             {!s.is_self && (
               confirmRemove === s.id ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-500 dark:text-slate-400">Remove?</span>
-                  <button onClick={() => removeSetters(s.id)} className="text-xs font-semibold text-red-600 hover:text-red-700">Yes</button>
-                  <button onClick={() => setConfirmRemove(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Remove?</span>
+                  <button
+                    onClick={() => removeSetters(s.id)}
+                    style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmRemove(null)}
+                    style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               ) : (
                 <button
                   onClick={() => setConfirmRemove(s.id)}
-                  className="text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors"
+                  style={{ color: 'var(--border-strong)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0, transition: 'color 120ms ease' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--border-strong)')}
                 >
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                   </svg>
                 </button>
@@ -213,20 +294,22 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
         ))}
       </div>
 
-      <div className="border-t border-gray-50 dark:border-slate-700 pt-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-3">Add person</p>
-        <div className="flex gap-2">
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+        <p className="label-caps" style={{ marginBottom: 10 }}>Add person</p>
+        <div style={{ display: 'flex', gap: 8 }}>
           <input
             value={newName}
             onChange={e => setNewName(e.target.value)}
             placeholder="Name"
-            className="flex-1 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input-base"
             onKeyDown={e => e.key === 'Enter' && addSetter()}
+            style={{ flex: 1 }}
           />
           <select
             value={newRole}
             onChange={e => setNewRole(e.target.value as SetterRole)}
-            className="px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="input-base"
+            style={{ width: 'auto' }}
           >
             <option value="setter">Setter</option>
             <option value="closer">Closer</option>
@@ -235,7 +318,7 @@ function SettersSection({ userId, initialSetters }: { userId: string; initialSet
           <button
             onClick={addSetter}
             disabled={adding || !newName.trim()}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="btn-primary"
           >
             Add
           </button>
@@ -257,17 +340,53 @@ function CopyButton({ value }: { value: string }) {
   return (
     <button
       onClick={copy}
-      className="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors flex-shrink-0"
+      className="btn-ghost"
+      style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}
     >
       {copied ? '✓ Copied' : 'Copy'}
     </button>
   )
 }
 
+function IntegrationIcon({ type }: { type: 'webhook' | 'stripe' | 'calendly' | 'sheets' }) {
+  const configs = {
+    webhook: { bg: 'rgba(245,158,11,0.12)', icon: (
+      <svg viewBox="0 0 20 20" fill="none" width="16" height="16" stroke="#D97706" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M11 2L4 11h7l-2 7 9-10h-7l2-8z" />
+      </svg>
+    )},
+    stripe: { bg: 'rgba(99,91,255,0.12)', icon: (
+      <span style={{ fontSize: 14, fontWeight: 700, color: '#635BFF', lineHeight: 1 }}>S</span>
+    )},
+    calendly: { bg: 'rgba(0,108,206,0.1)', icon: (
+      <svg viewBox="0 0 20 20" fill="none" width="16" height="16" stroke="#006CCE" strokeWidth="1.5" strokeLinecap="round">
+        <rect x="3" y="4" width="14" height="13" rx="2" />
+        <path d="M7 2v4M13 2v4M3 9h14" />
+      </svg>
+    )},
+    sheets: { bg: 'rgba(52,168,83,0.1)', icon: (
+      <svg viewBox="0 0 20 20" fill="none" width="16" height="16" stroke="#34A853" strokeWidth="1.5">
+        <rect x="3" y="3" width="14" height="14" rx="1.5" />
+        <path d="M7 3v14M13 3v14M3 7h14M3 13h14" strokeLinecap="round" />
+      </svg>
+    )},
+  }
+  const { bg, icon } = configs[type]
+  return (
+    <div style={{
+      width: 36, height: 36, borderRadius: 'var(--radius-btn)',
+      background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      {icon}
+    </div>
+  )
+}
+
 function WebhookCard({
-  emoji, name, desc, configured, webhookUrl, instructions, docsUrl,
+  name, desc, configured, webhookUrl, instructions, docsUrl,
 }: {
-  emoji: string
+  emoji?: string
   name: string
   desc: string
   configured: boolean
@@ -278,44 +397,58 @@ function WebhookCard({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${configured ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
-      <div className="flex items-start gap-4">
-        <span className="text-2xl mt-0.5">{emoji}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">{name}</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${configured ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
-            <span className={`text-xs ${configured ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-slate-500'}`}>
+    <div style={{
+      ...CARD,
+      borderLeft: configured ? '3px solid var(--success)' : '3px solid var(--border)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <IntegrationIcon type="webhook" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>{name}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 6px',
+              borderRadius: 'var(--radius-badge)', background: 'var(--surface-2)',
+              color: 'var(--text-3)', flexShrink: 0,
+            }}>Optional</span>
+            <StatusDot on={configured} />
+            <span style={{ fontSize: 12, color: configured ? 'var(--success)' : 'var(--text-3)' }}>
               {configured ? 'Configured' : 'Not set up'}
             </span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">{desc}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{desc}</p>
 
           {/* Webhook URL */}
-          <div className="mt-3 flex items-center gap-2">
-            <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 text-gray-700 dark:text-slate-300 truncate">
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <code style={{
+              flex: 1, fontSize: 12,
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-btn)', padding: '6px 10px',
+              color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              display: 'block',
+            }}>
               {webhookUrl}
             </code>
             <CopyButton value={webhookUrl} />
           </div>
 
-          {/* Setup instructions */}
+          {/* Setup instructions toggle */}
           <button
             onClick={() => setOpen(o => !o)}
-            className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {open ? 'Hide setup steps ↑' : 'How to set up ↓'}
           </button>
 
           {open && (
-            <ol className="mt-2 space-y-1 pl-4 list-decimal">
+            <ol style={{ marginTop: 8, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, listStyle: 'decimal' }}>
               {instructions.map((step, i) => (
-                <li key={i} className="text-xs text-gray-600 dark:text-slate-400">{step}</li>
+                <li key={i} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{step}</li>
               ))}
               {docsUrl && (
-                <li className="text-xs">
-                  <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                <li style={{ fontSize: 12 }}>
+                  <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
                     Open platform →
                   </a>
                 </li>
@@ -351,7 +484,6 @@ function GoogleSheetsCard() {
       .then(r => r.json())
       .then(d => setStatus(d))
       .finally(() => setLoading(false))
-    // Surface any background-sync error from localStorage
     try {
       const raw = localStorage.getItem('drivn_sheets_last_sync')
       if (raw) {
@@ -402,75 +534,79 @@ function GoogleSheetsCard() {
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${status.connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
-      <div className="flex items-start gap-4">
-        <span className="text-2xl mt-0.5">📊</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Google Sheets</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
-            {!loading && (
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status.connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
-            )}
+    <div style={{
+      ...CARD,
+      borderLeft: status.connected ? '3px solid var(--success)' : '3px solid var(--border)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <IntegrationIcon type="sheets" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Google Sheets</span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 6px',
+              borderRadius: 'var(--radius-badge)', background: 'var(--surface-2)',
+              color: 'var(--text-3)', flexShrink: 0,
+            }}>Optional</span>
+            {!loading && <StatusDot on={status.connected} />}
           </div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
             Syncs your pipeline, revenue, and KPIs to a Google Sheet automatically. Skip this and track manually instead.
           </p>
 
           {!status.connected && !loading && (
-            <ol className="mt-2 text-xs text-gray-500 dark:text-slate-400 space-y-1 list-decimal list-inside">
-              <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Connect Google</span> → sign in with the Google account where you want the sheet</li>
-              <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Allow</span> when Google asks for spreadsheet access</li>
-              <li>Done — Drivn creates a spreadsheet in your Drive and starts syncing automatically</li>
+            <ol style={{ marginTop: 8, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3, listStyle: 'decimal' }}>
+              <li style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                Click <strong style={{ color: 'var(--text-1)' }}>Connect Google</strong> → sign in with the Google account where you want the sheet
+              </li>
+              <li style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                Click <strong style={{ color: 'var(--text-1)' }}>Allow</strong> when Google asks for spreadsheet access
+              </li>
+              <li style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                Done — Drivn creates a spreadsheet in your Drive and starts syncing automatically
+              </li>
             </ol>
           )}
 
           {status.connected && (
-            <div className="mt-2 space-y-1">
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
               {status.spreadsheet_url && (
                 <a
                   href={status.spreadsheet_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline block truncate"
+                  style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
                 >
                   Open spreadsheet →
                 </a>
               )}
               {status.last_synced_at && !syncError && (
-                <p className="text-xs text-gray-400 dark:text-slate-500">Last synced {formatSynced(status.last_synced_at)}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Last synced {formatSynced(status.last_synced_at)}</p>
               )}
               {syncError && (
-                <p className="text-xs text-rose-500 dark:text-rose-400">⚠ Last sync failed: {syncError}</p>
+                <p style={{ fontSize: 12, color: 'var(--danger)' }}>Sync failed: {syncError}</p>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 flex-shrink-0">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
           {loading ? (
-            <span className="text-xs text-gray-400 dark:text-slate-500 py-2">Loading…</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', padding: '6px 0' }}>Loading…</span>
           ) : status.connected ? (
             <>
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
+              <button onClick={handleSync} disabled={syncing} className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }}>
                 {syncing ? 'Syncing…' : 'Sync now'}
               </button>
-              <button
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50"
-              >
+              <button onClick={handleDisconnect} disabled={disconnecting} className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>
                 {disconnecting ? 'Removing…' : 'Disconnect'}
               </button>
             </>
           ) : (
             <a
               href="/api/google/auth"
-              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center whitespace-nowrap"
+              className="btn-ghost"
+              style={{ fontSize: 13, padding: '6px 14px', textAlign: 'center', whiteSpace: 'nowrap', textDecoration: 'none', display: 'inline-block' }}
             >
               Connect Google
             </a>
@@ -487,25 +623,23 @@ const stripeSteps: GuideStep[] = [
     description: 'Log into dashboard.stripe.com and click "Developers" in the left sidebar.',
     visual: (
       <div className="flex h-full w-full">
-        {/* Sidebar */}
-        <div className="w-36 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 flex flex-col py-3 px-2 gap-0.5">
+        <div className="w-36 bg-white border-r border-gray-200 flex flex-col py-3 px-2 gap-0.5">
           <div className="flex items-center gap-1.5 px-2 py-1.5 mb-2">
             <div className="w-5 h-5 rounded bg-indigo-600 flex items-center justify-center">
               <span className="text-white font-bold" style={{ fontSize: 9 }}>S</span>
             </div>
-            <span className="text-xs font-bold text-gray-800 dark:text-slate-100">Stripe</span>
+            <span className="text-xs font-bold text-gray-800">Stripe</span>
           </div>
           {['Home', 'Payments', 'Customers'].map(item => (
-            <div key={item} className="px-2 py-1 rounded text-xs text-gray-500 dark:text-slate-400">{item}</div>
+            <div key={item} className="px-2 py-1 rounded text-xs text-gray-500">{item}</div>
           ))}
-          <div className="px-2 py-1 rounded text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/40 flex items-center gap-1.5">
+          <div className="px-2 py-1 rounded text-xs font-semibold text-indigo-700 bg-indigo-50 flex items-center gap-1.5">
             Developers
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
           </div>
         </div>
-        {/* Main area placeholder */}
-        <div className="flex-1 bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-          <span className="text-xs text-gray-300 dark:text-slate-600">Select Developers →</span>
+        <div className="flex-1 bg-gray-50 flex items-center justify-center">
+          <span className="text-xs text-gray-300">Select Developers →</span>
         </div>
       </div>
     ),
@@ -514,18 +648,18 @@ const stripeSteps: GuideStep[] = [
     title: 'Click Webhooks → Add endpoint',
     description: 'Inside Developers, click "Webhooks" in the sub-menu, then hit "Add endpoint" in the top right.',
     visual: (
-      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 p-3">
+      <div className="flex flex-col w-full h-full bg-white p-3">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-bold text-gray-800 dark:text-slate-100">Webhooks</span>
-          <div className="relative px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 ring-offset-1 dark:ring-offset-slate-800 animate-pulse">
+          <span className="text-sm font-bold text-gray-800">Webhooks</span>
+          <div className="relative px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 ring-offset-1 animate-pulse">
             + Add endpoint
           </div>
         </div>
-        <div className="border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700">
+        <div className="border border-gray-100 rounded-lg divide-y divide-gray-50">
           {['https://example.com/webhook', 'https://old-hook.io/stripe'].map(u => (
             <div key={u} className="px-3 py-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-              <span className="text-xs text-gray-500 dark:text-slate-400 truncate">{u}</span>
+              <span className="text-xs text-gray-500 truncate">{u}</span>
             </div>
           ))}
         </div>
@@ -536,11 +670,11 @@ const stripeSteps: GuideStep[] = [
     title: 'Paste your endpoint URL',
     description: 'Paste the webhook URL from above into the "Endpoint URL" field, then continue.',
     visual: (
-      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-3">
+      <div className="flex flex-col w-full h-full bg-white justify-center p-4 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Endpoint URL</label>
-          <div className="flex items-center gap-1.5 px-3 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-            <span className="text-xs text-gray-700 dark:text-slate-300 truncate flex-1 font-mono">
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Endpoint URL</label>
+          <div className="flex items-center gap-1.5 px-3 py-2 border-2 border-indigo-400 rounded-lg bg-indigo-50">
+            <span className="text-xs text-gray-700 truncate flex-1 font-mono">
               https://yourdomain.com/api/webhooks/stripe
             </span>
             <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 text-gray-400 flex-shrink-0">
@@ -549,7 +683,7 @@ const stripeSteps: GuideStep[] = [
             </svg>
           </div>
         </div>
-        <p className="text-xs text-indigo-600 dark:text-indigo-400">Paste the URL copied from Drivn above</p>
+        <p className="text-xs text-indigo-600">Paste the URL copied from Drivn above</p>
       </div>
     ),
   },
@@ -557,25 +691,25 @@ const stripeSteps: GuideStep[] = [
     title: 'Select payment events',
     description: 'Under "Select events", search and check both payment events shown below.',
     visual: (
-      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-2">
-        <label className="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Select events to listen to</label>
-        <div className="flex items-center gap-2 px-2 py-1.5 border border-gray-200 dark:border-slate-600 rounded-lg mb-1">
+      <div className="flex flex-col w-full h-full bg-white justify-center p-4 gap-2">
+        <label className="text-xs font-semibold text-gray-600 mb-1">Select events to listen to</label>
+        <div className="flex items-center gap-2 px-2 py-1.5 border border-gray-200 rounded-lg mb-1">
           <svg viewBox="0 0 16 16" className="w-3 h-3 text-gray-400 flex-shrink-0">
             <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          <span className="text-xs text-gray-400 dark:text-slate-500">Search events…</span>
+          <span className="text-xs text-gray-400">Search events…</span>
         </div>
         {[
           'payment_intent.succeeded',
           'payment_intent.payment_failed',
         ].map(ev => (
-          <div key={ev} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-green-600 dark:text-green-400 flex-shrink-0">
+          <div key={ev} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-green-50 border border-green-200">
+            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 text-green-600 flex-shrink-0">
               <rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor" opacity="0.15" />
               <path d="M4 8l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-xs font-mono text-green-800 dark:text-green-300">{ev}</span>
+            <span className="text-xs font-mono text-green-800">{ev}</span>
           </div>
         ))}
       </div>
@@ -585,17 +719,17 @@ const stripeSteps: GuideStep[] = [
     title: 'Copy the signing secret',
     description: 'After saving the endpoint, click "Reveal" next to Signing secret and copy the whsec_… value.',
     visual: (
-      <div className="flex flex-col w-full h-full bg-white dark:bg-slate-800 justify-center p-4 gap-2">
-        <label className="text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1">Signing secret</label>
-        <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700">
-          <span className="flex-1 text-xs font-mono text-gray-400 dark:text-slate-500 tracking-widest select-none blur-[3px]">
+      <div className="flex flex-col w-full h-full bg-white justify-center p-4 gap-2">
+        <label className="text-xs font-semibold text-gray-600 mb-1">Signing secret</label>
+        <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+          <span className="flex-1 text-xs font-mono text-gray-400 tracking-widest select-none blur-[3px]">
             whsec_••••••••••••••••••
           </span>
-          <div className="px-2 py-1 rounded bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 dark:ring-indigo-700 animate-pulse flex-shrink-0">
+          <div className="px-2 py-1 rounded bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 animate-pulse flex-shrink-0">
             Reveal
           </div>
         </div>
-        <p className="text-xs text-gray-400 dark:text-slate-500">Copy the revealed secret → paste it into Drivn below</p>
+        <p className="text-xs text-gray-400">Copy the revealed secret → paste it into Drivn below</p>
       </div>
     ),
   },
@@ -643,219 +777,195 @@ function StripeCard({ webhookUrl }: { webhookUrl: string }) {
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${connected ? 'border-green-200 dark:border-green-800' : 'border-gray-100 dark:border-slate-700'}`}>
-      <div className="flex items-start gap-4">
-        <span className="text-2xl mt-0.5">💳</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Stripe</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
-            {!loading && (
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />
-            )}
-          </div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">Auto-marks payments when clients pay. Skip this and mark payments manually in the client profile.</p>
-
-          {!connected && !showInput && (
-            <div className="mt-3 space-y-2">
-              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
-                <li>Log into <span className="font-medium text-gray-700 dark:text-slate-300">dashboard.stripe.com</span> → click <span className="font-medium text-gray-700 dark:text-slate-300">Developers</span> in the left sidebar</li>
-                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Webhooks</span> → then <span className="font-medium text-gray-700 dark:text-slate-300">Add endpoint</span> (top right)</li>
-                <li>Paste the URL below into the <span className="font-medium text-gray-700 dark:text-slate-300">Endpoint URL</span> field</li>
-                <li>Under <span className="font-medium text-gray-700 dark:text-slate-300">Select events</span>, search and add: <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.succeeded</span> and <span className="font-mono text-gray-700 dark:text-slate-300">payment_intent.payment_failed</span></li>
-                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Add endpoint</span> → on the next screen, click <span className="font-medium text-gray-700 dark:text-slate-300">Reveal</span> next to Signing secret</li>
-                <li>Copy the <span className="font-mono text-gray-700 dark:text-slate-300">whsec_…</span> value → paste it below and click Connect</li>
-              </ol>
-              <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 text-xs bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded px-2 py-1.5 truncate text-gray-600 dark:text-slate-300">{webhookUrl}</code>
-                <button onClick={copyUrl} className="px-2 py-1.5 text-xs bg-gray-100 dark:bg-slate-700 dark:text-slate-300 rounded hover:bg-gray-200 dark:hover:bg-slate-600 flex-shrink-0">
-                  {copied ? '✓' : 'Copy'}
-                </button>
-              </div>
-              {!showGuide && (
-                <button
-                  onClick={() => setShowGuide(true)}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1"
-                >
-                  Show me how →
-                </button>
-              )}
-              {showGuide && (
-                <IntegrationGuide steps={stripeSteps} onClose={() => setShowGuide(false)} />
+    <>
+      <div style={{
+        ...CARD,
+        borderLeft: connected ? '3px solid var(--success)' : '3px solid var(--border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <IntegrationIcon type="stripe" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Stripe</span>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: '2px 6px',
+                borderRadius: 'var(--radius-badge)', background: 'var(--surface-2)',
+                color: 'var(--text-3)', flexShrink: 0,
+              }}>Optional</span>
+              {!loading && <StatusDot on={connected} />}
+              {!loading && (
+                <span style={{ fontSize: 12, color: connected ? 'var(--success)' : 'var(--text-3)' }}>
+                  {connected ? 'Connected' : 'Not connected'}
+                </span>
               )}
             </div>
-          )}
+            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+              Automatically marks clients as paid when a Stripe payment goes through.
+            </p>
 
-          {showInput && (
-            <div className="mt-3 space-y-2">
-              <p className="text-xs text-gray-600 dark:text-slate-400">Paste your Stripe signing secret (starts with <span className="font-mono">whsec_</span>):</p>
-              <div className="flex gap-2">
+            {/* Webhook URL */}
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <code style={{
+                flex: 1, fontSize: 12,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-btn)', padding: '6px 10px',
+                color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                display: 'block',
+              }}>
+                {webhookUrl}
+              </code>
+              <button onClick={copyUrl} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 11, flexShrink: 0 }}>
+                {copied ? '✓ Copied' : 'Copy'}
+              </button>
+            </div>
+
+            {/* Secret input */}
+            {showInput && (
+              <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
                 <input
                   type="password"
                   value={secret}
                   onChange={e => setSecret(e.target.value)}
-                  placeholder="whsec_..."
-                  className="flex-1 text-xs border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="whsec_…"
+                  className="input-base"
+                  style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 12 }}
                 />
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !secret.trim()}
-                  className="px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }}>
                   {saving ? 'Saving…' : 'Save'}
                 </button>
-                <button onClick={() => setShowInput(false)} className="px-3 py-2 text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
+                <button onClick={() => setShowInput(false)} className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>
                   Cancel
                 </button>
               </div>
-            </div>
-          )}
+            )}
 
-          {connected && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">✓ Connected — payments sync automatically</p>
-          )}
-        </div>
+            {/* Guide toggle */}
+            <button
+              onClick={() => setShowGuide(g => !g)}
+              style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              {showGuide ? 'Hide setup guide ↑' : 'How to set up ↓'}
+            </button>
+          </div>
 
-        <div className="flex-shrink-0">
-          {loading ? (
-            <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
-          ) : connected ? (
-            <button onClick={handleDisconnect} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">
-              Disconnect
-            </button>
-          ) : !showInput ? (
-            <button onClick={() => setShowInput(true)} className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600">
-              Connect
-            </button>
-          ) : null}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+            {loading ? (
+              <span style={{ fontSize: 12, color: 'var(--text-3)', padding: '6px 0' }}>Loading…</span>
+            ) : connected ? (
+              <>
+                <button onClick={() => setShowInput(s => !s)} className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>
+                  Update secret
+                </button>
+                <button onClick={handleDisconnect} className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>
+                  Disconnect
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowInput(s => !s)} className="btn-primary" style={{ fontSize: 12, padding: '5px 12px' }}>
+                Connect Stripe
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {showGuide && (
+        <IntegrationGuide steps={stripeSteps} onClose={() => setShowGuide(false)} />
+      )}
+    </>
   )
 }
 
-function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: 'error' | 'ok'; errorStep?: string; errorDetail?: string }) {
+function CalendlyCard({
+  oauthResult,
+  errorStep,
+  errorDetail,
+}: {
+  oauthResult?: 'error' | 'ok'
+  errorStep?: string
+  errorDetail?: string
+}) {
   const [connected, setConnected] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [userName, setUserName] = useState<string | null>(null)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [userUri, setUserUri] = useState<string | null>(null)
-  const [connectedAt, setConnectedAt] = useState<string | null>(null)
+  const [showError, setShowError] = useState(oauthResult === 'error')
   const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
     fetch('/api/calendly/status')
       .then(r => r.json())
-      .then(d => {
-        setConnected(d.connected)
-        setUserName(d.userName ?? null)
-        setUserEmail(d.userEmail ?? null)
-        setUserUri(d.userUri ?? null)
-        setConnectedAt(d.connectedAt ?? null)
-        setLoading(false)
-      })
+      .then(d => { setConnected(d.connected); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
   async function handleDisconnect() {
     setDisconnecting(true)
-    await fetch('/api/calendly/status', { method: 'DELETE' })
+    await fetch('/api/calendly/disconnect', { method: 'POST' })
     setConnected(false)
-    setUserName(null)
-    setUserEmail(null)
-    setUserUri(null)
-    setConnectedAt(null)
     setDisconnecting(false)
   }
 
-  // Extract a readable ID from the URI: https://api.calendly.com/users/XXXX → XXXX
-  const accountId = userUri ? userUri.split('/').pop() : null
-
-  const showError = oauthResult === 'error'
-
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 transition-all ${
-      showError ? 'border-rose-200 dark:border-rose-800' :
-      connected ? 'border-green-200 dark:border-green-800' :
-      'border-gray-100 dark:border-slate-700'
-    }`}>
-      <div className="flex items-start gap-4">
-        <span className="text-2xl mt-0.5">📅</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-medium text-gray-900 dark:text-slate-100 text-sm">Calendly</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 flex-shrink-0">Optional</span>
-            {!loading && !showError && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`} />}
-            {showError && <span className="w-2 h-2 rounded-full flex-shrink-0 bg-rose-500" />}
+    <div style={{
+      ...CARD,
+      borderLeft: connected ? '3px solid var(--success)' : '3px solid var(--border)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <IntegrationIcon type="calendly" />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Calendly</span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 6px',
+              borderRadius: 'var(--radius-badge)', background: 'var(--surface-2)',
+              color: 'var(--text-3)', flexShrink: 0,
+            }}>Optional</span>
+            {!loading && <StatusDot on={connected} />}
+            {!loading && (
+              <span style={{ fontSize: 12, color: connected ? 'var(--success)' : 'var(--text-3)' }}>
+                {connected ? 'Connected' : 'Not connected'}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">
-            Auto-moves followers to &apos;Call booked&apos; when they book. Skip this and move them manually in the pipeline.
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+            Automatically moves leads to &ldquo;Meeting booked&rdquo; when they schedule a call with you.
           </p>
 
-          {/* OAuth error banner */}
+          {oauthResult === 'ok' && (
+            <p style={{ marginTop: 8, fontSize: 12, color: 'var(--success)', fontWeight: 500 }}>
+              Calendly connected successfully.
+            </p>
+          )}
+
           {showError && (
-            <div className="mt-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/40 rounded-lg px-3 py-2.5 space-y-1">
-              <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">
-                Connection failed{errorStep ? ` — step: ${errorStep}` : ''}
+            <div style={{
+              marginTop: 8, padding: '10px 12px',
+              background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.15)',
+              borderRadius: 'var(--radius-btn)', display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              <p style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 500 }}>
+                OAuth failed{errorStep ? ` at step: ${errorStep}` : ''}
               </p>
               {errorDetail && (
-                <p className="text-[11px] font-mono text-rose-600 dark:text-rose-400/80 break-all">{errorDetail}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-2)', fontFamily: 'var(--font-mono)' }}>{errorDetail}</p>
               )}
-              <p className="text-xs text-rose-600 dark:text-rose-400/80">
-                {connected ? 'Click Disconnect below, then try connecting again.' : 'Click Connect Calendly to try again.'}
-              </p>
-            </div>
-          )}
-
-          {connected && !showError && (
-            <div className="mt-3 space-y-1">
-              <p className="text-xs text-green-600 dark:text-green-400 font-medium">Connected — bookings sync automatically</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
-                {userName
-                  ? <><span className="font-medium text-gray-700 dark:text-slate-300">{userName}</span>{userEmail && ` · ${userEmail}`}</>
-                  : accountId
-                    ? <span className="font-mono">Account: {accountId}</span>
-                    : 'Account details unavailable'
-                }
-              </p>
-              {connectedAt && (
-                <p className="text-[11px] text-gray-400 dark:text-slate-500">
-                  Connected {new Date(connectedAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              )}
-              <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
-                Not the right account? Click Disconnect and reconnect after logging into the correct Calendly account.
-              </p>
-            </div>
-          )}
-
-          {!connected && !loading && !showError && (
-            <div className="mt-3">
-              <ol className="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 list-decimal list-inside">
-                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Connect Calendly</span> → you&apos;ll be taken to Calendly to sign in</li>
-                <li>Click <span className="font-medium text-gray-700 dark:text-slate-300">Allow</span> when Calendly asks for permission</li>
-                <li>Done — bookings will automatically move leads to <span className="font-medium text-gray-700 dark:text-slate-300">Call booked</span></li>
-              </ol>
             </div>
           )}
         </div>
 
-        <div className="flex-shrink-0 flex flex-col items-end gap-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
           {loading ? (
-            <span className="text-xs text-gray-400 dark:text-slate-500">Loading…</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', padding: '6px 0' }}>Loading…</span>
           ) : connected ? (
             <>
-              <button
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-                className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 disabled:opacity-50"
-              >
+              <button onClick={handleDisconnect} disabled={disconnecting} className="btn-ghost" style={{ fontSize: 12, padding: '4px 10px' }}>
                 {disconnecting ? 'Disconnecting…' : 'Disconnect'}
               </button>
               {showError && (
                 <a
                   href="/api/calendly/oauth/start"
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 text-center"
+                  className="btn-primary"
+                  style={{ fontSize: 12, padding: '5px 12px', textAlign: 'center', textDecoration: 'none', display: 'inline-block' }}
                 >
                   Reconnect
                 </a>
@@ -864,7 +974,8 @@ function CalendlyCard({ oauthResult, errorStep, errorDetail }: { oauthResult?: '
           ) : (
             <a
               href="/api/calendly/oauth/start"
-              className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 text-center whitespace-nowrap"
+              className="btn-ghost"
+              style={{ fontSize: 13, padding: '6px 14px', textAlign: 'center', whiteSpace: 'nowrap', textDecoration: 'none', display: 'inline-block' }}
             >
               Connect Calendly
             </a>
@@ -889,13 +1000,21 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
   const stripeUrl = status?.stripe.webhook_url ?? `${window.location.origin}/api/webhooks/stripe`
 
   return (
-    <div className="space-y-3">
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-700 dark:text-amber-400">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Info banner */}
+      <div style={{
+        padding: '10px 14px',
+        background: 'rgba(217,119,6,0.07)',
+        border: '1px solid rgba(217,119,6,0.2)',
+        borderRadius: 'var(--radius-card)',
+        fontSize: 12,
+        color: 'var(--warning)',
+        lineHeight: 1.5,
+      }}>
         All integrations are <strong>optional</strong>. You can skip them and add leads, mark payments, and move pipeline stages manually at any time.
       </div>
 
       <WebhookCard
-        emoji="⚡"
         name="ManyChat"
         desc="Automatically adds new followers to your pipeline when they DM you. Uses ManyChat's built-in HTTP action — no Zapier needed. Skip this and add followers manually instead."
         configured={status?.zapier.configured ?? false}
@@ -957,21 +1076,14 @@ function NotificationsSection({ userId }: { userId: string }) {
     if (prefs) save(prefs)
   }
 
-  function Toggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
+  function NotifToggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
     const on = prefs?.[k] ?? true
-    return (
-      <button
-        onClick={() => toggle(k)}
-        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'}`}
-      >
-        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
-      </button>
-    )
+    return <Toggle on={!!on} onClick={() => toggle(k)} />
   }
 
   function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'call_outcome_hours' | 'payment_days_before' | 'upsell_months'; min: number; max: number; unit: string }) {
     return (
-      <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
           type="number"
           value={prefs?.[k] ?? 0}
@@ -979,57 +1091,60 @@ function NotificationsSection({ userId }: { userId: string }) {
           max={max}
           onChange={e => setNumber(k, Math.max(min, Math.min(max, Number(e.target.value))))}
           onBlur={() => commitNumber(k)}
-          className="w-14 px-2 py-1 text-sm text-center border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="input-base"
+          style={{ width: 60, textAlign: 'center' }}
         />
-        <span className="text-xs text-gray-400 dark:text-slate-500">{unit}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{unit}</span>
       </div>
     )
   }
 
   if (!prefs) {
-    return <div className="text-sm text-gray-400 dark:text-slate-500 py-8 text-center">Loading…</div>
+    return <p style={{ fontSize: 13, color: 'var(--text-3)', padding: '32px 0', textAlign: 'center' }}>Loading…</p>
   }
 
+  const notifCard: React.CSSProperties = { ...CARD, marginBottom: 0 }
+  const divider: React.CSSProperties = { borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }
+  const rowBetween: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }
+
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {saved && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 rounded-xl px-4 py-2.5 text-xs text-green-700 dark:text-green-400 font-medium">
+        <div style={{
+          padding: '8px 14px',
+          background: 'rgba(22,163,74,0.07)',
+          border: '1px solid rgba(22,163,74,0.2)',
+          borderRadius: 'var(--radius-card)',
+          fontSize: 12, color: 'var(--success)', fontWeight: 500,
+        }}>
           Saved ✓
         </div>
       )}
 
       {/* Follow-ups */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+      <div style={notifCard}>
+        <div style={rowBetween}>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Follow-up tasks</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task when a lead hasn&apos;t been contacted in a while</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Follow-up tasks</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Creates a task when a lead hasn&apos;t been contacted in a while</p>
           </div>
-          <Toggle k="followup_enabled" />
+          <NotifToggle k="followup_enabled" />
         </div>
         {prefs.followup_enabled && (
-          <div className="space-y-3 border-t border-gray-100 dark:border-slate-700 pt-3">
-            <p className="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">By lead tier</p>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
-                <span className="text-base">🔥</span> Tier 1 — hot lead
-              </span>
-              <NumberInput k="followup_days_tier1" min={1} max={14} unit="days" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
-                <span className="text-base">💪</span> Tier 2 — warm lead
-              </span>
-              <NumberInput k="followup_days_tier2" min={1} max={21} unit="days" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300">
-                <span className="text-base">🌱</span> Tier 3 — cold lead
-              </span>
-              <NumberInput k="followup_days_tier3" min={1} max={30} unit="days" />
-            </div>
-            <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
-              <span className="text-sm text-gray-700 dark:text-slate-300">Mark overdue after</span>
+          <div style={{ ...divider, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <p className="label-caps">By lead tier</p>
+            {[
+              { label: 'Tier 1 — hot lead', k: 'followup_days_tier1' as const, min: 1, max: 14 },
+              { label: 'Tier 2 — warm lead', k: 'followup_days_tier2' as const, min: 1, max: 21 },
+              { label: 'Tier 3 — cold lead', k: 'followup_days_tier3' as const, min: 1, max: 30 },
+            ].map(({ label, k, min, max }) => (
+              <div key={k} style={rowBetween}>
+                <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{label}</span>
+                <NumberInput k={k} min={min} max={max} unit="days" />
+              </div>
+            ))}
+            <div style={{ ...rowBetween, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Mark overdue after</span>
               <NumberInput k="overdue_days" min={1} max={60} unit="days" />
             </div>
           </div>
@@ -1037,56 +1152,56 @@ function NotificationsSection({ userId }: { userId: string }) {
       </div>
 
       {/* Call outcome */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+      <div style={notifCard}>
+        <div style={rowBetween}>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Log call outcome</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Reminds you to log what happened after a call</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Log call outcome</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Reminds you to log what happened after a call</p>
           </div>
-          <Toggle k="call_outcome_enabled" />
+          <NotifToggle k="call_outcome_enabled" />
         </div>
         {prefs.call_outcome_enabled && (
-          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
-            <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+          <div style={{ ...divider, ...rowBetween }}>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Remind me</span>
             <NumberInput k="call_outcome_hours" min={0} max={24} unit="hours after call" />
           </div>
         )}
       </div>
 
       {/* Payments */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+      <div style={notifCard}>
+        <div style={rowBetween}>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Payment tasks</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task in your task list before each client payment is due</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Payment tasks</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Creates a task in your task list before each client payment is due</p>
           </div>
-          <Toggle k="payment_enabled" />
+          <NotifToggle k="payment_enabled" />
         </div>
         {prefs.payment_enabled && (
-          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-700 pt-3">
-            <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+          <div style={{ ...divider, ...rowBetween }}>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Remind me</span>
             <NumberInput k="payment_days_before" min={0} max={14} unit="days before due" />
           </div>
         )}
       </div>
 
       {/* Upsells */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5 space-y-4">
-        <div className="flex items-center justify-between">
+      <div style={notifCard}>
+        <div style={rowBetween}>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Upsell reminders</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Creates a task in your task list to reach out about renewing or upgrading</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Upsell reminders</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Creates a task in your task list to reach out about renewing or upgrading</p>
           </div>
-          <Toggle k="upsell_enabled" />
+          <NotifToggle k="upsell_enabled" />
         </div>
         {prefs.upsell_enabled && (
-          <div className="space-y-3 border-t border-gray-100 dark:border-slate-700 pt-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700 dark:text-slate-300">Remind me</span>
+          <div style={{ ...divider, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={rowBetween}>
+              <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Remind me</span>
               <NumberInput k="upsell_months" min={1} max={12} unit="month(s)" />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700 dark:text-slate-300">Timing</span>
+            <div style={rowBetween}>
+              <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Timing</span>
               <select
                 value={prefs.upsell_timing}
                 onChange={e => {
@@ -1094,7 +1209,8 @@ function NotificationsSection({ userId }: { userId: string }) {
                   setPrefs(updated)
                   save(updated)
                 }}
-                className="text-sm border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
+                style={{ width: 'auto', fontSize: 12 }}
               >
                 <option value="after_start">after contract start</option>
                 <option value="before_end">before contract end</option>
@@ -1105,13 +1221,13 @@ function NotificationsSection({ userId }: { userId: string }) {
       </div>
 
       {/* Daily digest */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <div className="flex items-center justify-between">
+      <div style={notifCard}>
+        <div style={rowBetween}>
           <div>
-            <p className="font-semibold text-gray-900 dark:text-slate-100">Daily digest</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Shows a morning summary when you open the Tasks page — overdue, today&apos;s tasks, leads being watched</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Daily digest</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Shows a morning summary when you open the Tasks page — overdue, today&apos;s tasks, leads being watched</p>
           </div>
-          <Toggle k="daily_digest_enabled" />
+          <NotifToggle k="daily_digest_enabled" />
         </div>
       </div>
     </div>
@@ -1149,68 +1265,91 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
   }
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Profile */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Profile</h3>
-        <div className="space-y-3">
+      <div style={CARD}>
+        <p className="section-title" style={{ marginBottom: 16 }}>Profile</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             { key: 'name', label: 'Your name', placeholder: 'Alex' },
             { key: 'business_name', label: 'Business name', placeholder: 'Alex Coaching' },
             { key: 'ig_handle', label: 'Instagram handle', placeholder: '@alexcoach' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{f.label}</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                {f.label}
+              </label>
               <input
                 value={profileData[f.key as keyof typeof profileData]}
                 onChange={e => setProfileData(d => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
               />
             </div>
           ))}
         </div>
-        <div className="flex justify-end mt-4">
-          <button onClick={saveProfile} disabled={saving} className={`px-5 py-2 rounded-xl text-sm font-medium ${saved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'} disabled:opacity-50`}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <button
+            onClick={saveProfile}
+            disabled={saving}
+            className="btn-primary"
+            style={saved ? { background: 'var(--success)' } : undefined}
+          >
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
           </button>
         </div>
       </div>
 
       {/* Currency & region */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Currency & region</h3>
-        <div className="space-y-4">
+      <div style={CARD}>
+        <p className="section-title" style={{ marginBottom: 16 }}>Currency &amp; region</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Base currency</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 8 }}>
+              Base currency
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               {CURRENCIES.map(c => (
                 <button
                   key={c.code}
                   onClick={() => setCurrency(c.code)}
-                  className={`flex flex-col items-center p-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                    currency === c.code ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'border-gray-100 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:border-gray-200 dark:hover:border-slate-500'
-                  }`}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '8px 6px',
+                    borderRadius: 'var(--radius-card)',
+                    border: currency === c.code ? '2px solid var(--accent)' : '2px solid var(--border)',
+                    background: currency === c.code ? 'rgba(37,99,235,0.06)' : 'var(--surface-1)',
+                    color: currency === c.code ? 'var(--accent)' : 'var(--text-2)',
+                    fontSize: 11, fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 120ms ease',
+                  }}
                 >
-                  <span className="text-base mb-0.5">{c.flag}</span>
+                  <span style={{ fontSize: 16, marginBottom: 2 }}>{c.flag}</span>
                   {c.code}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Timezone</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+              Timezone
+            </label>
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
             >
               {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
             </select>
           </div>
         </div>
-        <div className="flex justify-end mt-4">
-          <button onClick={saveCurrency} disabled={saving} className={`px-5 py-2 rounded-xl text-sm font-medium ${saved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'} disabled:opacity-50`}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <button
+            onClick={saveCurrency}
+            disabled={saving}
+            className="btn-primary"
+            style={saved ? { background: 'var(--success)' } : undefined}
+          >
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
           </button>
         </div>
@@ -1225,41 +1364,45 @@ function AppearanceSection() {
   const { dark, toggle } = useDarkMode()
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Dark mode toggle */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Appearance</h3>
-        <div className="flex items-center justify-between">
+      <div style={CARD}>
+        <p className="section-title" style={{ marginBottom: 16 }}>Appearance</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div>
-            <p className="text-sm font-medium text-gray-700 dark:text-slate-300">Dark mode</p>
-            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Switch between light and dark theme</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Dark mode</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Switch between light and dark theme</p>
           </div>
-          <button
-            onClick={toggle}
-            aria-pressed={dark}
-            className={`relative w-12 h-6 rounded-full transition-colors ${dark ? 'bg-blue-600' : 'bg-gray-200'}`}
-          >
-            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${dark ? 'translate-x-7' : 'translate-x-1'}`} />
-          </button>
+          <Toggle on={dark} onClick={toggle} />
         </div>
       </div>
 
       {/* PWA install instructions */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Add to home screen</h3>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">Install Drivn on your device for the best experience.</p>
-        <div className="space-y-3">
+      <div style={CARD}>
+        <p className="section-title" style={{ marginBottom: 4 }}>Add to home screen</p>
+        <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>Install Drivn on your device for the best experience.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* iOS */}
-          <div className="rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 p-4">
-            <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">iPhone / iPad (Safari)</p>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
+          <div style={{
+            padding: '12px 14px',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-card)',
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>iPhone / iPad (Safari)</p>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
               Tap the <strong>Share</strong> button (square with arrow) at the bottom of the screen, then tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
             </p>
           </div>
           {/* Android */}
-          <div className="rounded-lg bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 p-4">
-            <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Android (Chrome)</p>
-            <p className="text-xs text-gray-500 dark:text-slate-400">
+          <div style={{
+            padding: '12px 14px',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-card)',
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>Android (Chrome)</p>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
               Tap the menu button (<strong>&#8942;</strong>) in the top-right corner, then tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
             </p>
           </div>
@@ -1282,34 +1425,80 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
 
 export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
+  const [navHover, setNavHover] = useState<Section | null>(null)
 
   return (
-    <div className="flex h-full">
-      {/* Left nav */}
-      <div className="hidden md:flex flex-col w-48 border-r border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 py-6 px-3 flex-shrink-0">
-        <h1 className="text-lg font-bold text-gray-900 dark:text-slate-100 px-3 mb-4">Settings</h1>
-        <nav className="space-y-0.5">
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.key}
-              onClick={() => setSection(item.key)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                section === item.key ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+    <div style={{ display: 'flex', height: '100%' }}>
+      {/* Left nav — desktop */}
+      <div className="hidden md:flex" style={{
+        flexDirection: 'column',
+        width: 192,
+        borderRight: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        padding: '24px 12px',
+        flexShrink: 0,
+      }}>
+        <h1 className="page-title" style={{ paddingLeft: 12, marginBottom: 16 }}>Settings</h1>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {NAV_ITEMS.map(item => {
+            const isActive = section === item.key
+            const isHovered = navHover === item.key
+            return (
+              <button
+                key={item.key}
+                onClick={() => setSection(item.key)}
+                onMouseEnter={() => setNavHover(item.key)}
+                onMouseLeave={() => setNavHover(null)}
+                style={{
+                  width: '100%', textAlign: 'left',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-btn)',
+                  border: 'none',
+                  borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                  background: isActive ? 'var(--surface-2)' : isHovered ? 'var(--surface-2)' : 'transparent',
+                  color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                  fontSize: 13, fontWeight: isActive ? 500 : 400,
+                  cursor: 'pointer',
+                  transition: 'background 120ms ease, color 120ms ease',
+                }}
+              >
+                {item.label}
+              </button>
+            )
+          })}
         </nav>
       </div>
 
       {/* Mobile section nav */}
-      <div className="md:hidden border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 overflow-x-auto flex gap-2">
+      <div className="md:hidden" style={{
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        padding: '10px 16px',
+        overflowX: 'auto',
+        display: 'flex',
+        gap: 6,
+        flexShrink: 0,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+      }}>
         {NAV_ITEMS.map(item => (
           <button
             key={item.key}
             onClick={() => setSection(item.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${section === item.key ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-btn)',
+              border: 'none',
+              background: section === item.key ? 'var(--surface-2)' : 'transparent',
+              color: section === item.key ? 'var(--accent)' : 'var(--text-2)',
+              fontSize: 12, fontWeight: section === item.key ? 500 : 400,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'background 120ms ease, color 120ms ease',
+            }}
           >
             {item.label}
           </button>
@@ -1317,7 +1506,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
+      <div style={{ flex: 1, overflowY: 'auto', padding: 24, maxWidth: 640 }}>
         {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
         {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
         {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />}

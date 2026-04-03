@@ -25,13 +25,6 @@ function daysSince(dateStr: string | null) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
 }
 
-const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  overdue:   'bg-red-500',
-  today:     'bg-amber-400',
-  this_week: 'bg-gray-400',
-  upcoming:  'bg-purple-400',
-}
-
 const PRIORITY_LABELS: Record<TaskPriority, string> = {
   overdue:   'Overdue',
   today:     'Today',
@@ -39,19 +32,34 @@ const PRIORITY_LABELS: Record<TaskPriority, string> = {
   upcoming:  'Coming up',
 }
 
-const PRIORITY_BADGE_COLORS: Record<TaskPriority, string> = {
-  overdue:   'bg-red-100 text-red-700',
-  today:     'bg-amber-100 text-amber-700',
-  this_week: 'bg-gray-100 text-gray-600',
-  upcoming:  'bg-purple-100 text-purple-700',
+// Left border color per priority (upsell type overrides to purple in TaskRow)
+const PRIORITY_BORDER: Record<TaskPriority, string> = {
+  overdue:   'var(--danger)',
+  today:     'var(--warning)',
+  this_week: 'var(--border-strong)',
+  upcoming:  'var(--border-strong)',
+}
+
+// Section count badge colors
+const SECTION_BADGE_BG: Record<TaskPriority, string> = {
+  overdue:   'rgba(220,38,38,0.1)',
+  today:     'rgba(217,119,6,0.1)',
+  this_week: 'var(--surface-3)',
+  upcoming:  'var(--surface-3)',
+}
+const SECTION_BADGE_COLOR: Record<TaskPriority, string> = {
+  overdue:   'var(--danger)',
+  today:     'var(--warning)',
+  this_week: 'var(--text-2)',
+  upcoming:  'var(--text-2)',
 }
 
 const FILTER_TYPES: { key: 'all' | TaskType; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'follow_up', label: 'Follow-ups' },
-  { key: 'payment', label: 'Payments' },
-  { key: 'upsell', label: 'Upsells' },
-  { key: 'nurture', label: 'Nurture' },
+  { key: 'all',          label: 'All' },
+  { key: 'follow_up',    label: 'Follow-ups' },
+  { key: 'payment',      label: 'Payments' },
+  { key: 'upsell',       label: 'Upsells' },
+  { key: 'nurture',      label: 'Nurture' },
   { key: 'call_outcome', label: 'Calls' },
 ]
 
@@ -68,57 +76,70 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   not_interested: 'Not interested',
 }
 
-const STAGE_COLORS: Record<LeadStage, string> = {
-  follower:       'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300',
-  replied:        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  freebie_sent:   'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-  call_booked:    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  closed:         'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  nurture:        'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
-  bad_fit:        'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  not_interested: 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400',
+const STAGE_PILL_STYLE: Record<LeadStage, { bg: string; color: string }> = {
+  follower:       { bg: 'var(--surface-3)',          color: 'var(--text-2)' },
+  replied:        { bg: 'rgba(37,99,235,0.1)',        color: 'var(--accent)' },
+  freebie_sent:   { bg: 'rgba(124,58,237,0.1)',       color: 'var(--purple)' },
+  call_booked:    { bg: 'rgba(217,119,6,0.12)',       color: 'var(--warning)' },
+  closed:         { bg: 'rgba(22,163,74,0.12)',       color: 'var(--success)' },
+  nurture:        { bg: 'rgba(20,184,166,0.12)',      color: '#0d9488' },
+  bad_fit:        { bg: 'rgba(220,38,38,0.1)',        color: 'var(--danger)' },
+  not_interested: { bg: 'var(--surface-3)',           color: 'var(--text-3)' },
 }
 
-const TIER_STYLES: Record<1 | 2 | 3, { label: string; icon: string; cls: string }> = {
-  1: { label: 'T1', icon: '🔥', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-  2: { label: 'T2', icon: '💪', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-  3: { label: 'T3', icon: '🌱', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400' },
-}
+// Tier labels — no emojis
+const TIER_LABEL: Record<1 | 2 | 3, string> = { 1: 'T1', 2: 'T2', 3: 'T3' }
+const TIER_CSS: Record<1 | 2 | 3, string>   = { 1: 'tier-t1', 2: 'tier-t2', 3: 'tier-t3' }
 
 // ─── Daily digest banner ──────────────────────────────────────────────────────
 
 const DIGEST_KEY = 'drivn_digest_date'
 
 function DigestBanner({ tasks, watching, onDismiss }: { tasks: Task[]; watching: number; onDismiss: () => void }) {
-  const overdue = tasks.filter(t => t.priority === 'overdue').length
-  const today   = tasks.filter(t => t.priority === 'today').length
-  const hour    = new Date().getHours()
+  const overdue  = tasks.filter(t => t.priority === 'overdue').length
+  const today    = tasks.filter(t => t.priority === 'today').length
+  const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const items: { icon: string; text: string; color: string }[] = []
-  if (overdue > 0)  items.push({ icon: '🔴', text: `${overdue} overdue task${overdue !== 1 ? 's' : ''}`,      color: 'text-red-700 dark:text-red-400' })
-  if (today   > 0)  items.push({ icon: '🟡', text: `${today} due today`,                                       color: 'text-amber-700 dark:text-amber-400' })
-  if (watching > 0) items.push({ icon: '👀', text: `Watching ${watching} lead${watching !== 1 ? 's' : ''}`,    color: 'text-blue-700 dark:text-blue-400' })
-  if (items.length === 0) items.push({ icon: '✅', text: 'No open tasks — great work!', color: 'text-green-700 dark:text-green-400' })
+
+  const items: { text: string; color: string }[] = []
+  if (overdue > 0)  items.push({ text: `${overdue} overdue task${overdue !== 1 ? 's' : ''}`,     color: 'var(--danger)' })
+  if (today   > 0)  items.push({ text: `${today} due today`,                                       color: 'var(--warning)' })
+  if (watching > 0) items.push({ text: `Watching ${watching} lead${watching !== 1 ? 's' : ''}`,   color: 'var(--accent)' })
+  if (items.length === 0) items.push({ text: 'No open tasks — great work!', color: 'var(--success)' })
 
   return (
-    <div className="mx-6 mt-5 mb-1 rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-4 py-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">{greeting} 👋</p>
-          <div className="space-y-1">
-            {items.map((item, i) => (
-              <p key={i} className={`text-xs font-medium flex items-center gap-1.5 ${item.color}`}>
-                <span>{item.icon}</span>{item.text}
-              </p>
-            ))}
-          </div>
+    <div
+      style={{
+        margin: '16px 24px 4px',
+        padding: '12px 14px',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '12px',
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>{greeting}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          {items.map((item, i) => (
+            <p key={i} style={{ fontSize: '11px', fontWeight: '500', color: item.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+              {item.text}
+            </p>
+          ))}
         </div>
-        <button onClick={onDismiss} className="text-blue-400 dark:text-blue-600 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex-shrink-0 mt-0.5">
-          <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
       </div>
+      <button
+        onClick={onDismiss}
+        style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+      >
+        <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L8 6.586l2.293-2.293a1 1 0 111.414 1.414L9.414 8l2.293 2.293a1 1 0 01-1.414 1.414L8 9.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 8 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
     </div>
   )
 }
@@ -127,9 +148,11 @@ function DigestBanner({ tasks, watching, onDismiss }: { tasks: Task[]; watching:
 
 function TaskRow({ task, onComplete }: { task: Task; onComplete: (id: string) => void }) {
   const [fading, setFading] = useState(false)
-  const style    = TASK_TYPE_STYLES[task.type]
-  const dotColor = PRIORITY_COLORS[task.priority]
-  const isOverdue = task.priority === 'overdue'
+  const [hover, setHover]   = useState(false)
+  const style         = TASK_TYPE_STYLES[task.type]
+  const isOverdue     = task.priority === 'overdue'
+  const isUpsell      = task.type === 'upsell'
+  const borderColor   = isUpsell ? 'var(--purple)' : PRIORITY_BORDER[task.priority]
   const usernameMatch = task.title.match(/@([\w.]+)/)
   const leadUsername  = usernameMatch ? usernameMatch[1] : null
 
@@ -139,35 +162,102 @@ function TaskRow({ task, onComplete }: { task: Task; onComplete: (id: string) =>
   }
 
   return (
-    <div className={`flex items-start gap-3 py-3 px-4 rounded-xl border transition-all ${fading ? 'opacity-0 scale-95 pointer-events-none' : ''} ${
-      isOverdue ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30'
-                : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700'
-    }`}>
-      <span className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${dotColor}`} />
-      <button onClick={handleCheck} className="w-5 h-5 rounded-md border-2 border-gray-200 dark:border-slate-600 flex-shrink-0 mt-0.5 hover:border-green-400 transition-colors flex items-center justify-center">
-        {fading && <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3"><path d="M2 6l3 3 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+    <div
+      className={fading ? 'task-fade-out' : ''}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '10px',
+        padding: '10px 14px 10px 12px',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderLeft: `3px solid ${borderColor}`,
+        boxShadow: 'var(--shadow-card)',
+      }}
+    >
+      {/* Circular checkbox */}
+      <button
+        onClick={handleCheck}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          width: '18px',
+          height: '18px',
+          borderRadius: '50%',
+          border: fading ? 'none' : `1.5px solid ${hover ? 'var(--success)' : 'var(--border-strong)'}`,
+          background: fading ? 'var(--success)' : 'transparent',
+          flexShrink: 0,
+          marginTop: '1px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 120ms ease',
+          padding: 0,
+        }}
+      >
+        {fading && (
+          <svg viewBox="0 0 10 10" fill="none" width="10" height="10">
+            <path
+              d="M2 5l2.5 2.5 3.5-3.5"
+              stroke="#fff"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="check-draw"
+            />
+          </svg>
+        )}
       </button>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{task.title}</p>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: style.bg, color: style.text }}>{style.label}</span>
+
+      {/* Content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-1)', flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {task.title}
+          </p>
+          <span
+            className="badge"
+            style={{ background: style.bg, color: style.text, fontSize: '10px', flexShrink: 0 }}
+          >
+            {style.label}
+          </span>
           {task.lead_id && leadUsername && (
-            <a href="/pipeline" onClick={e => e.stopPropagation()} className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 transition-colors">
+            <a
+              href="/pipeline"
+              onClick={e => e.stopPropagation()}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '10px',
+                fontWeight: '500',
+                padding: '1px 6px',
+                borderRadius: 'var(--radius-badge)',
+                background: 'rgba(37,99,235,0.1)',
+                color: 'var(--accent)',
+                textDecoration: 'none',
+                flexShrink: 0,
+              }}
+            >
               @{leadUsername}
             </a>
           )}
         </div>
-        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2">{task.description}</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-2)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          {task.description}
+        </p>
       </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+
+      {/* Right: reminder + due date */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, marginTop: '1px' }}>
         {task.reminder_at && (
           <span title={`Reminder: ${formatDueDate(task.reminder_at)}`}>
-            <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-blue-400">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="11" height="11" style={{ color: 'var(--accent)', opacity: 0.6 }}>
               <path d="M8 1a5 5 0 00-5 5v2.586l-.707.707A1 1 0 003 11h10a1 1 0 00.707-1.707L13 8.586V6a5 5 0 00-5-5zm0 13a1.5 1.5 0 01-1.5-1.5h3A1.5 1.5 0 018 14z" />
             </svg>
           </span>
         )}
-        <span className={`text-xs ${isOverdue ? 'text-red-500 font-semibold' : 'text-gray-400 dark:text-slate-500'}`}>
+        <span style={{ fontSize: '11px', color: isOverdue ? 'var(--danger)' : 'var(--text-3)', fontWeight: isOverdue ? '600' : '400' }}>
           {formatDueDate(task.due_at)}
         </span>
       </div>
@@ -181,11 +271,33 @@ function TaskSection({ priority, tasks, onComplete }: { priority: TaskPriority; 
   if (tasks.length === 0) return null
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">{PRIORITY_LABELS[priority]}</h2>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${PRIORITY_BADGE_COLORS[priority]}`}>{tasks.length}</span>
+      {/* Sticky section header */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: 'var(--bg-base)',
+          paddingTop: '8px',
+          paddingBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '6px',
+        }}
+      >
+        <span className="label-caps">{PRIORITY_LABELS[priority]}</span>
+        <span
+          className="badge"
+          style={{
+            background: SECTION_BADGE_BG[priority],
+            color: SECTION_BADGE_COLOR[priority],
+          }}
+        >
+          {tasks.length}
+        </span>
       </div>
-      <div className="space-y-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {tasks.map(t => <TaskRow key={t.id} task={t} onComplete={onComplete} />)}
       </div>
     </div>
@@ -195,51 +307,81 @@ function TaskSection({ priority, tasks, onComplete }: { priority: TaskPriority; 
 // ─── Lead row (All Leads tab) ─────────────────────────────────────────────────
 
 function LeadRow({ lead }: { lead: Lead }) {
-  const tier    = (lead.tier ?? 2) as 1 | 2 | 3
-  const tStyle  = TIER_STYLES[tier]
-  const sColor  = STAGE_COLORS[lead.stage]
-  const days    = daysSince(lead.last_contact_at)
+  const tier   = (lead.tier ?? 2) as 1 | 2 | 3
+  const sStyle = STAGE_PILL_STYLE[lead.stage]
+  const days   = daysSince(lead.last_contact_at)
 
   return (
     <a
       href="/pipeline"
-      className="flex items-center gap-3 py-3 px-4 rounded-xl border bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-700 transition-colors"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '10px 14px',
+        borderRadius: 'var(--radius-card)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-card)',
+        textDecoration: 'none',
+        transition: 'border-color 120ms ease',
+      }}
+      onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border-strong)'}
+      onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'}
     >
       {/* Avatar */}
-      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center flex-shrink-0">
-        <span className="text-white text-xs font-bold">
+      <div
+        style={{
+          width: '30px',
+          height: '30px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700' }}>
           {(lead.ig_username?.[0] ?? '?').toUpperCase()}
         </span>
       </div>
 
       {/* Main info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">@{lead.ig_username}</p>
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${sColor}`}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: '500', color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            @{lead.ig_username}
+          </p>
+          <span
+            className="badge"
+            style={{ background: sStyle.bg, color: sStyle.color, fontSize: '10px', flexShrink: 0 }}
+          >
             {STAGE_LABELS[lead.stage]}
           </span>
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${tStyle.cls}`}>
-            {tStyle.icon} {tStyle.label}
+          <span className={`badge ${TIER_CSS[tier]}`} style={{ fontSize: '10px', flexShrink: 0 }}>
+            {TIER_LABEL[tier]}
           </span>
         </div>
         {lead.full_name && (
-          <p className="text-xs text-gray-400 dark:text-slate-500 truncate">{lead.full_name}</p>
+          <p style={{ fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lead.full_name}
+          </p>
         )}
       </div>
 
       {/* Last contact */}
-      <div className="flex-shrink-0 text-right">
+      <div style={{ flexShrink: 0, textAlign: 'right' }}>
         {days === null ? (
-          <span className="text-xs text-gray-300 dark:text-slate-600">Never</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Never</span>
         ) : days === 0 ? (
-          <span className="text-xs text-green-500 font-medium">Today</span>
+          <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: '500' }}>Today</span>
         ) : (
-          <span className={`text-xs font-medium ${days >= 7 ? 'text-red-500' : days >= 3 ? 'text-amber-500' : 'text-gray-400 dark:text-slate-500'}`}>
+          <span style={{ fontSize: '11px', fontWeight: '500', color: days >= 7 ? 'var(--danger)' : days >= 3 ? 'var(--warning)' : 'var(--text-3)' }}>
             {days}d ago
           </span>
         )}
-        <p className="text-[10px] text-gray-300 dark:text-slate-600">last contact</p>
+        <p style={{ fontSize: '10px', color: 'var(--text-3)', marginTop: '1px' }}>last contact</p>
       </div>
     </a>
   )
@@ -257,7 +399,6 @@ function AllLeadsView({ leads, loading }: { leads: Lead[]; loading: boolean }) {
     return q ? leads.filter(l => l.ig_username.toLowerCase().includes(q) || l.full_name.toLowerCase().includes(q)) : leads
   }, [leads, search])
 
-  // Group by stage
   const grouped = useMemo(() => {
     return LEAD_STAGE_ORDER.reduce<Record<LeadStage, Lead[]>>((acc, s) => {
       acc[s] = filtered.filter(l => l.stage === s)
@@ -267,35 +408,34 @@ function AllLeadsView({ leads, loading }: { leads: Lead[]; loading: boolean }) {
 
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <p className="text-2xl mb-2">⏳</p>
-        <p className="text-sm text-gray-400 dark:text-slate-500">Loading leads…</p>
+      <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading leads…</p>
       </div>
     )
   }
 
   if (leads.length === 0) {
     return (
-      <div className="text-center py-16">
-        <p className="text-2xl mb-2">👥</p>
-        <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">No leads yet</p>
-        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Add leads on the Pipeline page to see them here.</p>
+      <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-2)', marginBottom: '4px' }}>No leads yet</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>Add leads on the Pipeline page to see them here.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '640px' }}>
       {/* Search */}
-      <div className="relative">
-        <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500 pointer-events-none">
+      <div style={{ position: 'relative' }}>
+        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }}>
           <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
         </svg>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search leads…"
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="input-base"
+          style={{ paddingLeft: '32px' }}
         />
       </div>
 
@@ -305,15 +445,12 @@ function AllLeadsView({ leads, loading }: { leads: Lead[]; loading: boolean }) {
         if (!group?.length) return null
         return (
           <div key={stage}>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-bold text-gray-900 dark:text-slate-100">{STAGE_LABELS[stage]}</h2>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400">
-                {group.length}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span className="label-caps">{STAGE_LABELS[stage]}</span>
+              <span className="badge" style={{ background: 'var(--surface-3)', color: 'var(--text-2)' }}>{group.length}</span>
             </div>
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {group.sort((a, b) => {
-                // Sort by last contact ascending (longest without contact first)
                 const da = a.last_contact_at ? new Date(a.last_contact_at).getTime() : 0
                 const db = b.last_contact_at ? new Date(b.last_contact_at).getTime() : 0
                 return da - db
@@ -329,20 +466,19 @@ function AllLeadsView({ leads, loading }: { leads: Lead[]; loading: boolean }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function TasksClient({ initialTasks, userId }: { initialTasks: Task[]; userId: string }) {
-  const [view, setView] = useState<'tasks' | 'leads'>('tasks')
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [leads, setLeads] = useState<Lead[]>([])
+  const [view, setView]             = useState<'tasks' | 'leads'>('tasks')
+  const [tasks, setTasks]           = useState<Task[]>(initialTasks)
+  const [leads, setLeads]           = useState<Lead[]>([])
   const [leadsLoading, setLeadsLoading] = useState(false)
-  const [filter, setFilter] = useState<'all' | TaskType>('all')
-  const [addOpen, setAddOpen] = useState(false)
-  const [watching, setWatching] = useState<number | null>(null)
+  const [filter, setFilter]         = useState<'all' | TaskType>('all')
+  const [addOpen, setAddOpen]       = useState(false)
+  const [watching, setWatching]     = useState<number | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [showDigest, setShowDigest] = useState(false)
   const [digestEnabled, setDigestEnabled] = useState(false)
   const supabase = createClient()
 
-  // Load digest preference
   useEffect(() => {
     supabase.from('users').select('notification_prefs').eq('id', userId).single()
       .then(({ data }) => {
@@ -393,13 +529,8 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
     setLeadsLoading(false)
   }
 
-  // On mount: generate tasks
   useEffect(() => { generateAndRefresh() }, [userId])
-
-  // Load leads when switching to leads tab
-  useEffect(() => {
-    if (view === 'leads' && leads.length === 0) loadLeads()
-  }, [view])
+  useEffect(() => { if (view === 'leads' && leads.length === 0) loadLeads() }, [view])
 
   const filtered = useMemo(() =>
     filter === 'all' ? tasks : tasks.filter(t => t.type === filter),
@@ -431,82 +562,158 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-700 rounded-xl p-1">
-          <button
-            onClick={() => setView('tasks')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-              view === 'tasks'
-                ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-            }`}
-          >
-            Tasks
-            {totalOpen > 0 && (
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{totalOpen}</span>
-            )}
-          </button>
-          <button
-            onClick={() => setView('leads')}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-              view === 'leads'
-                ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-slate-100 shadow-sm'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
-            }`}
-          >
-            All leads
-            {leads.length > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-slate-600 text-gray-600 dark:text-slate-400">{leads.length}</span>
-            )}
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* ── Top bar ───────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          flexShrink: 0,
+        }}
+      >
+        {/* Tab switcher */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            background: 'var(--surface-2)',
+            borderRadius: 'var(--radius-btn)',
+            padding: '3px',
+          }}
+        >
+          {(['tasks', 'leads'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '5px',
+                fontSize: '12px',
+                fontWeight: view === v ? '500' : '400',
+                color: view === v ? 'var(--text-1)' : 'var(--text-2)',
+                background: view === v ? 'var(--surface-1)' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 120ms ease',
+                boxShadow: view === v ? 'var(--shadow-card)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {v === 'tasks' ? 'Tasks' : 'All leads'}
+              {v === 'tasks' && totalOpen > 0 && (
+                <span
+                  style={{
+                    background: 'var(--danger)',
+                    color: '#fff',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    borderRadius: '99px',
+                    padding: '0 5px',
+                    lineHeight: '16px',
+                    height: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {totalOpen}
+                </span>
+              )}
+              {v === 'leads' && leads.length > 0 && (
+                <span
+                  style={{
+                    background: 'var(--surface-3)',
+                    color: 'var(--text-2)',
+                    fontSize: '9px',
+                    fontWeight: '600',
+                    borderRadius: '99px',
+                    padding: '0 5px',
+                    lineHeight: '16px',
+                    height: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {leads.length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          {view === 'tasks' && (
-            <button
-              onClick={generateAndRefresh}
-              disabled={refreshing}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-40"
-              title="Refresh tasks"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}>
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-              </svg>
-            </button>
-          )}
-          {view === 'leads' && (
-            <button
-              onClick={loadLeads}
-              disabled={leadsLoading}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-40"
-              title="Refresh leads"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 ${leadsLoading ? 'animate-spin' : ''}`}>
-                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-              </svg>
-            </button>
-          )}
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={view === 'tasks' ? generateAndRefresh : loadLeads}
+            disabled={view === 'tasks' ? refreshing : leadsLoading}
+            title={view === 'tasks' ? 'Refresh tasks' : 'Refresh leads'}
+            style={{
+              padding: '6px',
+              color: 'var(--text-3)',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: 'var(--radius-btn)',
+              cursor: 'pointer',
+              opacity: (view === 'tasks' ? refreshing : leadsLoading) ? 0.4 : 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-1)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)' }}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" style={{ animation: (view === 'tasks' ? refreshing : leadsLoading) ? 'spin 1s linear infinite' : 'none' }}>
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+            </svg>
+          </button>
           <button
             onClick={() => setAddOpen(true)}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="btn-primary"
+            style={{ fontSize: '12px', padding: '5px 12px' }}
           >
             + Add task
           </button>
         </div>
       </div>
 
-      {/* Filter bar — tasks only */}
+      {/* ── Filter bar (tasks only) ───────────────────────────────────────── */}
       {view === 'tasks' && (
-        <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-50 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-x-auto">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '8px 24px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface-1)',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}
+        >
           {FILTER_TYPES.map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                filter === f.key ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700' : 'text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700'
-              }`}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-badge)',
+                fontSize: '11px',
+                fontWeight: '500',
+                whiteSpace: 'nowrap',
+                background: filter === f.key ? 'rgba(37,99,235,0.1)' : 'transparent',
+                color: filter === f.key ? 'var(--accent)' : 'var(--text-2)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 120ms ease',
+              }}
+              onMouseEnter={e => { if (filter !== f.key) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)' }}
+              onMouseLeave={e => { if (filter !== f.key) (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
             >
               {f.label}
             </button>
@@ -514,17 +721,34 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
         </div>
       )}
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Body ─────────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+
         {/* Generate error */}
         {generateError && view === 'tasks' && (
-          <div className="mx-6 mt-3 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl flex items-start gap-2">
-            <span className="text-red-500 flex-shrink-0 mt-0.5">⚠</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-red-700 dark:text-red-400">Task generator error</p>
-              <p className="text-xs text-red-600 dark:text-red-500 font-mono break-all">{generateError}</p>
+          <div
+            style={{
+              margin: '12px 24px 0',
+              padding: '10px 14px',
+              background: 'rgba(220,38,38,0.05)',
+              border: '1px solid rgba(220,38,38,0.2)',
+              borderRadius: 'var(--radius-card)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+            }}
+          >
+            <span style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '1px', fontSize: '13px' }}>⚠</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--danger)', marginBottom: '2px' }}>Task generator error</p>
+              <p style={{ fontSize: '11px', color: 'var(--danger)', fontFamily: 'var(--font-mono)', wordBreak: 'break-all', opacity: 0.8 }}>{generateError}</p>
             </div>
-            <button onClick={() => setGenerateError(null)} className="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+            <button
+              onClick={() => setGenerateError(null)}
+              style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: '13px', flexShrink: 0 }}
+            >
+              ✕
+            </button>
           </div>
         )}
 
@@ -533,35 +757,57 @@ export default function TasksClient({ initialTasks, userId }: { initialTasks: Ta
           <DigestBanner tasks={tasks} watching={watching} onDismiss={dismissDigest} />
         )}
 
-        <div className="p-6">
+        <div style={{ padding: '16px 24px 32px' }}>
           {view === 'leads' ? (
             <AllLeadsView leads={leads} loading={leadsLoading} />
           ) : totalOpen === 0 ? (
-            <div className="text-center py-16 max-w-sm mx-auto">
-              <p className="text-4xl mb-3">{refreshing ? '⏳' : '✅'}</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">
+            <div style={{ textAlign: 'center', padding: '64px 0', maxWidth: '360px', margin: '0 auto' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: refreshing ? 'var(--surface-3)' : 'rgba(22,163,74,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                }}
+              >
+                {refreshing ? (
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style={{ color: 'var(--text-3)', animation: 'spin 1s linear infinite' }}>
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18" style={{ color: 'var(--success)' }}>
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>
                 {refreshing ? 'Checking…' : 'All clear!'}
               </p>
               {!refreshing && (
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
                   {watching !== null && watching > 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-slate-400">
-                      Watching <span className="font-semibold text-gray-700 dark:text-slate-300">{watching} lead{watching !== 1 ? 's' : ''}</span> — tasks appear automatically based on lead tier.
+                    <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
+                      Watching <strong style={{ color: 'var(--text-1)' }}>{watching} lead{watching !== 1 ? 's' : ''}</strong> — tasks appear automatically based on lead tier.
                     </p>
                   ) : watching === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-slate-400">No leads in the pipeline yet.</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>No leads in the pipeline yet.</p>
                   ) : null}
                   <button
                     onClick={() => setView('leads')}
-                    className="mt-2 px-4 py-2 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                    className="btn-ghost"
+                    style={{ marginTop: '4px' }}
                   >
-                    👥 View all leads
+                    View all leads
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <div className="space-y-8 max-w-2xl">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
               {PRIORITY_ORDER.map(p => (
                 <TaskSection key={p} priority={p} tasks={grouped[p]} onComplete={handleComplete} />
               ))}

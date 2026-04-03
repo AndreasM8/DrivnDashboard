@@ -31,12 +31,6 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount)
 }
 
-function daysSince(dateStr: string | null) {
-  if (!dateStr) return null
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
-  return days
-}
-
 function greeting() {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
@@ -50,32 +44,69 @@ function todayLabel() {
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  statusColor = 'var(--text-3)',
+}: {
+  label: string
+  value: string
+  sub?: string
+  statusColor?: string
+}) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-4">
-      <p className="text-xs text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{value}</p>
-      {sub && <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{sub}</p>}
+    <div
+      style={{
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-card)',
+        boxShadow: 'var(--shadow-card)',
+        padding: '16px',
+        borderLeft: `3px solid ${statusColor}`,
+      }}
+    >
+      <p className="label-caps" style={{ marginBottom: '8px' }}>{label}</p>
+      <p className="hero-num">{value}</p>
+      {sub && (
+        <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>{sub}</p>
+      )}
     </div>
   )
 }
 
-// ─── Task row (dashboard preview) ─────────────────────────────────────────────
+// ─── Task row ─────────────────────────────────────────────────────────────────
 
 function TaskRow({ task }: { task: Task }) {
   const style = TASK_TYPE_STYLES[task.type]
-  const dotColor = task.priority === 'overdue' ? 'bg-red-500' : 'bg-amber-400'
+  const borderColor = task.priority === 'overdue' ? '#DC2626' : task.priority === 'today' ? '#D97706' : 'var(--border-strong)'
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
-      <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{task.title}</p>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 line-clamp-1">{task.description}</p>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 0',
+        borderBottom: '1px solid var(--border)',
+        borderLeft: `3px solid ${borderColor}`,
+        paddingLeft: '12px',
+        marginLeft: '-16px',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {task.title}
+        </p>
+        {task.description && (
+          <p style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {task.description}
+          </p>
+        )}
       </div>
       <span
-        className="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
-        style={{ background: style.bg, color: style.text }}
+        className="badge"
+        style={{ background: style.bg, color: style.text, flexShrink: 0 }}
       >
         {style.label}
       </span>
@@ -83,35 +114,80 @@ function TaskRow({ task }: { task: Task }) {
   )
 }
 
-// ─── Revenue snapshot ─────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────
 
-function ProgressBar({ value, max, color = 'bg-blue-500' }: { value: number; max: number; color?: string }) {
+function ProgressBar({ value, max, color = 'var(--accent)' }: { value: number; max: number; color?: string }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
-    <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-      <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+    <div style={{ width: '100%', height: '3px', background: 'var(--surface-3)', borderRadius: '99px', overflow: 'hidden' }}>
+      <div style={{ height: '100%', borderRadius: '99px', background: color, width: `${pct}%`, transition: 'width 400ms ease' }} />
     </div>
   )
 }
 
-// ─── Pipeline snapshot column ─────────────────────────────────────────────────
+// ─── Pipeline chip ────────────────────────────────────────────────────────────
 
-function PipelineCol({
-  label, count, leads, color,
-}: {
-  label: string; count: number; leads: string[]; color: string
-}) {
+function PipelineChip({ label, count, leads }: { label: string; count: number; leads: string[] }) {
   return (
-    <div className="flex-1 min-w-0">
-      <div className={`rounded-xl p-3 h-full border ${color}`}>
-        <p className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1">{label}</p>
-        <p className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-2">{count}</p>
-        <div className="space-y-1">
-          {leads.slice(0, 3).map((name, i) => (
-            <p key={i} className="text-xs text-gray-500 dark:text-slate-400 truncate">@{name}</p>
-          ))}
-        </div>
+    <div
+      style={{
+        flexShrink: 0,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        minWidth: '120px',
+      }}
+    >
+      <p className="label-caps" style={{ marginBottom: '6px' }}>{label}</p>
+      <p className="hero-num" style={{ fontSize: '22px', marginBottom: '6px' }}>{count}</p>
+      {leads.slice(0, 2).map((name, i) => (
+        <p
+          key={i}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            color: 'var(--text-2)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          @{name}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+// ─── Section card ─────────────────────────────────────────────────────────────
+
+function SectionCard({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-card)',
+        boxShadow: 'var(--shadow-card)',
+        padding: '20px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <h2 className="section-title">{title}</h2>
+        <Link
+          href={href}
+          style={{
+            fontSize: '13px',
+            color: 'var(--accent)',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
+          See all →
+        </Link>
       </div>
+      {children}
     </div>
   )
 }
@@ -146,13 +222,11 @@ export default async function DashboardPage() {
       .in('priority', ['overdue', 'today'])
       .order('priority')
       .limit(5),
-    // All active clients — needed for accurate stats (count + revenue)
     supabase
       .from('clients')
       .select('id, started_at, payment_type, total_amount')
       .eq('user_id', user.id)
       .eq('active', true),
-    // Only 5 most recent clients for the display table
     supabase
       .from('clients')
       .select('*')
@@ -179,7 +253,6 @@ export default async function DashboardPage() {
       .gte('updated_at', monthStart),
   ])
 
-  // Use stored snapshot if it exists, otherwise compute live
   const liveStats = computeLiveStats(
     (allActiveClients as Client[]) ?? [],
     monthStart,
@@ -193,10 +266,17 @@ export default async function DashboardPage() {
   const callsHeld = snapshot?.calls_held ?? liveStats.calls_held
 
   const cashTarget = targets?.cash_target ?? 0
+  const revenueTarget = targets?.revenue_target ?? 0
   const activeClientCount = allActiveClients?.length ?? 0
   const clients = clientsForTable
+  const currency = profile?.base_currency ?? 'NOK'
 
-  // Group leads by stage
+  const cashPct = cashTarget > 0 ? (cashCollected / cashTarget) * 100 : null
+  const cashStatusColor = cashPct === null ? 'var(--text-3)'
+    : cashPct >= 100 ? '#16A34A'
+    : cashPct >= 70 ? '#D97706'
+    : '#DC2626'
+
   const stageGroups = (leads ?? []).reduce<Record<string, string[]>>((acc, l) => {
     if (!acc[l.stage]) acc[l.stage] = []
     acc[l.stage].push(l.ig_username)
@@ -204,148 +284,218 @@ export default async function DashboardPage() {
   }, {})
 
   const pipelineCols = [
-    { label: 'Follower', key: 'follower', color: 'border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20' },
-    { label: 'Replied', key: 'replied', color: 'border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/20' },
-    { label: 'Freebie sent', key: 'freebie_sent', color: 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800' },
-    { label: 'Call booked', key: 'call_booked', color: 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800' },
-    { label: 'Nurture', key: 'nurture', color: 'border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800' },
+    { label: 'Follower', key: 'follower' },
+    { label: 'Replied', key: 'replied' },
+    { label: 'Freebie', key: 'freebie_sent' },
+    { label: 'Call booked', key: 'call_booked' },
+    { label: 'Nurture', key: 'nurture' },
   ]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-8">
+    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-          {greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
-        </h1>
-        <p className="text-gray-400 dark:text-slate-500 text-sm mt-0.5">{todayLabel()}</p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div>
+          <h1 className="page-title">
+            {greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
+          </h1>
+        </div>
+        <span
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-2)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-badge)',
+            padding: '4px 10px',
+          }}
+        >
+          {todayLabel()}
+        </span>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}
+        className="lg:grid-cols-4"
+      >
         <StatCard
           label="Money in this month"
-          value={formatCurrency(cashCollected, profile?.base_currency ?? 'NOK')}
-          sub={cashTarget ? `Target: ${formatCurrency(cashTarget, profile?.base_currency ?? 'NOK')}` : undefined}
+          value={formatCurrency(cashCollected, currency)}
+          sub={cashTarget ? `Target: ${formatCurrency(cashTarget, currency)}` : undefined}
+          statusColor={cashStatusColor}
         />
-        <StatCard label="Active clients" value={String(activeClientCount)} />
+        <StatCard
+          label="Active clients"
+          value={String(activeClientCount)}
+          statusColor="#16A34A"
+        />
         <StatCard label="Calls this month" value={String(callsHeld)} />
         <StatCard label="New followers" value={String(newFollowers)} sub="this month" />
       </div>
 
-      {/* Tasks + Revenue side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Do these today */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 dark:text-slate-100">Do these today</h2>
-            <Link href="/tasks" className="text-sm text-blue-600 hover:text-blue-700 font-medium">See all →</Link>
-          </div>
+      {/* Tasks + Revenue */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '16px' }}
+        className="lg:grid-cols-2"
+      >
+        {/* Tasks */}
+        <SectionCard title="Do these today" href="/tasks">
           {(tasks?.length ?? 0) === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-2xl mb-2">🎉</p>
-              <p className="text-sm text-gray-500 dark:text-slate-400">You&apos;re all caught up!</p>
+            <div style={{ textAlign: 'center', padding: '32px 0' }}>
+              <p style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>You&apos;re all caught up!</p>
             </div>
           ) : (
             <div>
               {(tasks as Task[]).map(t => <TaskRow key={t.id} task={t} />)}
             </div>
           )}
-        </div>
+        </SectionCard>
 
-        {/* Revenue snapshot */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 dark:text-slate-100">Revenue this month</h2>
-            <Link href="/numbers" className="text-sm text-blue-600 hover:text-blue-700 font-medium">See all →</Link>
-          </div>
-          <div className="space-y-4">
+        {/* Revenue */}
+        <SectionCard title="Revenue this month" href="/numbers">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[
-              { label: 'Cash collected', value: cashCollected, target: cashTarget, color: 'bg-green-500' },
-              { label: 'Revenue contracted', value: revenueContracted, target: targets?.revenue_target ?? 0, color: 'bg-blue-500' },
+              { label: 'Cash collected', value: cashCollected, target: cashTarget, color: '#16A34A' },
+              { label: 'Revenue contracted', value: revenueContracted, target: revenueTarget, color: 'var(--accent)' },
             ].map(row => (
               <div key={row.label}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-slate-400">{row.label}</span>
-                  <span className="font-semibold text-gray-900 dark:text-slate-100">
-                    {formatCurrency(row.value, profile?.base_currency ?? 'NOK')}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>{row.label}</span>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatCurrency(row.value, currency)}
                   </span>
                 </div>
                 <ProgressBar value={row.value} max={row.target} color={row.color} />
                 {row.target > 0 && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
-                    Target: {formatCurrency(row.target, profile?.base_currency ?? 'NOK')}
+                  <p style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '4px' }}>
+                    Target: {formatCurrency(row.target, currency)}
                   </p>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
       </div>
 
       {/* Pipeline snapshot */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900 dark:text-slate-100">Pipeline snapshot</h2>
-          <Link href="/pipeline" className="text-sm text-blue-600 hover:text-blue-700 font-medium">See all →</Link>
-        </div>
-        {(leads?.length ?? 0) === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-3">No leads yet.</p>
-            <Link href="/pipeline" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-              Add your first lead →
-            </Link>
-          </div>
-        ) : (
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {pipelineCols.map(col => (
-              <PipelineCol
-                key={col.key}
-                label={col.label}
-                count={stageGroups[col.key]?.length ?? 0}
-                leads={stageGroups[col.key] ?? []}
-                color={col.color}
-              />
-            ))}
-          </div>
-        )}
+      <div style={{ marginBottom: '16px' }}>
+        <SectionCard title="Pipeline snapshot" href="/pipeline">
+          {(leads?.length ?? 0) === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>No leads yet.</p>
+              <Link
+                href="/pipeline"
+                style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}
+              >
+                Add your first lead →
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {pipelineCols.map(col => (
+                <PipelineChip
+                  key={col.key}
+                  label={col.label}
+                  count={stageGroups[col.key]?.length ?? 0}
+                  leads={stageGroups[col.key] ?? []}
+                />
+              ))}
+            </div>
+          )}
+        </SectionCard>
       </div>
 
       {/* Clients */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900 dark:text-slate-100">Active clients</h2>
-          <Link href="/clients" className="text-sm text-blue-600 hover:text-blue-700 font-medium">See all →</Link>
-        </div>
+      <SectionCard title="Active clients" href="/clients">
         {(clients?.length ?? 0) === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-3">No clients yet.</p>
-            <Link href="/clients" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>No clients yet.</p>
+            <Link
+              href="/clients"
+              style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}
+            >
               Add your first client →
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="text-xs text-gray-400 dark:text-slate-500 text-left border-b border-gray-50 dark:border-slate-700">
-                  <th className="pb-2 font-medium">Client</th>
-                  <th className="pb-2 font-medium">Payment</th>
-                  <th className="pb-2 font-medium text-right">Monthly</th>
+                <tr>
+                  {['Client', 'Payment', 'Monthly'].map((h, i) => (
+                    <th
+                      key={h}
+                      className="label-caps"
+                      style={{
+                        padding: '0 0 10px',
+                        textAlign: i === 2 ? 'right' : 'left',
+                        borderBottom: '1px solid var(--border)',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {(clients as Client[]).map(c => (
-                  <tr key={c.id} className="border-b border-gray-50 dark:border-slate-700 last:border-0">
-                    <td className="py-2.5">
-                      <p className="font-medium text-gray-900 dark:text-slate-100">{c.full_name || c.ig_username}</p>
-                      <p className="text-xs text-gray-400 dark:text-slate-500">@{c.ig_username}</p>
+                  <tr
+                    key={c.id}
+                    style={{ borderBottom: '1px solid var(--border)' }}
+                  >
+                    <td style={{ padding: '10px 16px 10px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: 'rgba(37,99,235,0.12)',
+                            color: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {(c.full_name || c.ig_username).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 500, color: 'var(--text-1)' }}>{c.full_name || c.ig_username}</p>
+                          <p
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: '11px',
+                              color: 'var(--text-3)',
+                            }}
+                          >
+                            @{c.ig_username}
+                          </p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-2.5">
-                      <span className="text-xs text-gray-500 dark:text-slate-400 capitalize">{c.payment_type}</span>
+                    <td style={{ padding: '10px 16px 10px 0' }}>
+                      <span
+                        className="badge"
+                        style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                      >
+                        {c.payment_type === 'pif' ? 'Paid in full' : c.payment_type === 'split' ? 'Split' : `Plan`}
+                      </span>
                     </td>
-                    <td className="py-2.5 text-right font-medium text-gray-900 dark:text-slate-100">
-                      {c.monthly_amount ? formatCurrency(c.monthly_amount, profile?.base_currency ?? 'NOK') : '—'}
+                    <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 500, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
+                      {c.monthly_amount ? formatCurrency(c.monthly_amount, currency) : '—'}
                     </td>
                   </tr>
                 ))}
@@ -353,7 +503,7 @@ export default async function DashboardPage() {
             </table>
           </div>
         )}
-      </div>
+      </SectionCard>
     </div>
   )
 }

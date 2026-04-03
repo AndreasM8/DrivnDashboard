@@ -41,7 +41,6 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
         actor: 'You',
       })
 
-      // Create a "log outcome" reminder task due 2 hrs after the call
       const callDate = new Date(callBookedAt)
       await supabase.from('tasks').insert({
         user_id: lead.user_id,
@@ -60,59 +59,49 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100 mb-1">Book the call</h2>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">When is @{lead.ig_username}&apos;s call?</p>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, background: 'rgba(0,0,0,0.4)',
+    }}>
+      <div className="modal-enter" style={{
+        background: 'var(--surface-1)',
+        borderRadius: 'var(--radius-panel)',
+        boxShadow: 'var(--shadow-dropdown)',
+        width: '100%', maxWidth: 380, padding: 24,
+      }}>
+        <h2 className="section-title" style={{ marginBottom: 4 }}>Book the call</h2>
+        <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20 }}>
+          When is <span style={{ fontFamily: 'var(--font-mono)' }}>@{lead.ig_username}</span>&apos;s call?
+        </p>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Date</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input-base" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Time</label>
-              <input
-                type="time"
-                value={time}
-                onChange={e => setTime(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Time</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} className="input-base" />
             </div>
           </div>
 
           {setters.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Who&apos;s closing?</label>
-              <select
-                value={closerId}
-                onChange={e => setCloserId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Who&apos;s closing?</label>
+              <select value={closerId} onChange={e => setCloserId(e.target.value)} className="input-base">
                 {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           )}
         </div>
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
+          <button onClick={handleSave} disabled={loading} className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
             {loading ? 'Saving…' : 'Book call'}
           </button>
         </div>

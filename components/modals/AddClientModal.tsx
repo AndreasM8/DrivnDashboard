@@ -95,62 +95,67 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-slate-800 flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Add client</h2>
-          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.4)' }}>
+      <div className="modal-enter" style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-panel)', boxShadow: 'var(--shadow-dropdown)', width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ position: 'sticky', top: 0, background: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', zIndex: 1 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>Add client</h2>
+          <button
+            onClick={onClose}
+            style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0, transition: 'color 120ms ease' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-1)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Core info */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Instagram handle</label>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Instagram handle</label>
               <input
                 value={igUsername}
                 onChange={e => setIgUsername(e.target.value)}
                 placeholder="@username"
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Full name</label>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Full name</label>
               <input
                 value={fullName}
                 onChange={e => setFullName(e.target.value)}
                 placeholder="Jane Smith"
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Program / offer</label>
+            <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Program / offer</label>
             <input
               value={programType}
               onChange={e => setProgramType(e.target.value)}
               placeholder="e.g. 12-week transformation, 1:1 coaching…"
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
             />
           </div>
 
           {/* Start date */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Start date</label>
+            <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Start date</label>
             <input
               type="date"
               value={startedAt}
               onChange={e => setStartedAt(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
             />
             {isBackdated && (
-              <p className="text-xs text-amber-600 mt-1">
+              <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 4 }}>
                 Backdated client — payment installments will be created from this date. Tap the dots in the client drawer to mark which ones have already been paid.
               </p>
             )}
@@ -158,16 +163,19 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
 
           {/* Payment type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Payment type</label>
+            <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Payment type</label>
             <div className="flex gap-2">
               {(['pif', 'split', 'plan'] as PaymentType[]).map(t => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setPaymentType(t)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    paymentType === t ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700' : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400'
-                  }`}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-btn)', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms',
+                    background: paymentType === t ? 'rgba(37,99,235,0.1)' : 'transparent',
+                    color: paymentType === t ? 'var(--accent)' : 'var(--text-2)',
+                    border: `1px solid ${paymentType === t ? 'var(--accent)' : 'var(--border)'}`,
+                  }}
                 >
                   {t === 'pif' ? 'Paid in full' : t === 'split' ? 'Split pay' : 'Payment plan'}
                 </button>
@@ -177,23 +185,23 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
 
           {/* PIF: total + duration */}
           {paymentType === 'pif' && (
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Total amount ({baseCurrency})</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Total amount ({baseCurrency})</label>
                 <input
                   type="number"
                   value={totalAmount}
                   onChange={e => setTotalAmount(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-base"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Duration (months)</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {PLAN_MONTHS.map(m => (
                     <button key={m} type="button" onClick={() => setPlanMonths(m)}
-                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', background: planMonths === m ? 'var(--accent)' : 'var(--surface-3)', color: planMonths === m ? '#fff' : 'var(--text-2)' }}>
                       {m}
                     </button>
                   ))}
@@ -204,43 +212,43 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
 
           {/* Split: N payments + amount per payment + duration */}
           {paymentType === 'split' && (
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Number of payments</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Number of payments</label>
                 <div className="flex gap-2">
                   {[2, 3, 4, 5, 6].map(n => (
                     <button key={n} type="button" onClick={() => setSplitPayments(n)}
-                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${splitPayments === n ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', background: splitPayments === n ? 'var(--accent)' : 'var(--surface-3)', color: splitPayments === n ? '#fff' : 'var(--text-2)' }}>
                       {n}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Amount per payment ({baseCurrency})</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Amount per payment ({baseCurrency})</label>
                 <input
                   type="number"
                   value={splitAmount}
                   onChange={e => setSplitAmount(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-base"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Duration (months)</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Duration (months)</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {PLAN_MONTHS.map(m => (
                     <button key={m} type="button" onClick={() => setPlanMonths(m)}
-                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'}`}>
+                      style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', background: planMonths === m ? 'var(--accent)' : 'var(--surface-3)', color: planMonths === m ? '#fff' : 'var(--text-2)' }}>
                       {m}
                     </button>
                   ))}
                 </div>
               </div>
               {splitAmount && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-slate-400">Total contract value</span>
-                  <span className="font-semibold text-gray-900 dark:text-slate-100">{Number(splitAmount) * splitPayments} {baseCurrency}</span>
+                <div style={{ background: 'rgba(37,99,235,0.08)', borderRadius: 'var(--radius-btn)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: 'var(--text-2)' }}>Total contract value</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{Number(splitAmount) * splitPayments} {baseCurrency}</span>
                 </div>
               )}
             </div>
@@ -248,28 +256,26 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
 
           {/* Payment plan: monthly + duration */}
           {paymentType === 'plan' && (
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Monthly amount ({baseCurrency})</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Monthly amount ({baseCurrency})</label>
                 <input
                   type="number"
                   value={monthlyAmount}
                   onChange={e => setMonthlyAmount(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-base"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">Contract length</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Contract length</label>
                 <div className="flex gap-1.5 flex-wrap">
                   {PLAN_MONTHS.map(m => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => setPlanMonths(m)}
-                      className={`w-10 h-10 rounded-lg text-sm font-semibold transition-all ${
-                        planMonths === m ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                      }`}
+                      style={{ width: 40, height: 40, borderRadius: 'var(--radius-btn)', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', background: planMonths === m ? 'var(--accent)' : 'var(--surface-3)', color: planMonths === m ? '#fff' : 'var(--text-2)' }}
                     >
                       {m}
                     </button>
@@ -277,9 +283,9 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
                 </div>
               </div>
               {monthlyAmount && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2 flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-slate-400">Total contract value</span>
-                  <span className="font-semibold text-gray-900 dark:text-slate-100">{Number(monthlyAmount) * planMonths} {baseCurrency}</span>
+                <div style={{ background: 'rgba(37,99,235,0.08)', borderRadius: 'var(--radius-btn)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: 'var(--text-2)' }}>Total contract value</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{Number(monthlyAmount) * planMonths} {baseCurrency}</span>
                 </div>
               )}
             </div>
@@ -289,52 +295,52 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
           <button
             type="button"
             onClick={() => setShowMore(v => !v)}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+            style={{ fontSize: 12, fontWeight: 500, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
           >
-            {showMore ? '↑ Hide extra details' : '+ Add email, phone, referral…'}
+            {showMore ? 'Hide extra details' : '+ Add email, phone, referral…'}
           </button>
 
           {showMore && (
-            <div className="space-y-3 pt-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Email</label>
+                  <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="jane@email.com"
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-base"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Phone</label>
+                  <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Phone</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="+1 555 000 000"
-                    className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-base"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Referred by</label>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Referred by</label>
                 <input
                   value={referredBy}
                   onChange={e => setReferredBy(e.target.value)}
                   placeholder="Name or IG handle of who referred them"
-                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-base"
                 />
               </div>
             </div>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700">
+          <div className="flex gap-3" style={{ paddingTop: 8 }}>
+            <button type="button" onClick={onClose} className="btn-ghost" style={{ flex: 1, padding: '10px 0' }}>
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+            <button type="submit" disabled={loading} className="btn-primary" style={{ flex: 1, padding: '10px 0' }}>
               {loading ? 'Adding…' : 'Add client'}
             </button>
           </div>

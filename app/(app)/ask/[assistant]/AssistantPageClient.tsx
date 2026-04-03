@@ -15,25 +15,22 @@ const ASSISTANT_META: Record<AssistantSlug, {
   name: string
   emoji: string
   tagline: string
-  gradient: string
+  accentColor: string
   accentBg: string
-  accentText: string
 }> = {
   andreas: {
     name: 'Andreas',
     emoji: '🎯',
     tagline: 'Content, brand & Instagram growth',
-    gradient: 'from-orange-400 to-orange-600',
-    accentBg: 'bg-orange-500',
-    accentText: 'text-orange-600',
+    accentColor: '#f97316',
+    accentBg: '#f97316',
   },
   sebastian: {
     name: 'Sebastian',
     emoji: '💼',
     tagline: 'Sales, DMs & closing clients',
-    gradient: 'from-blue-500 to-blue-700',
-    accentBg: 'bg-blue-600',
-    accentText: 'text-blue-600',
+    accentColor: 'var(--accent)',
+    accentBg: 'var(--accent)',
   },
 }
 
@@ -63,7 +60,6 @@ function AgentModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // Build the prompt by replacing placeholders
     let prompt = agent.prompt
     for (const [key, val] of Object.entries(values)) {
       prompt = prompt.replace(new RegExp(`\\{${key}\\}`, 'g'), val)
@@ -73,24 +69,27 @@ function AgentModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0" onClick={onClose}>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', padding: '0 16px 16px' }}
+      onClick={onClose}
+    >
       <div
-        className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+        style={{ background: 'var(--surface-1)', width: '100%', maxWidth: 512, borderRadius: 'var(--radius-panel)', boxShadow: 'var(--shadow-dropdown)', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`${accentBg} px-5 py-4 flex items-center gap-3`}>
-          <span className="text-2xl">{agent.icon}</span>
+        <div style={{ background: accentBg, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 24 }}>{agent.icon}</span>
           <div>
-            <p className="font-bold text-white text-sm">{agent.label}</p>
-            <p className="text-xs text-white/80">{agent.description}</p>
+            <p style={{ fontWeight: 700, color: '#fff', fontSize: 14, margin: 0 }}>{agent.label}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', margin: '2px 0 0' }}>{agent.description}</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto' }}>
           {agent.fields.map(field => (
             <div key={field.id}>
-              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
                 {field.label}
               </label>
               {field.type === 'textarea' ? (
@@ -99,14 +98,15 @@ function AgentModal({
                   onChange={e => setValues(v => ({ ...v, [field.id]: e.target.value }))}
                   placeholder={field.placeholder}
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none"
+                  className="input-base"
+                  style={{ resize: 'none' }}
                   required
                 />
               ) : field.type === 'select' ? (
                 <select
                   value={values[field.id] ?? ''}
                   onChange={e => setValues(v => ({ ...v, [field.id]: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  className="input-base"
                   required
                 >
                   {field.options?.map(opt => (
@@ -119,24 +119,27 @@ function AgentModal({
                   value={values[field.id] ?? ''}
                   onChange={e => setValues(v => ({ ...v, [field.id]: e.target.value }))}
                   placeholder={field.placeholder}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  className="input-base"
                   required
                 />
               )}
             </div>
           ))}
 
-          <div className="flex gap-2 pt-1">
+          <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              className="btn-ghost"
+              style={{ flex: 1, padding: '10px 0' }}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`flex-1 py-2.5 rounded-xl ${accentBg} text-white text-sm font-semibold hover:opacity-90 transition-opacity`}
+              style={{ flex: 1, padding: '10px 0', borderRadius: 'var(--radius-btn)', background: accentBg, color: '#fff', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
               Generate with {assistantName}
             </button>
@@ -154,8 +157,8 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
 
   if (isUser) {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] bg-gray-900 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed">
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ maxWidth: '80%', background: 'var(--text-1)', color: 'var(--surface-1)', borderRadius: '16px 16px 4px 16px', padding: '10px 16px', fontSize: 14, lineHeight: 1.6 }}>
           {message.content}
         </div>
       </div>
@@ -166,10 +169,9 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
   const formatted = message.content
     .split('\n')
     .map((line, i) => {
-      // Bold **text**
       const parts = line.split(/\*\*(.*?)\*\*/g)
       return (
-        <p key={i} className={line === '' ? 'h-3' : 'leading-relaxed'}>
+        <p key={i} style={line === '' ? { height: 12, margin: 0 } : { margin: 0, lineHeight: 1.6 }}>
           {parts.map((part, j) =>
             j % 2 === 1 ? <strong key={j}>{part}</strong> : part,
           )}
@@ -178,9 +180,9 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
     })
 
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[85%] bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-gray-800 shadow-sm">
-        <div className="space-y-0.5">{formatted}</div>
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div style={{ maxWidth: '85%', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '12px 16px', fontSize: 14, color: 'var(--text-1)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>{formatted}</div>
       </div>
     </div>
   )
@@ -190,14 +192,14 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
 
 function TypingIndicator() {
   return (
-    <div className="flex justify-start">
-      <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-        <div className="flex gap-1 items-center h-4">
+    <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '12px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 16 }}>
           {[0, 1, 2].map(i => (
             <span
               key={i}
-              className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
+              style={{ width: 6, height: 6, background: 'var(--text-3)', borderRadius: '50%', display: 'inline-block', animationDelay: `${i * 0.15}s` }}
+              className="animate-bounce"
             />
           ))}
         </div>
@@ -276,23 +278,23 @@ function OnboardingScreen({
   const filledCount = config.fields.filter(f => values[f.id]?.trim()).length
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
-      <div className="max-w-lg mx-auto">
+    <div style={{ flex: 1, overflowY: 'auto', padding: '24px 16px' }}>
+      <div style={{ maxWidth: 512, margin: '0 auto' }}>
         {/* Avatar + headline */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-2xl flex-shrink-0 shadow-md`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 16, background: meta.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, boxShadow: '0 4px 8px rgba(0,0,0,0.15)' }}>
             {meta.emoji}
           </div>
           <div>
-            <h2 className="font-bold text-gray-900 text-base leading-tight">{config.headline}</h2>
-            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{config.subtext}</p>
+            <h2 style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 16, lineHeight: 1.2, margin: 0 }}>{config.headline}</h2>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.5 }}>{config.subtext}</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {config.fields.map(field => (
             <div key={field.id}>
-              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 6 }}>
                 {field.label}
               </label>
               <textarea
@@ -300,27 +302,30 @@ function OnboardingScreen({
                 onChange={e => setValues(v => ({ ...v, [field.id]: e.target.value }))}
                 placeholder={field.placeholder}
                 rows={2}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none leading-relaxed"
+                className="input-base"
+                style={{ resize: 'none', lineHeight: 1.6 }}
               />
             </div>
           ))}
 
-          <div className="pt-2 flex items-center gap-3">
+          <div style={{ paddingTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               type="submit"
               disabled={saving || filledCount === 0}
-              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${
-                filledCount > 0 && !saving
-                  ? `${meta.accentBg} text-white hover:opacity-90`
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
+              style={{
+                flex: 1, padding: '12px 0', borderRadius: 'var(--radius-btn)', fontSize: 14, fontWeight: 600, border: 'none', cursor: filledCount > 0 && !saving ? 'pointer' : 'not-allowed', transition: 'opacity 150ms',
+                background: filledCount > 0 && !saving ? meta.accentBg : 'var(--surface-3)',
+                color: filledCount > 0 && !saving ? '#fff' : 'var(--text-3)',
+              }}
             >
               {saving ? 'Lagrer…' : `Start samtale med ${meta.name} →`}
             </button>
             <button
               type="button"
               onClick={onComplete}
-              className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
+              style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 120ms' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
             >
               Hopp over
             </button>
@@ -522,32 +527,38 @@ export default function AssistantPageClient({
   const isEmpty = messages.length === 0
 
   return (
-    <div className="flex flex-col h-full">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white flex-shrink-0">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
         <Link
           href="/ask"
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+          style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, color: 'var(--text-2)', transition: 'background 120ms, color 120ms', textDecoration: 'none' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)' }}
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
             <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
           </svg>
         </Link>
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-lg flex-shrink-0`}>
+        <div style={{ width: 36, height: 36, borderRadius: 12, background: meta.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
           {meta.emoji}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-900 text-sm leading-none">{meta.name}</p>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{meta.tagline}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 14, lineHeight: 1, margin: 0 }}>{meta.name}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.tagline}</p>
         </div>
         {/* Agent tools button */}
         <button
           onClick={() => setShowAgents(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-            showAgents ? `${meta.accentBg} text-white` : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 120ms',
+            background: showAgents ? meta.accentBg : 'var(--surface-2)',
+            color: showAgents ? '#fff' : 'var(--text-2)',
+          }}
+          onMouseEnter={e => { if (!showAgents) (e.currentTarget.style.background = 'var(--surface-3)') }}
+          onMouseLeave={e => { if (!showAgents) (e.currentTarget.style.background = 'var(--surface-2)') }}
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
             <path d="M11.983 1.907a.75.75 0 0 0-1.292-.657l-8.5 9.5A.75.75 0 0 0 2.75 12h6.572l-1.305 6.093a.75.75 0 0 0 1.292.657l8.5-9.5A.75.75 0 0 0 17.25 8h-6.572l1.305-6.093Z" />
           </svg>
           Tools
@@ -556,13 +567,15 @@ export default function AssistantPageClient({
 
       {/* Agent tools panel */}
       {showAgents && (
-        <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 flex-shrink-0">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-2)', padding: '12px 16px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {agents.map(agent => (
               <button
                 key={agent.id}
                 onClick={() => { setActiveAgent(agent); setShowAgents(false) }}
-                className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold text-gray-700 hover:border-gray-300 hover:shadow-sm transition-all whitespace-nowrap flex-shrink-0"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12, padding: '8px 12px', fontSize: 12, fontWeight: 600, color: 'var(--text-1)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 120ms' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
               >
                 <span>{agent.icon}</span>
                 {agent.label}
@@ -582,24 +595,26 @@ export default function AssistantPageClient({
       )}
 
       {/* Messages */}
-      {memoryReady && <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      {memoryReady && <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {isEmpty && !streaming && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16 px-6">
-            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center text-3xl mb-4 shadow-md`}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '64px 24px' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 16, background: meta.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
               {meta.emoji}
             </div>
-            <h2 className="font-bold text-gray-900 text-lg mb-1">Chat with {meta.name}</h2>
-            <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-6">{meta.tagline}</p>
-            <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
+            <h2 style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: 18, marginBottom: 4 }}>Chat with {meta.name}</h2>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', maxWidth: 280, lineHeight: 1.6, marginBottom: 24 }}>{meta.tagline}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 360 }}>
               {agents.slice(0, 3).map(agent => (
                 <button
                   key={agent.id}
                   onClick={() => setActiveAgent(agent)}
-                  className="flex items-center gap-2.5 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 font-medium hover:border-gray-300 hover:shadow-sm transition-all text-left"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 16px', fontSize: 14, color: 'var(--text-1)', fontWeight: 500, cursor: 'pointer', transition: 'all 120ms', textAlign: 'left' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                 >
-                  <span className="text-base">{agent.icon}</span>
+                  <span style={{ fontSize: 16 }}>{agent.icon}</span>
                   <span>{agent.label}</span>
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-300 ml-auto">
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style={{ color: 'var(--border-strong)', marginLeft: 'auto' }}>
                     <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                   </svg>
                 </button>
@@ -618,8 +633,8 @@ export default function AssistantPageClient({
       </div>}
 
       {/* Input — hidden during onboarding */}
-      {memoryReady && <div className="px-4 py-3 border-t border-gray-100 bg-white flex-shrink-0">
-        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+      {memoryReady && <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -632,25 +647,27 @@ export default function AssistantPageClient({
             placeholder={`Ask ${meta.name} anything…`}
             rows={1}
             disabled={streaming}
-            className="flex-1 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300 resize-none leading-relaxed disabled:opacity-50"
-            style={{ minHeight: '42px', maxHeight: '120px' }}
+            className="input-base"
+            style={{ flex: 1, borderRadius: 20, resize: 'none', lineHeight: 1.6, minHeight: '42px', maxHeight: '120px', opacity: streaming ? 0.5 : 1 }}
           />
           <button
             type="submit"
             disabled={!input.trim() || streaming}
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all ${
-              input.trim() && !streaming
-                ? `${meta.accentBg} text-white hover:opacity-90`
-                : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-            }`}
+            style={{
+              width: 40, height: 40, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', cursor: input.trim() && !streaming ? 'pointer' : 'not-allowed', transition: 'all 150ms',
+              background: input.trim() && !streaming ? meta.accentBg : 'var(--surface-3)',
+              color: input.trim() && !streaming ? '#fff' : 'var(--text-3)',
+            }}
+            onMouseEnter={e => { if (input.trim() && !streaming) e.currentTarget.style.opacity = '0.9' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
           >
             {streaming ? (
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg className="animate-spin" viewBox="0 0 24 24" fill="none" width="16" height="16">
+                <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             ) : (
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                 <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.154.75.75 0 0 0 0-1.115A28.897 28.897 0 0 0 3.105 2.288Z" />
               </svg>
             )}

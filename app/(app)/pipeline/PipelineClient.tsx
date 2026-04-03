@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter, KpiTargets } from '@/types'
@@ -41,216 +41,111 @@ function contactColor(days: number | null) {
 // ─── Pipeline Funnel ──────────────────────────────────────────────────────────
 
 function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTargets | null }) {
-  const mainLightRef = useRef<SVGPathElement>(null)
-  const mainDarkRef  = useRef<SVGPathElement>(null)
-  const hlLightRef   = useRef<SVGPathElement>(null)
-  const hlDarkRef    = useRef<SVGPathElement>(null)
-  const prevPathRef  = useRef<string | null>(null)
-
   const total = leads.length
 
   const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
   const callBookedStages: LeadStage[] = ['call_booked', 'closed']
 
   const steps = [
-    { label: 'Leads',       count: total },
-    { label: 'Replied',     count: leads.filter(l => repliedStages.includes(l.stage)).length },
-    { label: 'Call booked', count: leads.filter(l => callBookedStages.includes(l.stage)).length },
-    { label: 'Closed',      count: leads.filter(l => l.stage === 'closed').length },
+    { label: 'LEADS',       count: total },
+    { label: 'REPLIED',     count: leads.filter(l => repliedStages.includes(l.stage)).length },
+    { label: 'BOOKED',      count: leads.filter(l => callBookedStages.includes(l.stage)).length },
+    { label: 'CLOSED',      count: leads.filter(l => l.stage === 'closed').length },
   ]
 
-  const W      = 600
-  const H      = 120
-  const cy     = H / 2
-  const n      = steps.length
-  const segW   = W / n
-  const MIN_H  = H * 0.02   // ultra-thin floor — makes drop-offs extremely dramatic
-  const MAX_H  = H * 0.92
-
-  function barH(count: number) {
-    if (total === 0) return MIN_H
-    return Math.max(MIN_H, (count / total) * MAX_H)
-  }
-
-  // Height at each stage boundary (repeat last so shape closes)
-  const hs = [...steps.map(s => barH(s.count)), barH(steps[n - 1].count)]
-
-  // Smootherstep (Ken Perlin) — steeper shoulders, flatter middle than plain smoothstep
-  function smootherstep(t: number): number {
-    return t * t * t * (t * (t * 6 - 15) + 10)
-  }
-
-  function heightAt(x: number): number {
-    const seg = Math.min(Math.floor(x / segW), n - 1)
-    const t   = (x - seg * segW) / segW
-    return hs[seg] * (1 - smootherstep(t)) + hs[seg + 1] * smootherstep(t)
-  }
-
-  const SAMPLES = 120
-  const FREQ    = 3.2 * Math.PI * 2  // more wave cycles across the width
-  const AMP     = 7                   // more pronounced waves
-
-  function buildPath(): string {
-    const top: string[] = []
-    const bot: string[] = []
-
-    for (let i = 0; i <= SAMPLES; i++) {
-      const x    = (i / SAMPLES) * W
-      const h    = heightAt(x)
-      const amp  = AMP * Math.pow(h / MAX_H, 0.6)  // even thin sections get a little wave
-      const wave = Math.sin((x / W) * FREQ + 0.4) * amp
-      top.push(`${x.toFixed(1)},${(cy - h / 2 + wave).toFixed(2)}`)
-      bot.push(`${x.toFixed(1)},${(cy + h / 2 - wave).toFixed(2)}`)
-    }
-
-    const topPath = `M ${top[0]} ` + top.slice(1).map(p => `L ${p}`).join(' ')
-    const botPath = bot.slice().reverse().map(p => `L ${p}`).join(' ')
-    return `${topPath} ${botPath} Z`
-  }
-
-  const pathD = useMemo(buildPath, [total, ...steps.map(s => s.count)])
-
-  // Animate the path morph using Web Animations API whenever counts change
-  useEffect(() => {
-    const prev = prevPathRef.current
-    if (!prev || prev === pathD) {
-      prevPathRef.current = pathD
-      return
-    }
-    const refs = [mainLightRef, mainDarkRef, hlLightRef, hlDarkRef]
-    refs.forEach(r => {
-      if (!r.current) return
-      r.current.animate(
-        [{ d: `path("${prev}")` }, { d: `path("${pathD}")` }],
-        { duration: 700, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', fill: 'forwards' },
-      )
-    })
-    prevPathRef.current = pathD
-  }, [pathD])
+  const convMeta: { target: number | null }[] = [
+    { target: kpiTargets?.reply_rate_target   ?? null },
+    { target: kpiTargets?.booking_rate_target ?? null },
+    { target: kpiTargets?.close_rate_target   ?? null },
+  ]
 
   if (total === 0) return null
 
-  // Map each funnel step's conversion to its KPI target field + label
-  const convMeta: { target: number | null; label: string }[] = [
-    { target: kpiTargets?.reply_rate_target   ?? null, label: 'Reply rate' },
-    { target: kpiTargets?.booking_rate_target ?? null, label: 'Booking rate' },
-    { target: kpiTargets?.close_rate_target   ?? null, label: 'Close rate' },
-  ]
-
-  const segs = steps.map((s, i) => ({
-    ...s,
-    convRate:   i < n - 1 && s.count > 0 ? Math.round((steps[i + 1].count / s.count) * 100) : null,
-    convTarget: convMeta[i]?.target ?? null,
-    convLabel:  convMeta[i]?.label  ?? '',
-  }))
-
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-5 pt-4 pb-2 mx-6 mt-4 mb-2 shadow-sm">
+    <div
+      style={{
+        margin: '16px 24px 8px',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-card)',
+        boxShadow: 'var(--shadow-card)',
+        padding: '20px 24px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+        {steps.map((step, i) => {
+          const convRate = i < steps.length - 1 && step.count > 0
+            ? Math.round((steps[i + 1].count / step.count) * 100)
+            : null
+          const target = convMeta[i]?.target ?? null
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        className="w-full"
-        style={{ height: 120, display: 'block' }}
-      >
-        <defs>
-          <linearGradient id="fgLight" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#818cf8" stopOpacity="1"    />
-            <stop offset="33%"  stopColor="#38bdf8" stopOpacity="0.95" />
-            <stop offset="66%"  stopColor="#fb923c" stopOpacity="0.90" />
-            <stop offset="100%" stopColor="#34d399" stopOpacity="1"    />
-          </linearGradient>
-          <linearGradient id="fgDark" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.90" />
-            <stop offset="33%"  stopColor="#0ea5e9" stopOpacity="0.85" />
-            <stop offset="66%"  stopColor="#f97316" stopOpacity="0.80" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.90" />
-          </linearGradient>
-          <linearGradient id="hlLight" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="white" stopOpacity="0.32" />
-            <stop offset="60%"  stopColor="white" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="white" stopOpacity="0"    />
-          </linearGradient>
-          <linearGradient id="hlDark" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="white" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="white" stopOpacity="0"    />
-          </linearGradient>
-          <filter id="funnelGlow" x="-5%" y="-20%" width="110%" height="140%">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-
-        <path ref={mainLightRef} d={pathD} fill="url(#fgLight)" filter="url(#funnelGlow)" className="dark:opacity-0 transition-opacity" />
-        <path ref={mainDarkRef}  d={pathD} fill="url(#fgDark)"  filter="url(#funnelGlow)" className="opacity-0 dark:opacity-100 transition-opacity" />
-        <path ref={hlLightRef}   d={pathD} fill="url(#hlLight)" className="dark:opacity-0 transition-opacity" />
-        <path ref={hlDarkRef}    d={pathD} fill="url(#hlDark)"  className="opacity-0 dark:opacity-100 transition-opacity" />
-
-        {/* Stage dividers */}
-        {Array.from({ length: n - 1 }, (_, i) => {
-          const x = (i + 1) * segW
-          const h = heightAt(x)
-          return (
-            <line key={i}
-              x1={x} y1={cy - h / 2 + 2}
-              x2={x} y2={cy + h / 2 - 2}
-              stroke="white" strokeOpacity="0.5" strokeWidth="1.5"
-            />
-          )
-        })}
-      </svg>
-
-      {/* Counts + labels */}
-      <div className="flex mt-2">
-        {segs.map((seg, i) => (
-          <div key={i} className="flex-1 text-center min-w-0 px-1">
-            <p className="text-sm font-bold text-gray-800 tabular-nums">{seg.count}</p>
-            <p className="text-[10px] text-gray-400 font-medium truncate">{seg.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Conversion rates */}
-      <div className="relative h-11 mt-0.5">
-        {segs.slice(0, -1).map((seg, i) => {
-          if (seg.convRate === null) return null
-          const r = seg.convRate
-          const t = seg.convTarget
-
-          // Color relative to KPI target if set, otherwise neutral thresholds
-          let color: string
-          let dot: string
-          let tooltip: string
-          if (t !== null) {
-            if (r >= t) {
-              color = 'text-emerald-500'
-              dot   = 'bg-emerald-400'
-              tooltip = `Target: ${t}% ✓`
-            } else if (r >= t * 0.8) {
-              color = 'text-amber-500'
-              dot   = 'bg-amber-400'
-              tooltip = `Target: ${t}% (${t - r}% below)`
-            } else {
-              color = 'text-rose-500'
-              dot   = 'bg-rose-400'
-              tooltip = `Target: ${t}% (${t - r}% below)`
-            }
-          } else {
-            // No target set — neutral grey with a subtle hint to add one
-            color   = 'text-gray-400'
-            dot     = 'bg-gray-300'
-            tooltip = 'Set a target in Settings → Conversion targets'
+          let rateColor = 'var(--text-3)'
+          if (convRate !== null && target !== null) {
+            rateColor = convRate >= target ? '#16A34A'
+              : convRate >= target * 0.8 ? '#D97706'
+              : '#DC2626'
+          } else if (convRate !== null) {
+            rateColor = 'var(--accent)'
           }
 
           return (
-            <div key={i} className="absolute -translate-x-1/2 flex flex-col items-center gap-0.5"
-              style={{ left: `${((i + 1) / n) * 100}%` }}
-              title={tooltip}>
-              <span className="text-[9px] text-gray-400 font-medium leading-none mb-0.5">{seg.convLabel}</span>
-              <div className={`w-1 h-1 rounded-full ${dot} opacity-70`} />
-              <span className={`text-xs font-bold tabular-nums leading-none ${color}`}>{r}%</span>
-              {t !== null && (
-                <span className="text-[9px] text-gray-300 leading-none tabular-nums">{t}%</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              {/* Stage block */}
+              <div
+                style={{
+                  flex: 1,
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '26px',
+                    fontWeight: 600,
+                    letterSpacing: '-0.03em',
+                    color: 'var(--text-1)',
+                    lineHeight: 1,
+                    marginBottom: '4px',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {step.count}
+                </div>
+                <div className="label-caps">{step.label}</div>
+              </div>
+
+              {/* Arrow + conversion */}
+              {i < steps.length - 1 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '0 8px',
+                    flexShrink: 0,
+                    gap: '2px',
+                  }}
+                >
+                  {convRate !== null && (
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: rateColor,
+                        fontVariantNumeric: 'tabular-nums',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {convRate}%
+                    </span>
+                  )}
+                  <svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+                    <path d="M0 6H16M16 6L11 1M16 6L11 11" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               )}
             </div>
           )
@@ -275,13 +170,13 @@ interface StageColumnConfig {
 }
 
 const STAGE_COLUMNS: StageColumnConfig[] = [
-  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white', accent: 'bg-blue-500',    extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-blue-400' },
-  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white', accent: 'bg-violet-500',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: 'bg-violet-400' },
-  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white', accent: 'bg-orange-500',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-orange-400' },
-  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white', accent: 'bg-emerald-500', extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: 'bg-emerald-400' },
-  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white', accent: 'bg-amber-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-amber-400' },
-  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white', accent: 'bg-slate-400',   extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-slate-400' },
-  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white', accent: 'bg-rose-400',    extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: 'bg-rose-400' },
+  { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white', accent: '#3B82F6',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#3B82F6' },
+  { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white', accent: '#8B5CF6',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: '#8B5CF6' },
+  { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white', accent: '#F97316',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#F97316' },
+  { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white', accent: '#10B981',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#10B981' },
+  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white', accent: '#F59E0B',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#F59E0B' },
+  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white', accent: '#94A3B8',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#94A3B8' },
+  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white', accent: '#FB7185',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#FB7185' },
 ]
 
 const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
@@ -305,9 +200,9 @@ function loadHiddenColumns(): Set<LeadStage> {
 const CONTACTED_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent']
 
 const TIER_META = {
-  1: { label: 'T1', emoji: '🔥', bg: 'bg-red-50',    text: 'text-red-600' },
-  2: { label: 'T2', emoji: '💪', bg: 'bg-amber-50',  text: 'text-amber-600' },
-  3: { label: 'T3', emoji: '🌱', bg: 'bg-gray-100',  text: 'text-gray-500' },
+  1: { label: 'T1', cssClass: 'tier-t1' },
+  2: { label: 'T2', cssClass: 'tier-t2' },
+  3: { label: 'T3', cssClass: 'tier-t3' },
 } as const
 
 function LeadCard({
@@ -323,6 +218,11 @@ function LeadCard({
   onContacted: (leadId: string) => void
 }) {
   const [contactedFlash, setContactedFlash] = useState(false)
+  // Disable native HTML drag on touch devices — it blocks swipe-scroll and shows white ghost boxes
+  const [isDraggable, setIsDraggable] = useState(false)
+  useEffect(() => {
+    setIsDraggable(!window.matchMedia('(hover: none)').matches)
+  }, [])
   const days = daysSince(lead.last_contact_at)
   const assignedLabels = labels.filter(l => assignedLabelIds.includes(l.id))
   const showContactedBtn = CONTACTED_STAGES.includes(lead.stage)
@@ -356,67 +256,147 @@ function LeadCard({
 
   return (
     <div
-      draggable={true}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
+      draggable={isDraggable}
+      onDragStart={isDraggable ? onDragStart : undefined}
+      onDragEnd={isDraggable ? onDragEnd : undefined}
       onClick={onClick}
-      className="relative bg-gray-50 rounded-xl border border-gray-200 p-3 cursor-pointer hover:bg-white hover:shadow-md hover:border-gray-300 transition-all group"
+      style={{
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-card)',
+        padding: '10px 12px',
+        cursor: 'pointer',
+        transition: 'transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease',
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.transform = 'translateY(-2px)'
+        el.style.boxShadow = 'var(--shadow-raised)'
+        el.style.borderColor = 'var(--border-strong)'
+        // Show tier buttons
+        const tierBtns = el.querySelector('[data-tier-btns]') as HTMLElement | null
+        if (tierBtns) tierBtns.style.opacity = '1'
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.transform = ''
+        el.style.boxShadow = ''
+        el.style.borderColor = 'var(--border)'
+        const tierBtns = el.querySelector('[data-tier-btns]') as HTMLElement | null
+        if (tierBtns) tierBtns.style.opacity = '0'
+      }}
     >
-      {/* Top row: username + urgency dot */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm truncate leading-tight">
+      {/* Top row: username + timestamp + urgency dot */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+        <p
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '12px',
+            fontWeight: 600,
+            color: 'var(--accent)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flex: 1,
+          }}
+        >
           @{lead.ig_username}
         </p>
-        <div
-          className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white ${urgencyDot}`}
-          title={urgencyTitle}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          {days !== null && (
+            <span style={{ fontSize: '11px', color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+              {days === 0 ? 'today' : `${days}d`}
+            </span>
+          )}
+          <div
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              flexShrink: 0,
+              background:
+                days === null ? 'var(--text-3)'
+                : days >= 5 ? '#DC2626'
+                : days >= 3 ? '#D97706'
+                : '#16A34A',
+            }}
+            title={urgencyTitle}
+          />
+        </div>
       </div>
 
-      {/* Labels */}
-      {assignedLabels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+      {/* Note preview */}
+      {lead.setter_notes && (
+        <p style={{ fontSize: '11px', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px', lineHeight: 1.4 }}>
+          {lead.setter_notes}
+        </p>
+      )}
+
+      {/* Bottom row: tier pill + labels + tier buttons on hover */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', flex: 1 }}>
+          <span className={`badge ${tierMeta.cssClass}`} style={{ cursor: 'pointer' }} onClick={handleTierCycle} title="Click to change tier">
+            {tierMeta.label}
+          </span>
           {assignedLabels.map(l => (
             <span
               key={l.id}
-              className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+              className="badge"
               style={{ background: l.bg_color, color: l.text_color }}
             >
               {l.name}
             </span>
           ))}
         </div>
-      )}
 
-      {lead.setter_notes && (
-        <p className="text-[11px] text-gray-400 line-clamp-1 mb-2 leading-snug">{lead.setter_notes}</p>
-      )}
-
-      {/* Bottom row: tier badge + time ago + contacted btn */}
-      <div className="flex items-center justify-between gap-2 mt-1" onClick={e => e.stopPropagation()}>
-        <button
-          onClick={handleTierCycle}
-          title="Click to change tier"
-          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all hover:opacity-80 ${tierMeta.bg} ${tierMeta.text}`}
+        {/* Tier selector — slides in on hover */}
+        <div
+          data-tier-btns=""
+          style={{ display: 'flex', gap: '2px', opacity: 0, transition: 'opacity 100ms ease', flexShrink: 0 }}
+          title="Change tier"
         >
-          {tierMeta.emoji} {tierMeta.label}
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          {days !== null && (
-            <span className="text-[10px] text-gray-400 tabular-nums">
-              {days === 0 ? 'today' : `${days}d ago`}
-            </span>
-          )}
+          {([1, 2, 3] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => onTierChange(t)}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-strong)',
+                background: tier === t ? 'var(--accent)' : 'var(--surface-2)',
+                color: tier === t ? '#fff' : 'var(--text-2)',
+                fontSize: '10px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 80ms ease, color 80ms ease',
+              }}
+            >
+              {t}
+            </button>
+          ))}
           {showContactedBtn && (
             <button
               onClick={handleContacted}
               title="Mark as contacted"
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                contactedFlash
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-emerald-50 text-emerald-600 opacity-0 group-hover:opacity-100'
-              }`}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '4px',
+                border: `1px solid ${contactedFlash ? '#16A34A' : 'var(--border-strong)'}`,
+                background: contactedFlash ? '#16A34A' : 'var(--surface-2)',
+                color: contactedFlash ? '#fff' : '#16A34A',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 120ms ease',
+              }}
             >
               ✓
             </button>
@@ -463,10 +443,10 @@ function StageColumn({
   }, [labels, allLeadsInStage, assignments])
 
   const tierBreakdown = useMemo(() => {
-    const tiers: { tier: 1 | 2 | 3; icon: string; cls: string }[] = [
-      { tier: 1, icon: '🔥', cls: 'bg-red-50 text-red-600' },
-      { tier: 2, icon: '💪', cls: 'bg-amber-50 text-amber-600' },
-      { tier: 3, icon: '🌱', cls: 'bg-gray-100 text-gray-500' },
+    const tiers: { tier: 1 | 2 | 3; cssClass: string }[] = [
+      { tier: 1, cssClass: 'tier-t1' },
+      { tier: 2, cssClass: 'tier-t2' },
+      { tier: 3, cssClass: 'tier-t3' },
     ]
     return tiers.map(t => ({
       ...t,
@@ -497,98 +477,144 @@ function StageColumn({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex-shrink-0 w-64 min-w-[256px] rounded-2xl ${bg} border transition-all ${
-        isDragOver
-          ? 'ring-2 ring-blue-400 border-blue-300 shadow-lg'
-          : 'border-gray-200 shadow-sm'
-      } flex flex-col`}
+      style={{
+        flexShrink: 0,
+        width: '256px',
+        minWidth: '256px',
+        background: isDragOver ? 'var(--surface-2)' : 'var(--surface-3)',
+        border: isDragOver ? `1.5px dashed ${accent}` : '1px solid var(--border)',
+        borderTop: `3px solid ${accent}`,
+        borderRadius: 'var(--radius-card)',
+        padding: '10px',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'background 120ms ease, border-color 120ms ease',
+      }}
     >
-      {/* Colored accent bar */}
-      <div className={`h-1 rounded-t-2xl ${accent} ${isDragOver ? 'opacity-100' : 'opacity-80'}`} />
-
-      <div className="p-3 flex flex-col gap-2 flex-1">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-gray-800">{label}</span>
-            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full tabular-nums ${
-              hasFilter
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-gray-100 text-gray-500'
-            }`}>
-              {hasFilter ? `${leads.length} / ${allLeadsInStage.length}` : leads.length}
-            </span>
-            {auto && (
-              <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wide">Auto</span>
-            )}
-          </div>
-          <button
-            onClick={onAddClick}
-            className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-all flex items-center justify-center text-sm font-bold leading-none"
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', padding: '0 2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span className="section-title">{label}</span>
+          <span
+            className="badge"
+            style={{
+              background: hasFilter ? 'rgba(37,99,235,0.12)' : 'var(--surface-1)',
+              color: hasFilter ? 'var(--accent)' : 'var(--text-2)',
+              border: '1px solid var(--border)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
           >
-            +
-          </button>
+            {hasFilter ? `${leads.length}/${allLeadsInStage.length}` : leads.length}
+          </span>
+          {auto && (
+            <span
+              className="badge"
+              style={{ background: 'rgba(37,99,235,0.12)', color: 'var(--accent)' }}
+            >
+              AUTO
+            </span>
+          )}
         </div>
+        <button
+          onClick={onAddClick}
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '6px',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-2)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            lineHeight: 1,
+            fontWeight: 400,
+            transition: 'background 120ms ease, color 120ms ease',
+          }}
+          onMouseEnter={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--accent)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#fff'
+          }}
+          onMouseLeave={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-1)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'
+          }}
+        >
+          +
+        </button>
+      </div>
 
-        {/* Tier + label chips — compact single row */}
-        {(tierBreakdown.length > 0 || labelCountsInStage.length > 0) && (
-          <div className="flex flex-wrap gap-1">
-            {tierBreakdown.map(({ tier, icon, cls, count }) => {
-              const isActive = tierFilter === String(tier)
-              return (
-                <span key={tier} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all ${cls} ${
-                  tierFilter !== 'all' && !isActive ? 'opacity-25' : ''
-                } ${isActive ? 'ring-1 ring-current' : ''}`}>
-                  {icon} {count}
-                </span>
-              )
-            })}
-            {labelCountsInStage.map(({ label: l, count }) => {
-              const isActive = selectedLabels.includes(l.id)
-              return (
-                <span key={l.id} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition-all"
-                  style={{
-                    background: l.bg_color, color: l.text_color,
-                    opacity: selectedLabels.length === 0 || isActive ? 1 : 0.25,
-                    outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
-                    outlineOffset: '1px',
-                  }}>
-                  {l.name} {count}
-                </span>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Cards */}
-        <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pb-2">
-          {leads.map(lead => {
-            const assignedLabelIds = assignments
-              .filter(a => a.lead_id === lead.id)
-              .map(a => a.label_id)
+      {/* Tier + label chips */}
+      {(tierBreakdown.length > 0 || labelCountsInStage.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+          {tierBreakdown.map(({ tier, cssClass, count }) => {
+            const isActive = tierFilter === String(tier)
             return (
-              <LeadCard
-                key={lead.id}
-                lead={lead}
-                labels={labels}
-                assignedLabelIds={assignedLabelIds}
-                onClick={() => onLeadClick(lead)}
-                onTierChange={tier => onTierChange(lead.id, tier)}
-                onContacted={onContacted}
-                onDragStart={e => {
-                  e.dataTransfer.setData('leadId', lead.id)
-                  ;(e.currentTarget as HTMLDivElement).classList.add('opacity-50')
+              <span
+                key={tier}
+                className={`badge ${cssClass}`}
+                style={{
+                  opacity: tierFilter !== 'all' && !isActive ? 0.3 : 1,
+                  outline: isActive ? '1.5px solid currentColor' : 'none',
+                  outlineOffset: '1px',
                 }}
-                onDragEnd={e => {
-                  ;(e.currentTarget as HTMLDivElement).classList.remove('opacity-50')
-                }}
-              />
+              >
+                T{tier} {count}
+              </span>
             )
           })}
-          {leads.length === 0 && (
-            <div className="text-center py-6 text-xs text-gray-400 px-2">
-            {stage === 'follower' && 'Add one with + Add above'}
-            {stage === 'replied' && 'Add one with + Add above'}
+          {labelCountsInStage.map(({ label: l, count }) => {
+            const isActive = selectedLabels.includes(l.id)
+            return (
+              <span
+                key={l.id}
+                className="badge"
+                style={{
+                  background: l.bg_color,
+                  color: l.text_color,
+                  opacity: selectedLabels.length === 0 || isActive ? 1 : 0.3,
+                  outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
+                  outlineOffset: '1px',
+                }}
+              >
+                {l.name} {count}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1, minHeight: 0, paddingBottom: '4px' }}>
+        {leads.map(lead => {
+          const assignedLabelIds = assignments
+            .filter(a => a.lead_id === lead.id)
+            .map(a => a.label_id)
+          return (
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              labels={labels}
+              assignedLabelIds={assignedLabelIds}
+              onClick={() => onLeadClick(lead)}
+              onTierChange={tier => onTierChange(lead.id, tier)}
+              onContacted={onContacted}
+              onDragStart={e => {
+                e.dataTransfer.setData('leadId', lead.id)
+                ;(e.currentTarget as HTMLDivElement).style.opacity = '0.4'
+              }}
+              onDragEnd={e => {
+                ;(e.currentTarget as HTMLDivElement).style.opacity = '1'
+              }}
+            />
+          )
+        })}
+        {leads.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px 8px', fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+            {stage === 'follower' && 'Add a follower with +'}
+            {stage === 'replied' && 'Move leads here when they reply'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
             {stage === 'closed' && 'Move leads here when you close a deal'}
             {stage === 'nurture' && 'Leads to keep warm over time'}
@@ -596,7 +622,6 @@ function StageColumn({
             {stage === 'bad_fit' && 'Leads that are not a good fit'}
           </div>
         )}
-        </div>
       </div>
     </div>
   )
@@ -767,20 +792,25 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-        <h1 className="text-xl font-bold text-gray-900">Pipeline</h1>
-        <div className="flex items-center gap-2">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          flexShrink: 0,
+        }}
+      >
+        <h1 className="page-title">Pipeline</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="btn-ghost" onClick={() => setLabelManagerOpen(true)}>Labels</button>
           <button
-            onClick={() => setLabelManagerOpen(true)}
-            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Labels
-          </button>
-          <button
+            className="btn-primary"
             onClick={() => { setAddLeadStage('follower'); setAddLeadOpen(true) }}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             + Add follower
           </button>
@@ -788,41 +818,46 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-gray-100 bg-white overflow-x-auto">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '10px 24px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--surface-1)',
+          overflowX: 'auto',
+          flexShrink: 0,
+        }}
+      >
         {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
-          const icons: Record<string, string> = { '1': '🔥', '2': '💪', '3': '🌱' }
           const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
+          const isActive = tierFilter === f
           return (
             <button
               key={f}
               onClick={() => setTierFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                tierFilter === f ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
-              }`}
+              className="badge"
+              style={{
+                cursor: 'pointer',
+                background: isActive ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
+                color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                border: `1px solid ${isActive ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`,
+                padding: '4px 10px',
+                fontSize: '12px',
+                whiteSpace: 'nowrap',
+                transition: 'background 100ms ease, color 100ms ease',
+              }}
             >
-              {icons[f] && <span>{icons[f]}</span>}
-              {f === 'all' ? 'All' : `Tier ${f}`}
-              <span className="font-bold opacity-60">{count}</span>
+              {f === 'all' ? 'All' : `T${f}`}
+              {' '}<span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>{count}</span>
             </button>
           )
         })}
 
         {labels.length > 0 && (
           <>
-            <div className="w-px h-4 bg-gray-200 mx-1" />
-
-            {/* All pill — clears label filter */}
-            <button
-              onClick={() => setSelectedLabels([])}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedLabels.length === 0
-                  ? 'bg-gray-200 text-gray-700'
-                  : 'text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              All
-            </button>
-
+            <div style={{ width: '1px', height: '16px', background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
             {labels.map(l => {
               const isActive = selectedLabels.includes(l.id)
               const count = labelCounts[l.id] ?? 0
@@ -832,23 +867,27 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                   onClick={() => setSelectedLabels(prev =>
                     isActive ? prev.filter(id => id !== l.id) : [...prev, l.id]
                   )}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1"
-                  style={
-                    isActive
-                      ? { background: l.bg_color, color: l.text_color, outline: `2px solid ${l.text_color}`, outlineOffset: '1px' }
-                      : { background: l.bg_color, color: l.text_color, opacity: 0.55 }
-                  }
+                  className="badge"
+                  style={{
+                    cursor: 'pointer',
+                    background: l.bg_color,
+                    color: l.text_color,
+                    opacity: selectedLabels.length === 0 || isActive ? 1 : 0.45,
+                    outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
+                    outlineOffset: '1px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  {l.name}
-                  <span className="font-bold opacity-75">{count}</span>
+                  {l.name} <span style={{ opacity: 0.75 }}>{count}</span>
                 </button>
               )
             })}
           </>
         )}
 
-        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
-          {/* Column visibility pills — appear to the left of the eye when active */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {showColumnToggles && (
             <>
               {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
@@ -857,28 +896,38 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                   <button
                     key={col.stage}
                     onClick={() => toggleColumn(col.stage)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                      visible
-                        ? 'bg-slate-200 text-slate-700'
-                        : 'text-gray-400 hover:bg-gray-100'
-                    }`}
+                    className="badge"
+                    style={{
+                      cursor: 'pointer',
+                      background: visible ? 'var(--surface-3)' : 'var(--surface-2)',
+                      color: visible ? 'var(--text-1)' : 'var(--text-3)',
+                      border: '1px solid var(--border)',
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      whiteSpace: 'nowrap',
+                    }}
                   >
                     {col.label}
                   </button>
                 )
               })}
-              <div className="w-px h-4 bg-gray-200 flex-shrink-0" />
+              <div style={{ width: '1px', height: '16px', background: 'var(--border)', flexShrink: 0 }} />
             </>
           )}
 
-          {/* Eye toggle */}
           <button
             onClick={() => setShowColumnToggles(v => !v)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              showColumnToggles
-                ? 'text-blue-600 bg-blue-50'
-                : 'text-gray-400 hover:bg-gray-100'
-            }`}
+            style={{
+              padding: '6px',
+              borderRadius: 'var(--radius-btn)',
+              background: showColumnToggles ? 'rgba(37,99,235,0.1)' : 'transparent',
+              border: 'none',
+              color: showColumnToggles ? 'var(--accent)' : 'var(--text-3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'background 100ms ease',
+            }}
             aria-label="Toggle column visibility"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -889,8 +938,9 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search followers…"
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 bg-white text-gray-900 placeholder-gray-400"
+            placeholder="Search…"
+            className="input-base"
+            style={{ width: '160px' }}
           />
         </div>
       </div>
@@ -899,8 +949,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       <PipelineFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
 
       {/* Kanban columns */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-4 p-6 h-full min-w-max">
+      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: '12px', padding: '16px 24px', height: '100%', minWidth: 'max-content' }}>
           {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => {
             const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
             return (

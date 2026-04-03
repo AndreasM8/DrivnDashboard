@@ -15,12 +15,12 @@ interface Props {
 
 type ExpenseCategory = 'team' | 'software' | 'ads' | 'withdrawal' | 'other'
 
-const CATEGORY_META: Record<ExpenseCategory, { label: string; icon: string }> = {
-  team:       { label: 'Team',        icon: '👥' },
-  software:   { label: 'Software',    icon: '💻' },
-  ads:        { label: 'Ads',         icon: '📣' },
-  withdrawal: { label: 'Withdrawals', icon: '💸' },
-  other:      { label: 'Other',       icon: '📦' },
+const CATEGORY_META: Record<ExpenseCategory, { label: string }> = {
+  team:       { label: 'Team' },
+  software:   { label: 'Software' },
+  ads:        { label: 'Ads' },
+  withdrawal: { label: 'Withdrawals' },
+  other:      { label: 'Other' },
 }
 
 const CATEGORY_ORDER: ExpenseCategory[] = ['team', 'software', 'ads', 'withdrawal', 'other']
@@ -72,15 +72,6 @@ export default function ExpensesSection({
     totalByCategory.ads +
     totalByCategory.withdrawal +
     totalByCategory.other
-
-  // Cash collected is not available in this component directly, so we surface
-  // it via a prop if needed — for now we compute net profit from what we have.
-  // (The parent passes cashCollected if desired; for this component we show
-  //  the breakdown and let the parent compute margin if it wants.)
-  // Actually per the spec we need cashCollected to show margin %. We receive
-  // it as adSpendTotal only, so we need to accept cashCollected too.
-  // The spec says to compute margin = net / cash_collected * 100.
-  // We'll surface this by accepting an optional cashCollected prop.
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -135,13 +126,15 @@ export default function ExpensesSection({
   })
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)', padding: 20 }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-gray-900 dark:text-slate-100">Expenses &amp; profit</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ fontWeight: 600, color: 'var(--text-1)', margin: 0, fontSize: 15 }}>Expenses &amp; profit</h2>
         <button
           onClick={() => setShowAddForm(v => !v)}
-          className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          style={{ fontSize: 12, fontWeight: 500, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-btn)', transition: 'background 120ms' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(37,99,235,0.08)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
         >
           {showAddForm ? 'Cancel' : '+ Add'}
         </button>
@@ -149,24 +142,24 @@ export default function ExpensesSection({
 
       {/* Inline add form */}
       {showAddForm && (
-        <div className="mb-4 p-4 rounded-xl bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 space-y-3">
+        <div style={{ marginBottom: 16, padding: 16, borderRadius: 'var(--radius-card)', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Category</label>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Category</label>
               <select
                 value={formCategory}
                 onChange={e => setFormCategory(e.target.value as ExpenseCategory)}
-                className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
               >
                 {CATEGORY_ORDER.map(cat => (
                   <option key={cat} value={cat}>
-                    {CATEGORY_META[cat].icon} {CATEGORY_META[cat].label}
+                    {CATEGORY_META[cat].label}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Amount ({currency})</label>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Amount ({currency})</label>
               <input
                 type="number"
                 value={formAmount}
@@ -174,25 +167,26 @@ export default function ExpensesSection({
                 placeholder="0"
                 min="0"
                 step="1"
-                className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-base"
               />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Label</label>
+            <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Label</label>
             <input
               type="text"
               value={formLabel}
               onChange={e => setFormLabel(e.target.value)}
               placeholder="What's it for? e.g. 'Setter salary'"
-              className="w-full border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
             />
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2" style={{ paddingTop: 4 }}>
             <button
               onClick={handleSave}
               disabled={saving || !formLabel.trim() || !formAmount}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+              className="btn-primary"
+              style={{ padding: '8px 16px' }}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
@@ -203,7 +197,8 @@ export default function ExpensesSection({
                 setFormAmount('')
                 setFormCategory('team')
               }}
-              className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-300 text-sm font-medium transition-colors"
+              className="btn-ghost"
+              style={{ padding: '8px 16px' }}
             >
               Cancel
             </button>
@@ -213,7 +208,7 @@ export default function ExpensesSection({
 
       {/* Expense rows by category */}
       {visibleCategories.length > 0 && (
-        <div className="space-y-3 mb-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
           {visibleCategories.map(cat => {
             const meta = CATEGORY_META[cat]
             const catTotal = totalByCategory[cat]
@@ -223,19 +218,15 @@ export default function ExpensesSection({
             return (
               <div key={cat}>
                 {/* Category total row */}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-700 dark:text-slate-300 font-medium">
-                    {meta.icon} {meta.label}
-                  </span>
-                  <span className="font-semibold text-gray-900 dark:text-slate-100">
-                    {formatCurrency(catTotal, currency)}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{meta.label}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(catTotal, currency)}</span>
                 </div>
 
                 {/* Ad spend note */}
                 {isAds && adSpendTotal > 0 && (
-                  <div className="ml-6 mt-1">
-                    <span className="text-xs text-gray-400 dark:text-slate-500">
+                  <div style={{ marginLeft: 24, marginTop: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                       {formatCurrency(adSpendTotal, currency)} from ad spend log
                     </span>
                   </div>
@@ -243,19 +234,21 @@ export default function ExpensesSection({
 
                 {/* Individual expense items */}
                 {catExpenses.length > 0 && (
-                  <ul className="mt-1 space-y-0.5">
+                  <ul style={{ marginTop: 4, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {catExpenses.map(exp => (
-                      <li key={exp.id} className="ml-6 flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-slate-400 truncate flex-1 mr-2">
+                      <li key={exp.id} style={{ marginLeft: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>
                           {exp.label}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-slate-400 mr-2 flex-shrink-0">
+                        <span style={{ fontSize: 12, color: 'var(--text-2)', marginRight: 8, flexShrink: 0 }}>
                           {formatCurrency(exp.amount, currency)}
                         </span>
                         <button
                           onClick={() => handleDelete(exp.id)}
                           disabled={deletingId === exp.id}
-                          className="text-gray-300 dark:text-slate-600 hover:text-rose-400 dark:hover:text-rose-400 transition-colors text-sm leading-none flex-shrink-0 disabled:opacity-50"
+                          style={{ color: 'var(--border-strong)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0, padding: 0, opacity: deletingId === exp.id ? 0.4 : 1, transition: 'color 120ms' }}
+                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+                          onMouseLeave={e => (e.currentTarget.style.color = 'var(--border-strong)')}
                           title="Delete"
                         >
                           ×
@@ -271,28 +264,28 @@ export default function ExpensesSection({
       )}
 
       {visibleCategories.length === 0 && (
-        <p className="text-sm text-gray-400 dark:text-slate-500 mb-4">
+        <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 16 }}>
           No expenses recorded for this month yet. Tap + Add to get started.
         </p>
       )}
 
       {/* P&L summary */}
       {(totalExpenses > 0 || cashCollected > 0) && (
-        <div className="border-t border-gray-100 dark:border-slate-700 pt-3 mt-1 space-y-2">
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
           {/* Revenue row */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500 dark:text-slate-400">Cash collected</span>
-            <span className="font-medium text-gray-700 dark:text-slate-300">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+            <span style={{ color: 'var(--text-2)' }}>Cash collected</span>
+            <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>
               {formatCurrency(cashCollected, currency)}
             </span>
           </div>
 
           {/* Total expenses row */}
           {totalExpenses > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 dark:text-slate-400">Total expenses</span>
-              <span className="font-medium text-rose-500 dark:text-rose-400">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+              <span style={{ color: 'var(--text-2)' }}>Total expenses</span>
+              <span style={{ fontWeight: 500, color: 'var(--danger)' }}>
                 − {formatCurrency(totalExpenses, currency)}
               </span>
             </div>
@@ -304,16 +297,16 @@ export default function ExpensesSection({
             const margin = cashCollected > 0 ? Math.round((net / cashCollected) * 100) : 0
             const positive = net >= 0
             return (
-              <div className={`flex items-center justify-between rounded-xl px-3 py-2.5 mt-1 ${positive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-rose-50 dark:bg-rose-900/20'}`}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 'var(--radius-card)', padding: '10px 12px', marginTop: 4, background: positive ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.06)' }}>
                 <div>
-                  <p className={`text-xs font-semibold uppercase tracking-wide ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: positive ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
                     Net profit
                   </p>
-                  <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-0.5">
+                  <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
                     {positive ? `${margin}% margin` : 'Operating at a loss'}
                   </p>
                 </div>
-                <p className={`text-lg font-bold tabular-nums ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                <p style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: positive ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
                   {positive ? '' : '−'}{formatCurrency(Math.abs(net), currency)}
                 </p>
               </div>

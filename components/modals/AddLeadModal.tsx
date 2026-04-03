@@ -60,30 +60,47 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Add follower to pipeline</h2>
-          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 16, background: 'rgba(0,0,0,0.4)',
+    }}>
+      <div className="modal-enter" style={{
+        background: 'var(--surface-1)',
+        borderRadius: 'var(--radius-panel)',
+        boxShadow: 'var(--shadow-dropdown)',
+        width: '100%', maxWidth: 440, padding: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 className="section-title">Add follower to pipeline</h2>
+          <button
+            onClick={onClose}
+            style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0, transition: 'color 120ms ease' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-1)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Instagram username *</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+              Instagram username *
+            </label>
             <input
               value={igUsername}
               onChange={e => setIgUsername(e.target.value)}
               placeholder="@username"
               required
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-base"
+              style={{ fontFamily: igUsername ? 'var(--font-mono)' : undefined }}
             />
             {isDuplicate && (
-              <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+              <p style={{ marginTop: 6, fontSize: 12, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style={{ flexShrink: 0 }}>
                   <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                 </svg>
                 A lead with this username already exists. You can still add them.
@@ -92,23 +109,14 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Full name</label>
-            <input
-              value={fullName}
-              onChange={e => setFullName(e.target.value)}
-              placeholder="Jane Smith"
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Full name</label>
+            <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Smith" className="input-base" />
           </div>
 
           {setters.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Assigned setter</label>
-              <select
-                value={setterId}
-                onChange={e => setSetterId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Assigned setter</label>
+              <select value={setterId} onChange={e => setSetterId(e.target.value)} className="input-base">
                 <option value="">Unassigned</option>
                 {setters.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -116,31 +124,24 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Notes</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Their vibe, goal, what content they reacted to…"
               rows={3}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="input-base"
+              style={{ resize: 'none' }}
             />
           </div>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p style={{ fontSize: 12, color: 'var(--danger)' }}>{error}</p>}
 
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-            >
+          <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+            <button type="button" onClick={onClose} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={loading || !igUsername}
-              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
+            <button type="submit" disabled={loading || !igUsername} className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
               {loading ? 'Adding…' : 'Add to pipeline'}
             </button>
           </div>
