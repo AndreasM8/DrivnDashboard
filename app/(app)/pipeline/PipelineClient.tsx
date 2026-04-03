@@ -561,7 +561,7 @@ function StageColumn({
                   outlineOffset: '1px',
                 }}
               >
-                T{tier} {count}
+                T{tier} ({count})
               </span>
             )
           })}
