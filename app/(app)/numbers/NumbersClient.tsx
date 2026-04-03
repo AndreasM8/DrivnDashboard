@@ -230,7 +230,7 @@ function HistoryTable({ history, currentMonth, baseCurrency }: { history: Monthl
         <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              {['Month', 'Cash in', 'Contracted', 'Followers', 'Meetings', 'Show-up', 'Close rate', 'Signed'].map((h, i) => (
+              {['Month', 'Cash in', 'New contracts', 'Followers', 'Meetings', 'Show-up', 'Close rate', 'Signed'].map((h, i) => (
                 <th key={h} className="label-caps" style={{ paddingBottom: '10px', textAlign: i > 0 ? 'right' : 'left', fontWeight: '500', borderBottom: '1px solid var(--border)' }}>{h}</th>
               ))}
             </tr>
@@ -593,7 +593,7 @@ export default function NumbersClient({
         {/* ── Current business overview ─────────────────────────────────── */}
         <div>
           <p className="label-caps" style={{ marginBottom: '10px' }}>Current business</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }} className="lg:grid-cols-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: '10px' }}>
             {[
               { label: 'Active clients',    value: String(totalActiveClients),                   accent: 'var(--accent)' },
               { label: 'Total contracted',  value: formatCurrency(totalContracted, baseCurrency), accent: 'var(--success)' },
@@ -621,7 +621,7 @@ export default function NumbersClient({
           <p className="label-caps" style={{ marginBottom: '10px' }}>{formatMonth(selectedMonth)}</p>
 
           {/* Primary KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '10px' }} className="md:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '10px', marginBottom: '10px' }}>
             <KpiCard
               label="Cash collected"
               value={snap?.cash_collected ?? 0}
@@ -636,7 +636,7 @@ export default function NumbersClient({
                 : undefined}
             />
             <KpiCard
-              label="Revenue contracted"
+              label="New contracts"
               value={snap?.revenue_contracted ?? 0}
               displayValue={formatCurrency(snap?.revenue_contracted ?? 0, baseCurrency)}
               target={getTarget('revenue_target')}
@@ -644,6 +644,7 @@ export default function NumbersClient({
               compareMode={compareMode}
               compareValue={getCompare('revenue_contracted')}
               color={score(snap?.revenue_contracted ?? 0, compareMode === 'targets' ? targets?.revenue_target : last?.revenue_contracted)}
+              subline="New clients signed this month"
             />
             <KpiCard
               label="New followers"
@@ -679,7 +680,7 @@ export default function NumbersClient({
           </div>
 
           {/* Supporting KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }} className="lg:grid-cols-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3" style={{ gap: '10px' }}>
             <KpiCard
               label="Show-up rate"
               value={snap?.show_up_rate ?? 0}
