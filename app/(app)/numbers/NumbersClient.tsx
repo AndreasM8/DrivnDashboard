@@ -24,6 +24,8 @@ interface Props {
   totalOutstanding: number
   cashPending: number
   leadsReplied: number
+  totalLeads: number
+  totalClientsAcquired: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -421,84 +423,69 @@ function HistoryTable({
   )
 }
 
-// ─── All-time accordion ───────────────────────────────────────────────────────
+// ─── All-time totals section ──────────────────────────────────────────────────
 
 function AllTimeTotals({
-  totalContracted, totalCashCollected, totalOutstanding, activePlanCount, baseCurrency,
+  totalContracted, totalCashCollected, totalOutstanding, activePlanCount,
+  totalClientsAcquired, baseCurrency,
 }: {
   totalContracted: number
   totalCashCollected: number
   totalOutstanding: number
   activePlanCount: number
+  totalClientsAcquired: number
   baseCurrency: string
 }) {
-  const [open, setOpen] = useState(false)
+  const collectedPct = totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0
+
+  const items: { label: string; display: string; accent: string; sub: string }[] = [
+    {
+      label:   'Total contracted',
+      display: fmtCurrency(totalContracted, baseCurrency),
+      accent:  '#7C3AED',
+      sub:     'Including future payments',
+    },
+    {
+      label:   'Cash collected',
+      display: fmtCurrency(totalCashCollected, baseCurrency),
+      accent:  '#16A34A',
+      sub:     `${collectedPct}% of contracted`,
+    },
+    {
+      label:   'Outstanding',
+      display: fmtCurrency(totalOutstanding, baseCurrency),
+      accent:  '#D97706',
+      sub:     `From ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}`,
+    },
+    {
+      label:   'Clients acquired',
+      display: String(totalClientsAcquired),
+      accent:  '#2563EB',
+      sub:     'Total ever signed',
+    },
+  ]
 
   return (
-    <div style={{
-      background:   'var(--surface-1)',
-      border:       '1px solid var(--border)',
-      borderRadius: 'var(--radius-card)',
-      boxShadow:    'var(--shadow-card)',
-      overflow:     'hidden',
-    }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          width:          '100%',
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'space-between',
-          padding:        '14px 16px',
-          background:     'transparent',
-          border:         'none',
-          cursor:         'pointer',
-          color:          'var(--text-1)',
-          fontSize:       '13px',
-          fontWeight:     500,
-        }}
-      >
-        <span>All time totals</span>
-        <svg
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          width="14"
-          height="14"
-          style={{ color: 'var(--text-3)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease' }}
+    <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+      {items.map(s => (
+        <div
+          key={s.label}
+          style={{
+            background:   'var(--surface-1)',
+            border:       '1px solid var(--border)',
+            borderLeft:   `3px solid ${s.accent}`,
+            borderRadius: 'var(--radius-card)',
+            padding:      '14px 16px',
+            boxShadow:    'var(--shadow-card)',
+          }}
         >
-          <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-        </svg>
-      </button>
-
-      {open && (
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
-          <div className="grid grid-cols-3" style={{ gap: '10px', marginTop: '14px' }}>
-            {([
-              { label: 'Total contracted', value: totalContracted,    accent: '#16A34A',   sub: 'All-time contracted revenue' },
-              { label: 'Total collected',  value: totalCashCollected, accent: '#2563EB',   sub: `${totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0}% of contracted` },
-              { label: 'Outstanding',      value: totalOutstanding,   accent: '#D97706',   sub: `From ${activePlanCount} active plan${activePlanCount !== 1 ? 's' : ''}` },
-            ] as { label: string; value: number; accent: string; sub: string }[]).map(s => (
-              <div
-                key={s.label}
-                style={{
-                  background:   'var(--surface-1)',
-                  border:       '1px solid var(--border)',
-                  borderLeft:   `3px solid ${s.accent}`,
-                  borderRadius: 'var(--radius-card)',
-                  padding:      '14px 16px',
-                  boxShadow:    'var(--shadow-card)',
-                }}
-              >
-                <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
-                <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px' }}>
-                  {fmtCurrency(s.value, baseCurrency)}
-                </p>
-                <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
-              </div>
-            ))}
-          </div>
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
+          <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+            {s.display}
+          </p>
+          <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
         </div>
-      )}
+      ))}
     </div>
   )
 }
@@ -509,7 +496,7 @@ export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
   clients, installments, currentMonth, expenses, adSpendTotal,
   monthlyRevenueDue, totalContracted, totalCashCollected,
-  totalOutstanding, cashPending, leadsReplied,
+  totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
 }: Props) {
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
@@ -979,17 +966,15 @@ export default function NumbersClient({
               subline="Replied to your DMs this month"
             />
 
-            {/* Avg client LTV */}
+            {/* Total followers in pipeline */}
             <KpiCard
-              label="Avg client LTV"
-              value={avgClientLtv}
-              displayValue={avgClientLtv > 0 ? fmtCurrency(avgClientLtv, baseCurrency) : '—'}
+              label="Total followers"
+              value={totalLeads}
+              displayValue={String(totalLeads)}
               compareMode={compareMode}
               color="neutral"
               numSize={28}
-              isCurrency
-              currency={baseCurrency}
-              subline={`Across ${clients.length} active client${clients.length !== 1 ? 's' : ''}`}
+              subline="All leads ever in pipeline"
             />
           </div>
         </div>
@@ -1092,14 +1077,18 @@ export default function NumbersClient({
           cashCollected={snap?.cash_collected ?? 0}
         />
 
-        {/* ── Section 8: ALL TIME TOTALS (collapsed) ───────────────────────── */}
-        <AllTimeTotals
-          totalContracted={totalContracted}
-          totalCashCollected={totalCashCollected}
-          totalOutstanding={totalOutstanding}
-          activePlanCount={activePlanCount}
-          baseCurrency={baseCurrency}
-        />
+        {/* ── Section 8: ALL TIME TOTALS ───────────────────────────────────── */}
+        <div>
+          <SectionLabel>All time</SectionLabel>
+          <AllTimeTotals
+            totalContracted={totalContracted}
+            totalCashCollected={totalCashCollected}
+            totalOutstanding={totalOutstanding}
+            activePlanCount={activePlanCount}
+            totalClientsAcquired={totalClientsAcquired}
+            baseCurrency={baseCurrency}
+          />
+        </div>
 
       </div>
     </div>

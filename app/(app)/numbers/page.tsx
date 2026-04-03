@@ -29,6 +29,8 @@ export default async function NumbersPage() {
     { data: expenses },
     { data: adSpend },
     { data: repliedLeads },
+    { count: totalLeadsCount },
+    { count: totalClientsCount },
   ] = await Promise.all([
     supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
@@ -56,6 +58,10 @@ export default async function NumbersPage() {
     supabase.from('leads').select('id').eq('user_id', user.id)
       .neq('stage', 'follower')
       .gte('created_at', monthStartTs),
+    // Total leads ever in pipeline
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    // Total clients ever acquired (including inactive)
+    supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────
@@ -163,6 +169,8 @@ export default async function NumbersPage() {
       totalOutstanding={totalOutstanding}
       cashPending={cashPending}
       leadsReplied={leadsReplied}
+      totalLeads={totalLeadsCount ?? 0}
+      totalClientsAcquired={totalClientsCount ?? 0}
     />
   )
 }
