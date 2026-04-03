@@ -117,8 +117,11 @@ export default async function NumbersPage() {
   const allInstallments = (installments ?? []) as PaymentInstallment[]
   const totalActiveClients = allClients.length
   const totalContracted = allClients.reduce((s, c) => s + c.total_amount, 0)
+  // PIF clients: paid in full upfront, no installments — count their total_amount directly
+  // Split + plan clients: revenue comes entirely from their installments (paid or unpaid)
+  // Never mix total_amount + installments for the same client — that double-counts
   const totalCashCollected = allClients
-    .filter(c => c.payment_type !== 'plan')
+    .filter(c => c.payment_type === 'pif')
     .reduce((s, c) => s + c.total_amount, 0)
     + allInstallments.filter(i => i.paid).reduce((s, i) => s + i.amount, 0)
   const totalOutstanding = allInstallments
