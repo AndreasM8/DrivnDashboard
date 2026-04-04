@@ -82,7 +82,7 @@ function isCompletedInCycle(task: PowerTask, cycleStart: Date): boolean {
 // ─── Section card wrapper ──────────────────────────────────────────────────────
 
 function SectionCard({
-  section, title, count, badge, defaultOpen, children,
+  section, title, count, badge, defaultOpen, children, dragHandle,
 }: {
   section: keyof typeof SECTION_STYLES
   title: string
@@ -90,6 +90,7 @@ function SectionCard({
   badge?: string
   defaultOpen?: boolean
   children: React.ReactNode
+  dragHandle?: React.ReactNode
 }) {
   const s = SECTION_STYLES[section]
   const [open, setOpen] = useState(defaultOpen === true)
@@ -114,6 +115,11 @@ function SectionCard({
           transition: 'padding 200ms ease',
         }}
       >
+        {dragHandle && (
+          <span onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {dragHandle}
+          </span>
+        )}
         <h2 style={{ fontSize: '14px', fontWeight: 600, color: s.border, margin: 0, flex: 1, letterSpacing: '-0.01em' }}>{title}</h2>
 
         {/* Summary chips — always visible */}
@@ -317,7 +323,7 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
 
 function NonNegSection({
   items, completions, followupTarget, followupsDoneToday, resetHour, todayDow,
-  onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour, onUpdateDays,
+  onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour, onUpdateDays, dragHandle,
 }: {
   items: NonNegotiable[]
   completions: NonNegotiableCompletion[]
@@ -331,6 +337,7 @@ function NonNegSection({
   onUpdateTarget: (t: number) => Promise<void>
   onUpdateResetHour: (h: number) => Promise<void>
   onUpdateDays: (id: string, days: number[] | null) => Promise<void>
+  dragHandle?: React.ReactNode
 }) {
   const color = SECTION_STYLES.nonneg.border
   const completedSet = new Set(completions.filter(c => c.completed).map(c => c.non_negotiable_id))
@@ -341,7 +348,7 @@ function NonNegSection({
   const pct = total > 0 ? (done / total) * 100 : 0
 
   return (
-    <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`} defaultOpen>
+    <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`} defaultOpen dragHandle={dragHandle}>
       {/* Progress bar */}
       <div style={{ height: '4px', borderRadius: '2px', background: `${color}22`, marginBottom: '16px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
@@ -449,7 +456,7 @@ function NonNegSection({
 // ─── Business powerlist section ────────────────────────────────────────────────
 
 function BusinessSection({
-  tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence,
+  tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence, dragHandle,
 }: {
   tasks: PowerTask[]
   scheduledTasks: PowerTask[]
@@ -458,13 +465,14 @@ function BusinessSection({
   onComplete: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
+  dragHandle?: React.ReactNode
 }) {
   const color = SECTION_STYLES.business.border
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({ product: true, content: true, operations: true })
   const activeCount = tasks.length
 
   return (
-    <SectionCard section="business" title="Business Powerlist" count={activeCount}>
+    <SectionCard section="business" title="Business Powerlist" count={activeCount} dragHandle={dragHandle}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {BUSINESS_CATS.map(cat => {
           const catTasks = tasks.filter(t => t.category === cat.key)
@@ -633,7 +641,7 @@ function PowerTaskRow({
 
 // ─── Personal section ──────────────────────────────────────────────────────────
 
-function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence }: {
+function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence, dragHandle }: {
   tasks: PowerTask[]
   scheduledTasks: PowerTask[]
   cycleStart: Date
@@ -641,11 +649,12 @@ function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete,
   onComplete: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
+  dragHandle?: React.ReactNode
 }) {
   const color = SECTION_STYLES.personal.border
 
   return (
-    <SectionCard section="personal" title="Personal" count={tasks.length}>
+    <SectionCard section="personal" title="Personal" count={tasks.length} dragHandle={dragHandle}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {tasks.length === 0 && scheduledTasks.length === 0 && (
           <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>Book dentist appointment…</p>
@@ -673,12 +682,13 @@ function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete,
 // ─── Follow-ups section ────────────────────────────────────────────────────────
 
 function FollowupsSection({
-  tasks, onComplete, onRefresh, refreshing,
+  tasks, onComplete, onRefresh, refreshing, dragHandle,
 }: {
   tasks: Task[]
   onComplete: (id: string) => Promise<void>
   onRefresh: () => Promise<void>
   refreshing: boolean
+  dragHandle?: React.ReactNode
 }) {
   const color = SECTION_STYLES.followups.border
   const overdueCount = tasks.filter(t => t.priority === 'overdue').length
@@ -691,6 +701,7 @@ function FollowupsSection({
       title="Follow-ups"
       count={tasks.length}
       badge={needsAttention > 0 ? `${needsAttention} need attention` : undefined}
+      dragHandle={dragHandle}
     >
       {/* Refresh button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', marginTop: '-4px' }}>
@@ -830,7 +841,7 @@ type NNCompletion = {
   completed_at: string | null
 }
 
-function PerformanceSection({ userId: _userId }: { userId: string }) {
+function PerformanceSection({ userId: _userId, dragHandle }: { userId: string; dragHandle?: React.ReactNode }) {
   const [period, setPeriod] = useState<7 | 30>(7)
   const [ptCompletions, setPtCompletions] = useState<PowerTaskCompletion[]>([])
   const [nnCompletions, setNnCompletions] = useState<NNCompletion[]>([])
@@ -895,7 +906,7 @@ function PerformanceSection({ userId: _userId }: { userId: string }) {
   ]
 
   return (
-    <SectionCard section="performance" title="Performance" defaultOpen={false}>
+    <SectionCard section="performance" title="Performance" defaultOpen={false} dragHandle={dragHandle}>
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Loading…</p>
       ) : !hasAny ? (
@@ -975,9 +986,11 @@ function emptySchedule(): ScheduleData {
 function StoryScheduleSection({
   initialStorySchedule,
   todayDow,
+  dragHandle,
 }: {
   initialStorySchedule: StorySchedule | null
   todayDow: number
+  dragHandle?: React.ReactNode
 }) {
   const [schedule, setSchedule] = useState<ScheduleData>(() =>
     initialStorySchedule
@@ -1031,6 +1044,7 @@ function StoryScheduleSection({
       section="story"
       title="Weekly Story Schedule"
       defaultOpen={false}
+      dragHandle={dragHandle}
     >
       {/* Edit / Done button row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', gap: '8px' }}>
@@ -1175,6 +1189,26 @@ export default function TasksClient({
   const targetDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetDebounce  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabaseRef = useRef(createClient())
+
+  const DEFAULT_ORDER = ['nonneg', 'business', 'story', 'personal', 'followups', 'performance'] as const
+  type SectionKey = typeof DEFAULT_ORDER[number]
+
+  const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(() => {
+    if (typeof window === 'undefined') return [...DEFAULT_ORDER]
+    try {
+      const saved = localStorage.getItem(`tasks-section-order-${userId}`)
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[]
+        const valid = parsed.filter((k): k is SectionKey => (DEFAULT_ORDER as readonly string[]).includes(k))
+        const merged = [...valid]
+        DEFAULT_ORDER.forEach(k => { if (!merged.includes(k)) merged.push(k) })
+        return merged
+      }
+    } catch { /* ignore */ }
+    return [...DEFAULT_ORDER]
+  })
+  const draggedKey = useRef<SectionKey | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<SectionKey | null>(null)
 
   const cycleStart = new Date(cycleStartIso)
 
@@ -1322,6 +1356,65 @@ export default function TasksClient({
     }, 600)
   }, [])
 
+  useEffect(() => {
+    localStorage.setItem(`tasks-section-order-${userId}`, JSON.stringify(sectionOrder))
+  }, [sectionOrder, userId])
+
+  function handleDragStart(key: SectionKey) {
+    draggedKey.current = key
+  }
+
+  function handleDragOver(key: SectionKey, e: React.DragEvent) {
+    e.preventDefault()
+    if (draggedKey.current && draggedKey.current !== key) {
+      setDragOverKey(key)
+    }
+  }
+
+  function handleDrop(key: SectionKey) {
+    if (!draggedKey.current || draggedKey.current === key) {
+      setDragOverKey(null)
+      return
+    }
+    const from = sectionOrder.indexOf(draggedKey.current)
+    const to = sectionOrder.indexOf(key)
+    if (from === -1 || to === -1) return
+    const next = [...sectionOrder]
+    next.splice(from, 1)
+    next.splice(to, 0, draggedKey.current)
+    setSectionOrder(next)
+    draggedKey.current = null
+    setDragOverKey(null)
+  }
+
+  function handleDragEnd() {
+    draggedKey.current = null
+    setDragOverKey(null)
+  }
+
+  function makeGrip(key: SectionKey) {
+    return (
+      <button
+        draggable
+        onDragStart={e => { e.stopPropagation(); handleDragStart(key) }}
+        onDragEnd={e => { e.stopPropagation(); handleDragEnd() }}
+        onClick={e => e.stopPropagation()}
+        title="Drag to reorder"
+        style={{
+          background: 'none', border: 'none', cursor: 'grab', padding: '2px 6px 2px 0',
+          color: 'var(--text-3)', fontSize: '14px', lineHeight: 1, opacity: 0.5,
+          display: 'flex', alignItems: 'center', flexShrink: 0,
+          transition: 'opacity 150ms',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+      >
+        ⠿
+      </button>
+    )
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const quote = WEEKLY_QUOTES[new Date().getDay()]
@@ -1357,57 +1450,95 @@ export default function TasksClient({
         <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', margin: 0 }}>{quote}</p>
       </div>
 
-      {/* ── Section 1: Non-Negotiables ────────────────────────────────────── */}
-      <NonNegSection
-        items={nonNeg}
-        completions={completions}
-        followupTarget={followupTarget}
-        followupsDoneToday={followupsDone}
-        resetHour={resetHour}
-        todayDow={todayDow}
-        onToggle={toggleNonNeg}
-        onAdd={addNonNeg}
-        onDelete={deleteNonNeg}
-        onUpdateTarget={updateFollowupTarget}
-        onUpdateResetHour={updateResetHour}
-        onUpdateDays={updateNonNegDays}
-      />
+      {sectionOrder.map(key => {
+        const isDragTarget = dragOverKey === key
+        const wrapperStyle: React.CSSProperties = {
+          transition: 'transform 150ms ease, opacity 150ms ease',
+          opacity: draggedKey.current === key ? 0.4 : 1,
+          outline: isDragTarget ? '2px solid var(--accent)' : 'none',
+          outlineOffset: '2px',
+          borderRadius: '14px',
+        }
 
-      {/* ── Section 2: Business Powerlist ────────────────────────────────── */}
-      <BusinessSection
-        tasks={businessTasks}
-        scheduledTasks={businessScheduled}
-        cycleStart={cycleStart}
-        onAdd={addPowerTask}
-        onComplete={completePowerTask}
-        onDelete={deletePowerTask}
-        onSetRecurrence={setRecurrence}
-      />
+        const dragProps = {
+          onDragOver: (e: React.DragEvent) => handleDragOver(key, e),
+          onDrop: () => handleDrop(key),
+        }
 
-      {/* ── Story Schedule ─────────────────────────────────────────────── */}
-      <StoryScheduleSection initialStorySchedule={initialStorySchedule} todayDow={todayDow} />
+        const grip = makeGrip(key)
 
-      {/* ── Section 3: Personal ──────────────────────────────────────────── */}
-      <PersonalSection
-        tasks={personalTasks}
-        scheduledTasks={personalScheduled}
-        cycleStart={cycleStart}
-        onAdd={addPersonalTask}
-        onComplete={completePowerTask}
-        onDelete={deletePowerTask}
-        onSetRecurrence={setRecurrence}
-      />
-
-      {/* ── Section 4: Follow-ups ─────────────────────────────────────────── */}
-      <FollowupsSection
-        tasks={tasks}
-        onComplete={completeFollowup}
-        onRefresh={refreshTasks}
-        refreshing={refreshing}
-      />
-
-      {/* ── Section 5: Performance ────────────────────────────────────────── */}
-      <PerformanceSection userId={userId} />
+        switch (key) {
+          case 'nonneg': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <NonNegSection
+                items={nonNeg}
+                completions={completions}
+                followupTarget={followupTarget}
+                followupsDoneToday={followupsDone}
+                resetHour={resetHour}
+                todayDow={todayDow}
+                onToggle={toggleNonNeg}
+                onAdd={addNonNeg}
+                onDelete={deleteNonNeg}
+                onUpdateTarget={updateFollowupTarget}
+                onUpdateResetHour={updateResetHour}
+                onUpdateDays={updateNonNegDays}
+                dragHandle={grip}
+              />
+            </div>
+          )
+          case 'business': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <BusinessSection
+                tasks={businessTasks}
+                scheduledTasks={businessScheduled}
+                cycleStart={cycleStart}
+                onAdd={addPowerTask}
+                onComplete={completePowerTask}
+                onDelete={deletePowerTask}
+                onSetRecurrence={setRecurrence}
+                dragHandle={grip}
+              />
+            </div>
+          )
+          case 'story': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <StoryScheduleSection initialStorySchedule={initialStorySchedule} todayDow={todayDow} dragHandle={grip} />
+            </div>
+          )
+          case 'personal': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <PersonalSection
+                tasks={personalTasks}
+                scheduledTasks={personalScheduled}
+                cycleStart={cycleStart}
+                onAdd={addPersonalTask}
+                onComplete={completePowerTask}
+                onDelete={deletePowerTask}
+                onSetRecurrence={setRecurrence}
+                dragHandle={grip}
+              />
+            </div>
+          )
+          case 'followups': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <FollowupsSection
+                tasks={tasks}
+                onComplete={completeFollowup}
+                onRefresh={refreshTasks}
+                refreshing={refreshing}
+                dragHandle={grip}
+              />
+            </div>
+          )
+          case 'performance': return (
+            <div key={key} style={wrapperStyle} {...dragProps}>
+              <PerformanceSection userId={userId} dragHandle={grip} />
+            </div>
+          )
+          default: return null
+        }
+      })}
 
     </div>
   )
