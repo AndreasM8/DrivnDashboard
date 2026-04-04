@@ -230,7 +230,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
         {/* Left: client list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 32px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 88px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
             {clients.length === 0 ? (
@@ -413,6 +413,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             flexShrink: 0,
             borderLeft: '1px solid var(--border)',
             overflowY: 'auto',
+            paddingBottom: 88,
           }}
         >
           <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />

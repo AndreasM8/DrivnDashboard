@@ -598,7 +598,7 @@ function StageColumn({
       )}
 
       {/* Cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1, minHeight: 0, paddingBottom: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', flex: 1, minHeight: 0, paddingBottom: '88px' }}>
         {leads.map(lead => {
           const assignedLabelIds = assignments
             .filter(a => a.lead_id === lead.id)

@@ -1551,7 +1551,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24, maxWidth: 640 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 24, paddingBottom: 88, maxWidth: 640 }}>
         {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
         {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
         {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />}

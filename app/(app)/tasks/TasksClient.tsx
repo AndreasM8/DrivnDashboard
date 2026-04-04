@@ -484,18 +484,13 @@ function BusinessSection({
                       </p>
                     )}
                   </div>
-                  {/* Scheduled (off-day weekly) tasks — dimmed */}
+                  {/* Scheduled (off-day weekly) tasks — dimmed but interactive */}
                   {catScheduled.length > 0 && (
-                    <div style={{ marginTop: '10px', borderTop: '1px dashed var(--border)', paddingTop: '8px', opacity: 0.45 }}>
+                    <div style={{ marginTop: '10px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
                       <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Scheduled</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', opacity: 0.55 }}>
                         {catScheduled.map(task => (
-                          <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '24px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-2)', flex: 1 }}>{task.title}</span>
-                            <span style={{ fontSize: '10px', fontWeight: 600, color, background: `${color}15`, border: `1px solid ${color}30`, borderRadius: '8px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
-                              ↻ {fmtDays(task.recurrence_days)}
-                            </span>
-                          </div>
+                          <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
                         ))}
                       </div>
                     </div>
@@ -638,18 +633,13 @@ function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete,
         {tasks.map(task => (
           <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
         ))}
-        {/* Scheduled (off-day weekly) tasks — dimmed */}
+        {/* Scheduled (off-day weekly) tasks — dimmed but interactive */}
         {scheduledTasks.length > 0 && (
-          <div style={{ marginTop: tasks.length > 0 ? '10px' : '2px', borderTop: tasks.length > 0 ? '1px dashed var(--border)' : 'none', paddingTop: tasks.length > 0 ? '8px' : '0', opacity: 0.45 }}>
+          <div style={{ marginTop: tasks.length > 0 ? '10px' : '2px', borderTop: tasks.length > 0 ? '1px dashed var(--border)' : 'none', paddingTop: tasks.length > 0 ? '8px' : '0' }}>
             <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Scheduled</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', opacity: 0.55 }}>
               {scheduledTasks.map(task => (
-                <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '24px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-2)', flex: 1 }}>{task.title}</span>
-                  <span style={{ fontSize: '10px', fontWeight: 600, color, background: `${color}15`, border: `1px solid ${color}30`, borderRadius: '8px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
-                    ↻ {fmtDays(task.recurrence_days)}
-                  </span>
-                </div>
+                <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
               ))}
             </div>
           </div>
