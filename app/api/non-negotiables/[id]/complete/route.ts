@@ -6,8 +6,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const { completed } = await req.json() as { completed: boolean }
-  const today = new Date().toISOString().slice(0, 10)
+  const { completed, date } = await req.json() as { completed: boolean; date: string }
+  const today = date ?? new Date().toISOString().slice(0, 10)
 
   const { data, error } = await supabase
     .from('non_negotiable_completions')

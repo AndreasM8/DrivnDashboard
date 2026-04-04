@@ -180,19 +180,30 @@ function AddInline({ placeholder, color, onAdd }: { placeholder: string; color: 
   )
 }
 
+// ─── Reset hour helpers ────────────────────────────────────────────────────────
+
+function fmtHour(h: number) {
+  if (h === 0)  return '12:00 AM (midnight)'
+  if (h === 12) return '12:00 PM (noon)'
+  return h < 12 ? `${h}:00 AM` : `${h - 12}:00 PM`
+}
+
 // ─── Non-Negotiables section ───────────────────────────────────────────────────
 
 function NonNegSection({
-  items, completions, followupTarget, followupsDoneToday, onToggle, onAdd, onDelete, onUpdateTarget,
+  items, completions, followupTarget, followupsDoneToday, resetHour,
+  onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour,
 }: {
   items: NonNegotiable[]
   completions: NonNegotiableCompletion[]
   followupTarget: number
   followupsDoneToday: number
+  resetHour: number
   onToggle: (id: string, completed: boolean) => Promise<void>
   onAdd: (title: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onUpdateTarget: (t: number) => Promise<void>
+  onUpdateResetHour: (h: number) => Promise<void>
 }) {
   const color = SECTION_STYLES.nonneg.border
   const completedSet = new Set(completions.filter(c => c.completed).map(c => c.non_negotiable_id))
@@ -235,10 +246,7 @@ function NonNegSection({
       <AddInline placeholder="Add a non-negotiable…" color={color} onAdd={onAdd} />
 
       {/* Follow-up goal widget */}
-      <div style={{
-        marginTop: '16px', paddingTop: '16px',
-        borderTop: `1px solid ${color}22`,
-      }}>
+      <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${color}22` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-2)', flex: 1 }}>Follow-up goal today</span>
           <input
@@ -265,6 +273,32 @@ function NonNegSection({
             {followupsDoneToday} / {followupTarget} done
           </span>
         </div>
+      </div>
+
+      {/* Reset time picker */}
+      <div style={{
+        marginTop: '14px', paddingTop: '14px',
+        borderTop: `1px solid ${color}15`,
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13" style={{ color: `${color}99`, flexShrink: 0 }}>
+          <circle cx="8" cy="8" r="6" />
+          <path strokeLinecap="round" d="M8 5v3l2 1.5" />
+        </svg>
+        <span style={{ fontSize: '12px', color: 'var(--text-3)', flex: 1 }}>Resets daily at</span>
+        <select
+          value={resetHour}
+          onChange={e => onUpdateResetHour(Number(e.target.value))}
+          style={{
+            fontSize: '12px', fontWeight: 500, color: color,
+            background: `${color}10`, border: `1px solid ${color}33`,
+            borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', outline: 'none',
+          }}
+        >
+          {Array.from({ length: 24 }, (_, h) => (
+            <option key={h} value={h}>{fmtHour(h)}</option>
+          ))}
+        </select>
       </div>
     </SectionCard>
   )
@@ -533,12 +567,14 @@ function FollowupRow({ task, onComplete }: { task: Task; onComplete: (id: string
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TasksClient({
-  userId, userName, dailyFollowupTarget,
+  userId, userName, dailyFollowupTarget, resetHour: initialResetHour, todayKey,
   initialNonNeg, initialCompletions, initialPowerTasks, initialTasks, followupsCompletedToday,
 }: {
   userId: string
   userName: string
   dailyFollowupTarget: number
+  resetHour: number
+  todayKey: string
   initialNonNeg: NonNegotiable[]
   initialCompletions: NonNegotiableCompletion[]
   initialPowerTasks: PowerTask[]
@@ -550,9 +586,11 @@ export default function TasksClient({
   const [powerTasks, setPowerTasks]     = useState(initialPowerTasks)
   const [tasks, setTasks]               = useState(initialTasks)
   const [followupTarget, setFollowupTarget] = useState(dailyFollowupTarget)
+  const [resetHour, setResetHour]       = useState(initialResetHour)
   const [followupsDone, setFollowupsDone]   = useState(followupsCompletedToday)
   const [refreshing, setRefreshing]     = useState(false)
   const targetDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resetDebounce  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabaseRef = useRef(createClient())
 
   const businessTasks = powerTasks.filter(t => t.category !== 'personal')
@@ -569,13 +607,13 @@ export default function TasksClient({
     setCompletions(prev => {
       const existing = prev.find(c => c.non_negotiable_id === id)
       if (existing) return prev.map(c => c.non_negotiable_id === id ? { ...c, completed } : c)
-      return [...prev, { id: crypto.randomUUID(), user_id: userId, non_negotiable_id: id, date: new Date().toISOString().slice(0, 10), completed, completed_at: completed ? new Date().toISOString() : null }]
+      return [...prev, { id: crypto.randomUUID(), user_id: userId, non_negotiable_id: id, date: todayKey, completed, completed_at: completed ? new Date().toISOString() : null }]
     })
     await fetch(`/api/non-negotiables/${id}/complete`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed }),
+      body: JSON.stringify({ completed, date: todayKey }),
     })
-  }, [userId])
+  }, [userId, todayKey])
 
   const addNonNeg = useCallback(async (title: string) => {
     const res = await fetch('/api/non-negotiables', {
@@ -651,6 +689,17 @@ export default function TasksClient({
     }, 800)
   }, [])
 
+  const updateResetHour = useCallback(async (h: number) => {
+    setResetHour(h)
+    if (resetDebounce.current) clearTimeout(resetDebounce.current)
+    resetDebounce.current = setTimeout(() => {
+      void fetch('/api/user/nonneg-reset-hour', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hour: h }),
+      })
+    }, 600)
+  }, [])
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const quote = WEEKLY_QUOTES[new Date().getDay()]
@@ -692,10 +741,12 @@ export default function TasksClient({
         completions={completions}
         followupTarget={followupTarget}
         followupsDoneToday={followupsDone}
+        resetHour={resetHour}
         onToggle={toggleNonNeg}
         onAdd={addNonNeg}
         onDelete={deleteNonNeg}
         onUpdateTarget={updateFollowupTarget}
+        onUpdateResetHour={updateResetHour}
       />
 
       {/* ── Section 2: Business Powerlist ────────────────────────────────── */}

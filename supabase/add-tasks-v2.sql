@@ -43,3 +43,6 @@ create policy "Users manage own power_tasks"
 
 -- Daily follow-up target on users table
 alter table users add column if not exists daily_followup_target integer not null default 10;
+
+-- Reset hour for non-negotiables (0–23, user's local time)
+alter table users add column if not exists nonneg_reset_hour integer not null default 0;
