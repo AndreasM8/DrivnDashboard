@@ -199,7 +199,11 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const monthStart = `${new Date().toISOString().slice(0, 7)}-01`
+  const now = new Date()
+  const monthStart = `${now.toISOString().slice(0, 7)}-01`
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const monthEnd = nextMonth.toISOString().slice(0, 10)
+  const monthName = now.toLocaleString('en-US', { month: 'long' })
 
   const [
     { data: profile },
@@ -212,6 +216,7 @@ export default async function DashboardPage() {
     { data: newLeadsThisMonth },
     { data: paidInstallmentsThisMonth },
     { data: callsHeldThisMonth },
+    { data: pendingInstallmentsThisMonth },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase
@@ -251,6 +256,9 @@ export default async function DashboardPage() {
       .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
     supabase.from('leads').select('id').eq('user_id', user.id).eq('call_outcome', 'showed')
       .gte('updated_at', monthStart),
+    supabase.from('payment_installments').select('amount, clients!inner(user_id)')
+      .eq('clients.user_id', user.id).eq('paid', false)
+      .gte('due_date', monthStart).lt('due_date', monthEnd),
   ])
 
   const liveStats = computeLiveStats(
@@ -262,6 +270,7 @@ export default async function DashboardPage() {
   )
   const cashCollected = snapshot?.cash_collected ?? liveStats.cash_collected
   const revenueContracted = snapshot?.revenue_contracted ?? liveStats.revenue_contracted
+  const expectedThisMonth = (pendingInstallmentsThisMonth ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0)
   const newFollowers = snapshot?.new_followers ?? liveStats.new_followers
   const callsHeld = snapshot?.calls_held ?? liveStats.calls_held
 
@@ -361,10 +370,10 @@ export default async function DashboardPage() {
         </SectionCard>
 
         {/* Revenue */}
-        <SectionCard title="Revenue this month" href="/numbers">
+        <SectionCard title={`Numbers for ${monthName}`} href="/numbers">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[
-              { label: 'Cash collected', value: cashCollected, target: cashTarget, color: '#16A34A' },
+              { label: 'Expected this month', value: expectedThisMonth, target: cashTarget, color: '#16A34A' },
               { label: 'Revenue contracted', value: revenueContracted, target: revenueTarget, color: 'var(--accent)' },
             ].map(row => (
               <div key={row.label}>
