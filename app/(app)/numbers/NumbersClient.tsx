@@ -579,6 +579,27 @@ export default function NumbersClient({
 
   const activePlanCount = clients.filter(c => c.payment_type === 'plan' || c.payment_type === 'split').length
 
+  // ── Month-specific pending from installments (accurate for any month) ────────
+  const pifClientIds = new Set(clients.filter(c => c.payment_type === 'pif').map(c => c.id))
+  const planSplitInstallments = installments.filter(i => !pifClientIds.has(i.client_id))
+
+  const [selMonthStart, selMonthEnd] = (() => {
+    const [y, m] = selectedMonth.split('-').map(Number)
+    return [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59)]
+  })()
+
+  const selectedMonthDue = planSplitInstallments.filter(i => {
+    const due = new Date(i.due_date)
+    return due >= selMonthStart && due <= selMonthEnd
+  })
+
+  // Pending at end of selected month = due that month but not paid by month end
+  const selectedMonthPending = selectedMonth === currentMonth
+    ? cashPending
+    : selectedMonthDue
+        .filter(i => !i.paid || (i.paid_at !== null && new Date(i.paid_at) > selMonthEnd))
+        .reduce((s, i) => s + i.amount, 0)
+
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
 
   const cashRoas    = adSpendTotal > 0 ? (snap?.cash_collected ?? 0) / adSpendTotal : null
@@ -862,7 +883,7 @@ export default function NumbersClient({
               numSize={32}
               padding="20px 18px"
               subline="Collected this month"
-              subline2={selectedMonth === currentMonth && cashPending > 0 ? `+ ${fmtCurrency(cashPending, baseCurrency)} still pending` : undefined}
+              subline2={selectedMonthPending > 0 ? `+ ${fmtCurrency(selectedMonthPending, baseCurrency)} still pending` : undefined}
             />
 
             {/* Card 2: New contracts */}
@@ -888,15 +909,15 @@ export default function NumbersClient({
           {/* Bottom row: 2 medium cards */}
           <div className="grid grid-cols-2" style={{ gap: '10px' }}>
 
-            {/* Card 3: Pending this month */}
+            {/* Card 3: Pending this month (accurate per month from installments) */}
             <KpiCard
               label="Pending"
-              value={cashPending}
-              displayValue={cashPending > 0 ? fmtCurrency(cashPending, baseCurrency) : '—'}
+              value={selectedMonthPending}
+              displayValue={selectedMonthPending > 0 ? fmtCurrency(selectedMonthPending, baseCurrency) : '—'}
               compareMode={compareMode}
               overrideAccent="#2563EB"
               numSize={28}
-              subline="Still to collect this month"
+              subline="Unpaid from this month's installments"
             />
 
             {/* Card 4: Avg deal size */}
