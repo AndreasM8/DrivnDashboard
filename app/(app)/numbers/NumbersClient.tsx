@@ -427,7 +427,7 @@ function HistoryTable({
 
 function AllTimeTotals({
   totalContracted, totalCashCollected, totalOutstanding, activePlanCount,
-  totalClientsAcquired, totalLeads, baseCurrency,
+  totalClientsAcquired, totalLeads, totalCalls, baseCurrency,
 }: {
   totalContracted: number
   totalCashCollected: number
@@ -435,12 +435,12 @@ function AllTimeTotals({
   activePlanCount: number
   totalClientsAcquired: number
   totalLeads: number
+  totalCalls: number
   baseCurrency: string
 }) {
   const collectedPct = totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0
 
-  // Financial cards — 2x2 grid
-  const financial: { label: string; display: string; accent: string; sub: string }[] = [
+  const items: { label: string; display: string; accent: string; sub: string }[] = [
     {
       label:   'Total contracted',
       display: fmtCurrency(totalContracted, baseCurrency),
@@ -465,38 +465,41 @@ function AllTimeTotals({
       accent:  '#2563EB',
       sub:     'Total ever signed',
     },
+    {
+      label:   'Total followers',
+      display: String(totalLeads),
+      accent:  'var(--border-strong)',
+      sub:     'All leads in pipeline',
+    },
+    {
+      label:   'Total calls',
+      display: String(totalCalls),
+      accent:  'var(--border-strong)',
+      sub:     'Calls held across all months',
+    },
   ]
 
-  const StatCard = ({ label, display, accent, sub }: typeof financial[0]) => (
-    <div style={{
-      background:   'var(--surface-1)',
-      border:       '1px solid var(--border)',
-      borderLeft:   `3px solid ${accent}`,
-      borderRadius: 'var(--radius-card)',
-      padding:      '14px 16px',
-      boxShadow:    'var(--shadow-card)',
-    }}>
-      <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{label}</p>
-      <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-        {display}
-      </p>
-      <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{sub}</p>
-    </div>
-  )
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {/* 2×2 financial grid */}
-      <div className="grid grid-cols-2" style={{ gap: '10px' }}>
-        {financial.map(s => <StatCard key={s.label} {...s} />)}
-      </div>
-      {/* Full-width pipeline stat */}
-      <StatCard
-        label="Total followers"
-        display={String(totalLeads)}
-        accent="var(--border-strong)"
-        sub="All leads ever in pipeline"
-      />
+    <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+      {items.map(s => (
+        <div
+          key={s.label}
+          style={{
+            background:   'var(--surface-1)',
+            border:       '1px solid var(--border)',
+            borderLeft:   `3px solid ${s.accent}`,
+            borderRadius: 'var(--radius-card)',
+            padding:      '14px 16px',
+            boxShadow:    'var(--shadow-card)',
+          }}
+        >
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
+          <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+            {s.display}
+          </p>
+          <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
+        </div>
+      ))}
     </div>
   )
 }
@@ -599,6 +602,9 @@ export default function NumbersClient({
     ...(currentSnapshot ? [currentSnapshot] : []),
     ...history.filter(s => s.month !== currentMonth),
   ]
+
+  // All-time call total across all recorded months
+  const totalCalls = chartHistory.reduce((sum, s) => sum + (s.calls_held ?? 0), 0)
 
   return (
     <div
@@ -1066,6 +1072,7 @@ export default function NumbersClient({
           activePlanCount={activePlanCount}
           totalClientsAcquired={totalClientsAcquired}
           totalLeads={totalLeads}
+          totalCalls={totalCalls}
           baseCurrency={baseCurrency}
         />
 
