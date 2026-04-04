@@ -588,16 +588,18 @@ export default function NumbersClient({
     return [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59)]
   })()
 
-  const selectedMonthDue = planSplitInstallments.filter(i => {
-    const due = new Date(i.due_date)
-    return due >= selMonthStart && due <= selMonthEnd
-  })
+  // For past months: clients whose first installment (month_number=1) started in selectedMonth
+  // → sum ALL their remaining unpaid installments (total cohort outstanding)
+  const cohortClientIds = new Set(
+    planSplitInstallments
+      .filter(i => i.month_number === 1 && i.due_date?.startsWith(selectedMonth))
+      .map(i => i.client_id)
+  )
 
-  // Pending at end of selected month = due that month but not paid by month end
   const selectedMonthPending = selectedMonth === currentMonth
     ? cashPending
-    : selectedMonthDue
-        .filter(i => !i.paid || (i.paid_at !== null && new Date(i.paid_at) > selMonthEnd))
+    : planSplitInstallments
+        .filter(i => cohortClientIds.has(i.client_id) && !i.paid)
         .reduce((s, i) => s + i.amount, 0)
 
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
@@ -917,7 +919,7 @@ export default function NumbersClient({
               compareMode={compareMode}
               overrideAccent="#2563EB"
               numSize={28}
-              subline="Unpaid from this month's installments"
+              subline="Unpaid from this month's signings"
             />
 
             {/* Card 4: Avg deal size */}
