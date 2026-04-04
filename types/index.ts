@@ -342,6 +342,19 @@ export const CURRENCIES = [
   { code: 'AUD', label: 'Australian Dollar',flag: '🇦🇺' },
 ]
 
+// ─── Products ─────────────────────────────────────────────────────────────────
+
+export interface Product {
+  id: string
+  user_id: string
+  name: string
+  description: string
+  price: number
+  duration_months: number | null
+  active: boolean
+  created_at: string
+}
+
 // ─── Expenses ─────────────────────────────────────────────────────────────────
 
 export interface Expense {

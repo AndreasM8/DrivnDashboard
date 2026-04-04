@@ -2,15 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Client, PaymentInstallment } from '@/types'
+import type { Client, PaymentInstallment, Product } from '@/types'
 import ClientDrawer from '@/components/clients/ClientDrawer'
 import AddClientModal from '@/components/modals/AddClientModal'
+import ProductsPanel from '@/components/clients/ProductsPanel'
 
 interface Props {
   initialClients: Client[]
   installments: PaymentInstallment[]
   userId: string
   baseCurrency: string
+  products: Product[]
 }
 
 type FilterKey = 'all' | 'invoice_due' | 'plan' | 'upsell'
@@ -50,7 +52,7 @@ function PaymentDots({ installments }: { installments: PaymentInstallment[] }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function ClientsClient({ initialClients, installments, userId, baseCurrency }: Props) {
+export default function ClientsClient({ initialClients, installments, userId, baseCurrency, products }: Props) {
   const [clients, setClients] = useState<Client[]>(initialClients)
   const [filter, setFilter]   = useState<FilterKey>('all')
   const [search, setSearch]   = useState('')
@@ -224,8 +226,11 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         </div>
       </div>
 
-      {/* ── Client cards ──────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 32px' }}>
+      {/* ── Client cards + Products panel ─────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+        {/* Left: client list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 32px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
             {clients.length === 0 ? (
@@ -398,6 +403,21 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             })}
           </div>
         )}
+        </div>
+
+        {/* Right: products panel */}
+        <div
+          className="hidden md:block"
+          style={{
+            width: '300px',
+            flexShrink: 0,
+            borderLeft: '1px solid var(--border)',
+            overflowY: 'auto',
+          }}
+        >
+          <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />
+        </div>
+
       </div>
 
       {drawerClient && (
@@ -414,6 +434,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         <AddClientModal
           userId={userId}
           baseCurrency={baseCurrency}
+          products={products}
           onClose={() => setAddOpen(false)}
           onAdded={onClientAdded}
         />

@@ -249,3 +249,19 @@ alter table non_negotiables
 
 -- ── 12. Ad spend currency on users ────────────────────────────────────────────
 alter table users add column if not exists ad_spend_currency text not null default 'USD';
+
+-- ── 13. Products ──────────────────────────────────────────────────────────────
+create table if not exists products (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references users on delete cascade,
+  name             text not null,
+  description      text not null default '',
+  price            numeric not null default 0,
+  duration_months  integer,
+  active           boolean not null default true,
+  created_at       timestamp with time zone default now()
+);
+alter table products enable row level security;
+drop policy if exists "Users manage own products" on products;
+create policy "Users manage own products"
+  on products for all using (auth.uid() = user_id);

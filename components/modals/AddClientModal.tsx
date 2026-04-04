@@ -3,18 +3,23 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
-import type { Client, PaymentType } from '@/types'
+import type { Client, PaymentType, Product } from '@/types'
 
 interface Props {
   userId: string
   baseCurrency: string
+  products: Product[]
   onClose: () => void
   onAdded: (client: Client) => void
 }
 
 const PLAN_MONTHS = [1, 2, 3, 4, 6, 9, 12]
 
-export default function AddClientModal({ userId, baseCurrency, onClose, onAdded }: Props) {
+function formatCurrency(amount: number, currency: string) {
+  return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
+}
+
+export default function AddClientModal({ userId, baseCurrency, products, onClose, onAdded }: Props) {
   const [igUsername, setIgUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -30,6 +35,7 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
   const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 10))
   const [showMore, setShowMore] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
 
   const isBackdated = startedAt < new Date().toISOString().slice(0, 10)
 
@@ -112,6 +118,54 @@ export default function AddClientModal({ userId, baseCurrency, onClose, onAdded 
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Product picker */}
+          {products.length > 0 && (
+            <div>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 8 }}>Select a product (optional)</label>
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {products.map(product => {
+                  const isSelected = selectedProductId === product.id
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedProductId(null)
+                        } else {
+                          setSelectedProductId(product.id)
+                          setTotalAmount(String(product.price))
+                          if (product.duration_months != null) {
+                            setPlanMonths(product.duration_months)
+                            setPaymentType('plan')
+                            setMonthlyAmount(String(Math.round(product.price / product.duration_months)))
+                          } else {
+                            setPaymentType('pif')
+                          }
+                        }
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        padding: '5px 10px',
+                        borderRadius: 'var(--radius-badge)',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 150ms',
+                        background: isSelected ? '#7C3AED' : 'var(--surface-2)',
+                        color: isSelected ? '#fff' : 'var(--text-2)',
+                        border: `1px solid ${isSelected ? '#7C3AED' : 'var(--border)'}`,
+                      }}
+                    >
+                      {product.name} · {formatCurrency(product.price, baseCurrency)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Core info */}
           <div className="grid grid-cols-2 gap-3">
