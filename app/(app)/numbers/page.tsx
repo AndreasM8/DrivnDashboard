@@ -33,7 +33,7 @@ export default async function NumbersPage() {
     { count: totalClientsCount },
     { data: allExpensesData },
   ] = await Promise.all([
-    supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
+    supabase.from('users').select('*').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
     supabase.from('monthly_snapshots').select('*').eq('user_id', user.id).order('month', { ascending: false }).limit(7),
     supabase.from('clients').select('*').eq('user_id', user.id).eq('active', true),
@@ -54,7 +54,7 @@ export default async function NumbersPage() {
     // Expenses for current month
     supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
     // Ad spend log for all months
-    supabase.from('ad_spend_log').select('month, actual_amount').eq('user_id', user.id),
+    supabase.from('ad_spend_log').select('month, actual_amount, currency_code').eq('user_id', user.id),
     // Leads replied this month = leads created this month NOT still in 'follower' stage
     supabase.from('leads').select('id').eq('user_id', user.id)
       .neq('stage', 'follower')
@@ -66,6 +66,20 @@ export default async function NumbersPage() {
     // All expenses ever (for all-time profit)
     supabase.from('expenses').select('amount').eq('user_id', user.id),
   ])
+
+  // ── Exchange rate for ad spend currency conversion ────────────────────────
+  const adSpendCurrency = (profile?.ad_spend_currency ?? profile?.base_currency ?? 'USD') as string
+  const baseCurrency = (profile?.base_currency ?? 'NOK') as string
+
+  let adToBaseRate = 1
+  if (adSpendCurrency !== baseCurrency) {
+    try {
+      const { getRate } = await import('@/lib/exchange-rates')
+      adToBaseRate = await getRate(adSpendCurrency, baseCurrency)
+    } catch {
+      adToBaseRate = 1
+    }
+  }
 
   // ── Build live current-month snapshot from real data ──────────────────────
   const monthClients = (clients ?? []).filter(c =>
@@ -134,7 +148,8 @@ export default async function NumbersPage() {
   const lastMonthSnapshot = snapshots?.find(s => s.month === lastMonth)
 
   type AdSpendRow = { month: string; actual_amount: number }
-  const adSpendLog = (adSpend ?? []) as AdSpendRow[]
+  const adSpendLogRaw = (adSpend ?? []) as AdSpendRow[]
+  const adSpendLog = adSpendLogRaw.map(r => ({ month: r.month, actual_amount: r.actual_amount * adToBaseRate }))
   const adSpendTotal = adSpendLog.filter(r => r.month === currentMonth).reduce((sum, row) => sum + row.actual_amount, 0)
   const totalAdSpend = adSpendLog.reduce((s, r) => s + r.actual_amount, 0)
   const totalAllExpenses = ((allExpensesData ?? []) as { amount: number }[]).reduce((s, e) => s + e.amount, 0)
@@ -160,7 +175,7 @@ export default async function NumbersPage() {
 
   return (
     <NumbersClient
-      baseCurrency={profile?.base_currency ?? 'NOK'}
+      baseCurrency={baseCurrency}
       targets={(targets as KpiTargets) ?? null}
       currentSnapshot={liveSnapshot}
       lastMonthSnapshot={(lastMonthSnapshot as MonthlySnapshot) ?? null}
@@ -181,6 +196,8 @@ export default async function NumbersPage() {
       leadsReplied={leadsReplied}
       totalLeads={totalLeadsCount ?? 0}
       totalClientsAcquired={totalClientsCount ?? 0}
+      adSpendCurrency={adSpendCurrency}
+      adToBaseRate={adToBaseRate}
     />
   )
 }

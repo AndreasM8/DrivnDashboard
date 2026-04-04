@@ -246,3 +246,6 @@ alter table power_tasks
 
 alter table non_negotiables
   add column if not exists days_of_week integer[];
+
+-- ── 12. Ad spend currency on users ────────────────────────────────────────────
+alter table users add column if not exists ad_spend_currency text not null default 'USD';

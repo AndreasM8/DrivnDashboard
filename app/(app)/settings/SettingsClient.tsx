@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { getLiveRate } from '@/lib/exchange-rates-client'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
 import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import { useDarkMode } from '@/components/providers/DarkModeProvider'
@@ -1243,10 +1244,20 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
     ig_handle: profile.ig_handle,
   })
   const [currency, setCurrency] = useState(profile.base_currency)
+  const [adSpendCurrency, setAdSpendCurrency] = useState(profile.ad_spend_currency ?? profile.base_currency)
+  const [liveRate, setLiveRate] = useState<number | null>(null)
   const [timezone, setTimezone] = useState(profile.timezone)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    if (adSpendCurrency !== currency) {
+      getLiveRate(adSpendCurrency, currency).then(setLiveRate)
+    } else {
+      setLiveRate(null)
+    }
+  }, [adSpendCurrency, currency])
 
   async function saveProfile() {
     setSaving(true)
@@ -1258,7 +1269,7 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
 
   async function saveCurrency() {
     setSaving(true)
-    await supabase.from('users').update({ base_currency: currency, timezone }).eq('id', userId)
+    await supabase.from('users').update({ base_currency: currency, ad_spend_currency: adSpendCurrency, timezone }).eq('id', userId)
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -1329,6 +1340,40 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
                 </button>
               ))}
             </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 4 }}>
+              Ad spend currency
+            </label>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
+              Set the currency your ads platform charges in. Amounts are auto-converted to your base currency.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {CURRENCIES.map(c => (
+                <button
+                  key={c.code}
+                  onClick={() => setAdSpendCurrency(c.code)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '8px 6px',
+                    borderRadius: 'var(--radius-card)',
+                    border: adSpendCurrency === c.code ? '2px solid var(--accent)' : '2px solid var(--border)',
+                    background: adSpendCurrency === c.code ? 'rgba(37,99,235,0.06)' : 'var(--surface-1)',
+                    color: adSpendCurrency === c.code ? 'var(--accent)' : 'var(--text-2)',
+                    fontSize: 11, fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 120ms ease',
+                  }}
+                >
+                  <span style={{ fontSize: 16, marginBottom: 2 }}>{c.flag}</span>
+                  {c.code}
+                </button>
+              ))}
+            </div>
+            {adSpendCurrency !== currency && liveRate !== null && (
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                1 {adSpendCurrency} = {liveRate.toFixed(2)} {currency}
+              </p>
+            )}
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>

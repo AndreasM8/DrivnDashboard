@@ -46,6 +46,7 @@ export interface User {
   business_name: string
   ig_handle: string
   base_currency: string
+  ad_spend_currency: string
   timezone: string
   notification_prefs: Partial<NotificationPrefs>
   created_at: string

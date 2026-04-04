@@ -29,6 +29,8 @@ interface Props {
   leadsReplied: number
   totalLeads: number
   totalClientsAcquired: number
+  adSpendCurrency: string
+  adToBaseRate: number
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -641,6 +643,7 @@ export default function NumbersClient({
   adSpendLog, totalAdSpend, totalAllExpenses,
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
+  adSpendCurrency, adToBaseRate,
 }: Props) {
   const [viewMode, setViewMode]       = useState<'month' | 'alltime'>('month')
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
@@ -1174,19 +1177,19 @@ export default function NumbersClient({
                   {
                     label:   'Cash ROAS',
                     value:   cashRoas,
-                    sub:     'Per AED spent on ads',
-                    formula: `${fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)} ÷ ${fmtCurrency(adSpendTotal, baseCurrency)}`,
+                    sub:     `Per ${adSpendCurrency} spent on ads`,
+                    formula: `${fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)} ÷ ${fmtCurrency(adSpendTotal / adToBaseRate, adSpendCurrency)} (${adSpendCurrency})`,
                   },
                   {
                     label:   'Revenue ROAS',
                     value:   revenueRoas,
-                    sub:     'Contracted per AED spent',
+                    sub:     `Contracted per ${adSpendCurrency} spent`,
                     formula: null,
                   },
                   {
                     label:   'Profit ROAS',
                     value:   profitRoas,
-                    sub:     'Profit per AED spent',
+                    sub:     `Profit per ${adSpendCurrency} spent`,
                     formula: null,
                   },
                 ] as { label: string; value: number | null; sub: string; formula: string | null }[]).map((col, i) => (
@@ -1215,6 +1218,11 @@ export default function NumbersClient({
               </div>
             )}
           </div>
+          {adSpendCurrency !== baseCurrency && adSpendTotal > 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--text-3)', marginTop: '8px', textAlign: 'center' }}>
+              Ad spend entered in {adSpendCurrency}, converted at {adToBaseRate.toFixed(4)} {baseCurrency}/{adSpendCurrency}
+            </p>
+          )}
         </div>
 
         {/* ── Expenses & profit ─────────────────────────────────────────────── */}
