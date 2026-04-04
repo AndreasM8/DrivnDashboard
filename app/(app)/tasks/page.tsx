@@ -10,6 +10,7 @@ export interface NonNegotiable {
   position: number
   active: boolean
   created_at: string
+  days_of_week: number[] | null
 }
 
 export interface NonNegotiableCompletion {
@@ -31,6 +32,8 @@ export interface PowerTask {
   completed_at: string | null
   position: number
   created_at: string
+  recurrence: 'daily' | 'weekly' | null
+  recurrence_days: number[] | null
 }
 
 // Compute the "current cycle date" for non-negotiables.
@@ -74,6 +77,16 @@ export default async function TasksPage() {
   const todayKey  = getNonNegTodayKey(timezone, resetHour)
   const today     = new Date().toISOString().slice(0, 10)
 
+  // Approximate cycle start as UTC midnight of the cycle date (good enough for daily resets)
+  const cycleStartIso = todayKey + 'T00:00:00.000Z'
+
+  // Today's day-of-week in user's timezone (0=Sun…6=Sat)
+  const todayDow = (() => {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' })
+    const day = fmt.format(new Date())
+    return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(day)
+  })()
+
   const [
     { data: nonNegotiables },
     { data: completions },
@@ -83,7 +96,9 @@ export default async function TasksPage() {
   ] = await Promise.all([
     supabase.from('non_negotiables').select('*').eq('user_id', user.id).eq('active', true).order('position'),
     supabase.from('non_negotiable_completions').select('*').eq('user_id', user.id).eq('date', todayKey),
-    supabase.from('power_tasks').select('*').eq('user_id', user.id).eq('completed', false).order('position'),
+    supabase.from('power_tasks').select('*').eq('user_id', user.id)
+      .or(`completed.eq.false,completed_at.gte.${cycleStartIso}`)
+      .order('position'),
     supabase.from('tasks').select('*').eq('user_id', user.id).eq('completed', false).order('due_at'),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
       .eq('user_id', user.id).eq('type', 'follow_up').eq('completed', true)
@@ -97,6 +112,8 @@ export default async function TasksPage() {
       dailyFollowupTarget={profile?.daily_followup_target ?? 10}
       resetHour={resetHour}
       todayKey={todayKey}
+      cycleStartIso={cycleStartIso}
+      todayDow={todayDow}
       initialNonNeg={(nonNegotiables as NonNegotiable[]) ?? []}
       initialCompletions={(completions as NonNegotiableCompletion[]) ?? []}
       initialPowerTasks={(powerTasks as PowerTask[]) ?? []}

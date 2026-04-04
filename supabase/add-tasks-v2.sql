@@ -46,3 +46,12 @@ alter table users add column if not exists daily_followup_target integer not nul
 
 -- Reset hour for non-negotiables (0–23, user's local time)
 alter table users add column if not exists nonneg_reset_hour integer not null default 0;
+
+-- Recurrence for power tasks
+alter table power_tasks
+  add column if not exists recurrence text check (recurrence in ('daily', 'weekly')),
+  add column if not exists recurrence_days integer[]; -- [0]=Sun [1]=Mon … [6]=Sat; null = all days for weekly
+
+-- Day-of-week filter for non-negotiables (null = every day)
+alter table non_negotiables
+  add column if not exists days_of_week integer[]; -- e.g. [6] = Saturdays only

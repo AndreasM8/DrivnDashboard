@@ -63,6 +63,20 @@ function daysSince(d: string | null) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 86400000)
 }
 
+const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DOW_FULL   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function fmtDays(days: number[] | null): string {
+  if (!days || days.length === 7) return 'Every day'
+  if (days.length === 0) return 'No days'
+  return days.sort((a,b)=>a-b).map(d => DOW_FULL[d]).join(', ')
+}
+
+function isCompletedInCycle(task: PowerTask, cycleStart: Date): boolean {
+  if (!task.completed || !task.completed_at) return false
+  return new Date(task.completed_at) >= cycleStart
+}
+
 // ─── Section card wrapper ──────────────────────────────────────────────────────
 
 function SectionCard({
@@ -188,27 +202,128 @@ function fmtHour(h: number) {
   return h < 12 ? `${h}:00 AM` : `${h - 12}:00 PM`
 }
 
+// ─── Non-Negotiables item row ─────────────────────────────────────────────────
+
+function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays }: {
+  item: NonNegotiable
+  checked: boolean
+  color: string
+  onToggle: (id: string, completed: boolean) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onUpdateDays: (id: string, days: number[] | null) => Promise<void>
+}) {
+  const [showDays, setShowDays] = useState(false)
+
+  function toggleDay(dow: number) {
+    const current = item.days_of_week ?? [0,1,2,3,4,5,6]
+    const next = current.includes(dow)
+      ? current.filter(d => d !== dow)
+      : [...current, dow]
+    // If all 7 selected, treat as "every day" (null)
+    const normalised = next.length === 7 ? null : next.length === 0 ? [dow] : next
+    void onUpdateDays(item.id, normalised)
+  }
+
+  const hasSchedule = item.days_of_week !== null && item.days_of_week.length < 7
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '32px' }}>
+        <Checkbox checked={checked} onChange={() => onToggle(item.id, !checked)} color={color} />
+        <span style={{
+          flex: 1, fontSize: '14px',
+          color: checked ? 'var(--text-3)' : 'var(--text-1)',
+          textDecoration: checked ? 'line-through' : 'none',
+          transition: 'all 200ms ease',
+        }}>
+          {item.title}
+        </span>
+        {/* Day schedule indicator — shows if not every day */}
+        {hasSchedule && (
+          <span style={{ fontSize: '10px', color: `${color}99`, fontWeight: 500 }}>
+            {fmtDays(item.days_of_week)}
+          </span>
+        )}
+        {/* Calendar toggle */}
+        <button
+          onClick={() => setShowDays(v => !v)}
+          title="Set which days this appears"
+          style={{
+            color: showDays ? color : 'var(--text-3)', background: 'none', border: 'none',
+            cursor: 'pointer', padding: '2px 4px', lineHeight: 1, opacity: showDays ? 1 : 0.5,
+            transition: 'all 120ms',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = showDays ? '1' : '0.5')}
+        >
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" width="13" height="13">
+            <rect x="1" y="2" width="12" height="11" rx="2" />
+            <path strokeLinecap="round" d="M1 6h12M5 1v2M9 1v2" />
+          </svg>
+        </button>
+        <button
+          onClick={() => onDelete(item.id)}
+          style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, opacity: 0.5 }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+        >×</button>
+      </div>
+
+      {/* Day picker (expandable) */}
+      {showDays && (
+        <div style={{ marginLeft: '30px', marginTop: '6px', display: 'flex', gap: '5px', flexWrap: 'wrap', paddingBottom: '4px' }}>
+          {DOW_LABELS.map((label, dow) => {
+            const active = !item.days_of_week || item.days_of_week.includes(dow)
+            return (
+              <button
+                key={dow}
+                onClick={() => toggleDay(dow)}
+                style={{
+                  width: '26px', height: '26px', borderRadius: '50%',
+                  fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                  border: `1.5px solid ${active ? color : 'var(--border-strong)'}`,
+                  background: active ? color : 'transparent',
+                  color: active ? '#fff' : 'var(--text-3)',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+          <span style={{ fontSize: '11px', color: 'var(--text-3)', alignSelf: 'center', marginLeft: '4px' }}>
+            {fmtDays(item.days_of_week)}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Non-Negotiables section ───────────────────────────────────────────────────
 
 function NonNegSection({
-  items, completions, followupTarget, followupsDoneToday, resetHour,
-  onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour,
+  items, completions, followupTarget, followupsDoneToday, resetHour, todayDow,
+  onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour, onUpdateDays,
 }: {
   items: NonNegotiable[]
   completions: NonNegotiableCompletion[]
   followupTarget: number
   followupsDoneToday: number
   resetHour: number
+  todayDow: number
   onToggle: (id: string, completed: boolean) => Promise<void>
   onAdd: (title: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onUpdateTarget: (t: number) => Promise<void>
   onUpdateResetHour: (h: number) => Promise<void>
+  onUpdateDays: (id: string, days: number[] | null) => Promise<void>
 }) {
   const color = SECTION_STYLES.nonneg.border
   const completedSet = new Set(completions.filter(c => c.completed).map(c => c.non_negotiable_id))
-  const done = items.filter(i => completedSet.has(i.id)).length
-  const total = items.length
+  const visibleItems = items.filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
+  const done = visibleItems.filter(i => completedSet.has(i.id)).length
+  const total = visibleItems.length
   const pct = total > 0 ? (done / total) * 100 : 0
 
   return (
@@ -220,27 +335,23 @@ function NonNegSection({
 
       {/* Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {items.map(item => {
-          const checked = completedSet.has(item.id)
-          return (
-            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '32px' }}>
-              <Checkbox checked={checked} onChange={() => onToggle(item.id, !checked)} color={color} />
-              <span style={{
-                flex: 1, fontSize: '14px', color: checked ? 'var(--text-3)' : 'var(--text-1)',
-                textDecoration: checked ? 'line-through' : 'none',
-                transition: 'all 200ms ease',
-              }}>
-                {item.title}
-              </span>
-              <button
-                onClick={() => onDelete(item.id)}
-                style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, opacity: 0.5 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
-              >×</button>
-            </div>
-          )
-        })}
+        {items
+          .filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
+          .map(item => {
+            const checked = completedSet.has(item.id)
+            return (
+              <NonNegItemRow
+                key={item.id}
+                item={item}
+                checked={checked}
+                color={color}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                onUpdateDays={onUpdateDays}
+              />
+            )
+          })
+        }
       </div>
 
       <AddInline placeholder="Add a non-negotiable…" color={color} onAdd={onAdd} />
@@ -307,12 +418,14 @@ function NonNegSection({
 // ─── Business powerlist section ────────────────────────────────────────────────
 
 function BusinessSection({
-  tasks, onAdd, onComplete, onDelete,
+  tasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence,
 }: {
   tasks: PowerTask[]
+  cycleStart: Date
   onAdd: (title: string, category: 'product' | 'content' | 'operations') => Promise<void>
   onComplete: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
 }) {
   const color = SECTION_STYLES.business.border
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({ product: true, content: true, operations: true })
@@ -350,7 +463,7 @@ function BusinessSection({
                 <div style={{ padding: '10px 14px 12px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {catTasks.map(task => (
-                      <PowerTaskRow key={task.id} task={task} color={color} onComplete={onComplete} onDelete={onDelete} />
+                      <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
                     ))}
                     {catTasks.length === 0 && (
                       <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic', padding: '2px 0' }}>
@@ -371,40 +484,118 @@ function BusinessSection({
 
 // ─── Power task row ────────────────────────────────────────────────────────────
 
-function PowerTaskRow({ task, color, onComplete, onDelete }: { task: PowerTask; color: string; onComplete: (id: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
-  const [fading, setFading] = useState(false)
+function PowerTaskRow({
+  task, color, cycleStart, onComplete, onDelete, onSetRecurrence,
+}: {
+  task: PowerTask
+  color: string
+  cycleStart: Date
+  onComplete: (id: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
+}) {
+  const [showRecDays, setShowRecDays] = useState(false)
+  const completedThisCycle = isCompletedInCycle(task, cycleStart)
+  // For recurring tasks completed before this cycle: treat as uncompleted
+  const showAsCompleted = task.completed && completedThisCycle
 
-  async function handleComplete() {
-    setFading(true)
-    await onComplete(task.id)
+  function cycleRecurrence() {
+    if (!task.recurrence) {
+      void onSetRecurrence(task.id, 'daily')
+    } else if (task.recurrence === 'daily') {
+      void onSetRecurrence(task.id, 'weekly', task.recurrence_days ?? [])
+      setShowRecDays(true)
+    } else {
+      void onSetRecurrence(task.id, null)
+      setShowRecDays(false)
+    }
   }
 
-  if (fading) return null
+  function toggleRecDay(dow: number) {
+    const current = task.recurrence_days ?? []
+    const next = current.includes(dow) ? current.filter(d => d !== dow) : [...current, dow]
+    void onSetRecurrence(task.id, 'weekly', next.length === 0 ? [dow] : next)
+  }
+
+  const recIcon = !task.recurrence ? null : task.recurrence === 'daily' ? '↻ Daily' : `↻ ${fmtDays(task.recurrence_days)}`
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '28px' }}>
-      <Checkbox checked={false} onChange={handleComplete} color={color} />
-      <span style={{ flex: 1, fontSize: '13px', color: 'var(--text-1)' }}>{task.title}</span>
-      {task.due_date && (
-        <span style={{ fontSize: '11px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDue(task.due_date)}</span>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '28px' }}>
+        <Checkbox
+          checked={showAsCompleted}
+          onChange={() => { if (!showAsCompleted) void onComplete(task.id) }}
+          color={color}
+        />
+        <span style={{
+          flex: 1, fontSize: '13px',
+          color: showAsCompleted ? 'var(--text-3)' : 'var(--text-1)',
+          textDecoration: showAsCompleted ? 'line-through' : 'none',
+          transition: 'all 200ms',
+        }}>
+          {task.title}
+        </span>
+        {task.due_date && !showAsCompleted && (
+          <span style={{ fontSize: '11px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDue(task.due_date)}</span>
+        )}
+        {/* Recurrence badge / toggle */}
+        <button
+          onClick={cycleRecurrence}
+          title={!task.recurrence ? 'Set recurrence' : task.recurrence === 'daily' ? 'Daily — click for weekly' : 'Weekly — click to remove'}
+          style={{
+            fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '10px', cursor: 'pointer',
+            border: `1px solid ${task.recurrence ? color + '44' : 'var(--border)'}`,
+            background: task.recurrence ? color + '15' : 'transparent',
+            color: task.recurrence ? color : 'var(--text-3)',
+            transition: 'all 120ms', whiteSpace: 'nowrap',
+          }}
+        >
+          {recIcon ?? '↻'}
+        </button>
+        <button
+          onClick={() => onDelete(task.id)}
+          style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, opacity: 0.5 }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+        >×</button>
+      </div>
+
+      {/* Weekly day picker */}
+      {task.recurrence === 'weekly' && showRecDays && (
+        <div style={{ marginLeft: '28px', marginTop: '6px', display: 'flex', gap: '5px', flexWrap: 'wrap', paddingBottom: '4px' }}>
+          {DOW_LABELS.map((label, dow) => {
+            const active = !task.recurrence_days || task.recurrence_days.includes(dow)
+            return (
+              <button
+                key={dow}
+                onClick={() => toggleRecDay(dow)}
+                style={{
+                  width: '24px', height: '24px', borderRadius: '50%', fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+                  border: `1.5px solid ${active ? color : 'var(--border-strong)'}`,
+                  background: active ? color : 'transparent',
+                  color: active ? '#fff' : 'var(--text-3)',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
       )}
-      <button
-        onClick={() => onDelete(task.id)}
-        style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, opacity: 0.5 }}
-        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-        onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
-      >×</button>
     </div>
   )
 }
 
 // ─── Personal section ──────────────────────────────────────────────────────────
 
-function PersonalSection({ tasks, onAdd, onComplete, onDelete }: {
+function PersonalSection({ tasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence }: {
   tasks: PowerTask[]
+  cycleStart: Date
   onAdd: (title: string) => Promise<void>
   onComplete: (id: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
 }) {
   const color = SECTION_STYLES.personal.border
 
@@ -415,7 +606,7 @@ function PersonalSection({ tasks, onAdd, onComplete, onDelete }: {
           <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>Book dentist appointment…</p>
         )}
         {tasks.map(task => (
-          <PowerTaskRow key={task.id} task={task} color={color} onComplete={onComplete} onDelete={onDelete} />
+          <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
         ))}
       </div>
       <AddInline placeholder="Add a personal task…" color={color} onAdd={onAdd} />
@@ -568,6 +759,7 @@ function FollowupRow({ task, onComplete }: { task: Task; onComplete: (id: string
 
 export default function TasksClient({
   userId, userName, dailyFollowupTarget, resetHour: initialResetHour, todayKey,
+  cycleStartIso, todayDow,
   initialNonNeg, initialCompletions, initialPowerTasks, initialTasks, followupsCompletedToday,
 }: {
   userId: string
@@ -575,6 +767,8 @@ export default function TasksClient({
   dailyFollowupTarget: number
   resetHour: number
   todayKey: string
+  cycleStartIso: string
+  todayDow: number
   initialNonNeg: NonNegotiable[]
   initialCompletions: NonNegotiableCompletion[]
   initialPowerTasks: PowerTask[]
@@ -593,8 +787,18 @@ export default function TasksClient({
   const resetDebounce  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabaseRef = useRef(createClient())
 
-  const businessTasks = powerTasks.filter(t => t.category !== 'personal')
-  const personalTasks = powerTasks.filter(t => t.category === 'personal')
+  const cycleStart = new Date(cycleStartIso)
+
+  const businessTasks = powerTasks.filter(t => {
+    if (t.category === 'personal') return false
+    if (t.recurrence === 'weekly' && t.recurrence_days && !t.recurrence_days.includes(todayDow)) return false
+    return true
+  })
+  const personalTasks = powerTasks.filter(t => {
+    if (t.category !== 'personal') return false
+    if (t.recurrence === 'weekly' && t.recurrence_days && !t.recurrence_days.includes(todayDow)) return false
+    return true
+  })
 
   // Status chips for header
   const nonNegDone = completions.filter(c => c.completed).length
@@ -648,16 +852,36 @@ export default function TasksClient({
   }, [personalTasks.length])
 
   const completePowerTask = useCallback(async (id: string) => {
-    setPowerTasks(prev => prev.filter(t => t.id !== id))
+    const now = new Date().toISOString()
+    setPowerTasks(prev => prev.map(t => t.id === id ? { ...t, completed: true, completed_at: now } : t))
     await fetch(`/api/power-tasks/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: true, completed_at: new Date().toISOString() }),
+      body: JSON.stringify({ completed: true, completed_at: now }),
     })
   }, [])
 
   const deletePowerTask = useCallback(async (id: string) => {
     setPowerTasks(prev => prev.filter(t => t.id !== id))
     await fetch(`/api/power-tasks/${id}`, { method: 'DELETE' })
+  }, [])
+
+  const setRecurrence = useCallback(async (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => {
+    setPowerTasks(prev => prev.map(t => t.id === id
+      ? { ...t, recurrence, recurrence_days: days !== undefined ? days : t.recurrence_days }
+      : t
+    ))
+    await fetch(`/api/power-tasks/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recurrence, ...(days !== undefined ? { recurrence_days: days } : {}) }),
+    })
+  }, [])
+
+  const updateNonNegDays = useCallback(async (id: string, days: number[] | null) => {
+    setNonNeg(prev => prev.map(i => i.id === id ? { ...i, days_of_week: days } : i))
+    await fetch(`/api/non-negotiables/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days_of_week: days }),
+    })
   }, [])
 
   const completeFollowup = useCallback(async (id: string) => {
@@ -742,27 +966,33 @@ export default function TasksClient({
         followupTarget={followupTarget}
         followupsDoneToday={followupsDone}
         resetHour={resetHour}
+        todayDow={todayDow}
         onToggle={toggleNonNeg}
         onAdd={addNonNeg}
         onDelete={deleteNonNeg}
         onUpdateTarget={updateFollowupTarget}
         onUpdateResetHour={updateResetHour}
+        onUpdateDays={updateNonNegDays}
       />
 
       {/* ── Section 2: Business Powerlist ────────────────────────────────── */}
       <BusinessSection
         tasks={businessTasks}
+        cycleStart={cycleStart}
         onAdd={addPowerTask}
         onComplete={completePowerTask}
         onDelete={deletePowerTask}
+        onSetRecurrence={setRecurrence}
       />
 
       {/* ── Section 3: Personal ──────────────────────────────────────────── */}
       <PersonalSection
         tasks={personalTasks}
+        cycleStart={cycleStart}
         onAdd={addPersonalTask}
         onComplete={completePowerTask}
         onDelete={deletePowerTask}
+        onSetRecurrence={setRecurrence}
       />
 
       {/* ── Section 4: Follow-ups ─────────────────────────────────────────── */}
