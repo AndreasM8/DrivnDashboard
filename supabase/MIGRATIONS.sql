@@ -265,3 +265,18 @@ alter table products enable row level security;
 drop policy if exists "Users manage own products" on products;
 create policy "Users manage own products"
   on products for all using (auth.uid() = user_id);
+
+-- ── 14. Power task completion log ─────────────────────────────────────────────
+create table if not exists power_task_completions (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references users on delete cascade,
+  power_task_id   uuid references power_tasks on delete set null,
+  task_title      text not null,
+  category        text not null,
+  completed_date  date not null default current_date,
+  created_at      timestamp with time zone default now()
+);
+alter table power_task_completions enable row level security;
+drop policy if exists "Users manage own power task completions" on power_task_completions;
+create policy "Users manage own power task completions"
+  on power_task_completions for all using (auth.uid() = user_id);

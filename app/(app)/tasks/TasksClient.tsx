@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
 import type { NonNegotiable, NonNegotiableCompletion, PowerTask } from './page'
@@ -8,10 +8,11 @@ import type { NonNegotiable, NonNegotiableCompletion, PowerTask } from './page'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SECTION_STYLES = {
-  nonneg:   { border: '#F59E0B', bg: 'rgba(245,158,11,0.04)',  title: 'Non-Negotiables' },
-  business: { border: '#6366F1', bg: 'rgba(99,102,241,0.04)', title: 'Business Powerlist' },
-  personal: { border: '#10B981', bg: 'rgba(16,185,129,0.04)', title: 'Personal' },
-  followups:{ border: '#EF4444', bg: 'rgba(239,68,68,0.03)',  title: 'Follow-ups' },
+  nonneg:      { border: '#F59E0B', bg: 'rgba(245,158,11,0.04)',  title: 'Non-Negotiables' },
+  business:    { border: '#6366F1', bg: 'rgba(99,102,241,0.04)', title: 'Business Powerlist' },
+  personal:    { border: '#10B981', bg: 'rgba(16,185,129,0.04)', title: 'Personal' },
+  followups:   { border: '#EF4444', bg: 'rgba(239,68,68,0.03)',  title: 'Follow-ups' },
+  performance: { border: '#8B5CF6', bg: 'rgba(139,92,246,0.04)', title: 'Performance' },
 } as const
 
 const BUSINESS_CATS = [
@@ -332,9 +333,10 @@ function NonNegSection({
 }) {
   const color = SECTION_STYLES.nonneg.border
   const completedSet = new Set(completions.filter(c => c.completed).map(c => c.non_negotiable_id))
-  const visibleItems = items.filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
-  const done = visibleItems.filter(i => completedSet.has(i.id)).length
-  const total = visibleItems.length
+  const activeItems    = items.filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
+  const scheduledItems = items.filter(item => item.days_of_week != null && !item.days_of_week.includes(todayDow))
+  const done = activeItems.filter(i => completedSet.has(i.id)).length
+  const total = activeItems.length
   const pct = total > 0 ? (done / total) * 100 : 0
 
   return (
@@ -344,26 +346,43 @@ function NonNegSection({
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
       </div>
 
-      {/* Items */}
+      {/* Active items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {items
-          .filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
-          .map(item => {
-            const checked = completedSet.has(item.id)
-            return (
+        {activeItems.map(item => {
+          const checked = completedSet.has(item.id)
+          return (
+            <NonNegItemRow
+              key={item.id}
+              item={item}
+              checked={checked}
+              color={color}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              onUpdateDays={onUpdateDays}
+            />
+          )
+        })}
+      </div>
+
+      {/* Scheduled (off-day) items — dimmed but interactive */}
+      {scheduledItems.length > 0 && (
+        <div style={{ marginTop: activeItems.length > 0 ? '10px' : '2px', borderTop: activeItems.length > 0 ? '1px dashed var(--border)' : 'none', paddingTop: activeItems.length > 0 ? '8px' : '0' }}>
+          <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Scheduled</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: 0.55 }}>
+            {scheduledItems.map(item => (
               <NonNegItemRow
                 key={item.id}
                 item={item}
-                checked={checked}
+                checked={completedSet.has(item.id)}
                 color={color}
                 onToggle={onToggle}
                 onDelete={onDelete}
                 onUpdateDays={onUpdateDays}
               />
-            )
-          })
-        }
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AddInline placeholder="Add a non-negotiable…" color={color} onAdd={onAdd} />
 
@@ -789,6 +808,150 @@ function FollowupRow({ task, onComplete }: { task: Task; onComplete: (id: string
   )
 }
 
+// ─── Performance Section ───────────────────────────────────────────────────────
+
+type PowerTaskCompletion = {
+  id: string
+  user_id: string
+  power_task_id: string | null
+  task_title: string
+  category: string
+  completed_date: string
+  created_at: string
+}
+
+type NNCompletion = {
+  id: string
+  user_id: string
+  non_negotiable_id: string
+  date: string
+  completed: boolean
+  completed_at: string | null
+}
+
+function PerformanceSection({ userId: _userId }: { userId: string }) {
+  const [period, setPeriod] = useState<7 | 30>(7)
+  const [ptCompletions, setPtCompletions] = useState<PowerTaskCompletion[]>([])
+  const [nnCompletions, setNnCompletions] = useState<NNCompletion[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([
+      fetch('/api/power-task-completions').then(r => r.json() as Promise<{ completions: PowerTaskCompletion[] }>),
+      fetch('/api/non-negotiables/completions').then(r => r.json() as Promise<{ completions: NNCompletion[] }>),
+    ]).then(([pt, nn]) => {
+      if (cancelled) return
+      setPtCompletions(pt.completions ?? [])
+      setNnCompletions(nn.completions ?? [])
+      setLoading(false)
+    }).catch(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - period)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+  const ptInPeriod = ptCompletions.filter(c => c.completed_date >= cutoffStr)
+  const nnInPeriod = nnCompletions.filter(c => c.date >= cutoffStr)
+
+  const nnTotal     = nnInPeriod.length
+  const nnDone      = nnInPeriod.filter(c => c.completed).length
+  const nnPct       = nnTotal > 0 ? Math.round((nnDone / nnTotal) * 100) : null
+
+  const countByCategory = (cat: string) => ptInPeriod.filter(c => c.category === cat).length
+
+  const hasAny = ptCompletions.length > 0 || nnCompletions.length > 0
+
+  const metrics: { label: string; value: string; sub: string }[] = [
+    {
+      label: 'NON-NEGOTIABLES',
+      value: nnPct !== null ? `${nnPct}%` : '—',
+      sub: 'avg completion',
+    },
+    {
+      label: 'PRODUCT',
+      value: String(countByCategory('product')),
+      sub: `last ${period} days`,
+    },
+    {
+      label: 'CONTENT',
+      value: String(countByCategory('content')),
+      sub: `last ${period} days`,
+    },
+    {
+      label: 'OPERATIONS',
+      value: String(countByCategory('operations')),
+      sub: `last ${period} days`,
+    },
+    {
+      label: 'PERSONAL',
+      value: String(countByCategory('personal')),
+      sub: `last ${period} days`,
+    },
+  ]
+
+  return (
+    <SectionCard section="performance" title="Performance" defaultOpen={false}>
+      {loading ? (
+        <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Loading…</p>
+      ) : !hasAny ? (
+        <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Start completing tasks to see your performance here.</p>
+      ) : (
+        <>
+          {/* Period toggle */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+            {([7, 30] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                style={{
+                  fontSize: '12px', fontWeight: 500,
+                  padding: '4px 12px', borderRadius: '20px',
+                  border: `1px solid ${period === p ? '#8B5CF6' : 'var(--border)'}`,
+                  background: period === p ? 'rgba(139,92,246,0.1)' : 'transparent',
+                  color: period === p ? '#8B5CF6' : 'var(--text-2)',
+                  cursor: 'pointer',
+                }}
+              >
+                {p} days
+              </button>
+            ))}
+          </div>
+
+          {/* Metric cards grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {metrics.map(m => (
+              <div
+                key={m.label}
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-card)',
+                  boxShadow: 'var(--shadow-card)',
+                  padding: '12px 14px',
+                }}
+              >
+                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-3)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {m.label}
+                </p>
+                <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px', lineHeight: 1.1 }}>
+                  {m.value}
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--text-3)', margin: 0 }}>
+                  {m.sub}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </SectionCard>
+  )
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TasksClient({
@@ -883,13 +1046,25 @@ export default function TasksClient({
   }, [personalTasks.length])
 
   const completePowerTask = useCallback(async (id: string) => {
+    const task = powerTasks.find(t => t.id === id)
     const now = new Date().toISOString()
     setPowerTasks(prev => prev.map(t => t.id === id ? { ...t, completed: true, completed_at: now } : t))
     await fetch(`/api/power-tasks/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed: true, completed_at: now }),
     })
-  }, [])
+    if (task) {
+      void fetch('/api/power-task-completions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          power_task_id: id,
+          task_title: task.title,
+          category: task.category,
+          completed_date: new Date().toISOString().slice(0, 10),
+        }),
+      })
+    }
+  }, [powerTasks])
 
   const deletePowerTask = useCallback(async (id: string) => {
     setPowerTasks(prev => prev.filter(t => t.id !== id))
@@ -1035,6 +1210,9 @@ export default function TasksClient({
         onRefresh={refreshTasks}
         refreshing={refreshing}
       />
+
+      {/* ── Section 5: Performance ────────────────────────────────────────── */}
+      <PerformanceSection userId={userId} />
 
     </div>
   )
