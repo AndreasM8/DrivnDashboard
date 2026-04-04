@@ -427,18 +427,20 @@ function HistoryTable({
 
 function AllTimeTotals({
   totalContracted, totalCashCollected, totalOutstanding, activePlanCount,
-  totalClientsAcquired, baseCurrency,
+  totalClientsAcquired, totalLeads, baseCurrency,
 }: {
   totalContracted: number
   totalCashCollected: number
   totalOutstanding: number
   activePlanCount: number
   totalClientsAcquired: number
+  totalLeads: number
   baseCurrency: string
 }) {
   const collectedPct = totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0
 
-  const items: { label: string; display: string; accent: string; sub: string }[] = [
+  // Financial cards — 2x2 grid
+  const financial: { label: string; display: string; accent: string; sub: string }[] = [
     {
       label:   'Total contracted',
       display: fmtCurrency(totalContracted, baseCurrency),
@@ -465,27 +467,36 @@ function AllTimeTotals({
     },
   ]
 
+  const StatCard = ({ label, display, accent, sub }: typeof financial[0]) => (
+    <div style={{
+      background:   'var(--surface-1)',
+      border:       '1px solid var(--border)',
+      borderLeft:   `3px solid ${accent}`,
+      borderRadius: 'var(--radius-card)',
+      padding:      '14px 16px',
+      boxShadow:    'var(--shadow-card)',
+    }}>
+      <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{label}</p>
+      <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+        {display}
+      </p>
+      <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{sub}</p>
+    </div>
+  )
+
   return (
-    <div className="grid grid-cols-2" style={{ gap: '10px' }}>
-      {items.map(s => (
-        <div
-          key={s.label}
-          style={{
-            background:   'var(--surface-1)',
-            border:       '1px solid var(--border)',
-            borderLeft:   `3px solid ${s.accent}`,
-            borderRadius: 'var(--radius-card)',
-            padding:      '14px 16px',
-            boxShadow:    'var(--shadow-card)',
-          }}
-        >
-          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
-          <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-            {s.display}
-          </p>
-          <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
-        </div>
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* 2×2 financial grid */}
+      <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+        {financial.map(s => <StatCard key={s.label} {...s} />)}
+      </div>
+      {/* Full-width pipeline stat */}
+      <StatCard
+        label="Total followers"
+        display={String(totalLeads)}
+        accent="var(--border-strong)"
+        sub="All leads ever in pipeline"
+      />
     </div>
   )
 }
@@ -498,6 +509,7 @@ export default function NumbersClient({
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
 }: Props) {
+  const [viewMode, setViewMode]       = useState<'month' | 'alltime'>('month')
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
     if (lastMonthSnapshot !== null) return false
@@ -611,71 +623,102 @@ export default function NumbersClient({
         zIndex:         10,
       }}>
 
-        {/* Month navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            onClick={() => canGoBack && setSelectedMonth(availableMonths[selectedIdx + 1])}
-            disabled={!canGoBack}
-            style={{ ...NAV_BTN, opacity: canGoBack ? 1 : 0.3, cursor: canGoBack ? 'pointer' : 'not-allowed' }}
-            title="Previous month"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-              <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-            </svg>
-          </button>
+        {/* Left: view toggle + (month nav when in month mode) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
 
-          {/* Month selector */}
-          <div style={{ position: 'relative' }}>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-              aria-label="Jump to month"
-            >
-              {availableMonths.map(m => (
-                <option key={m} value={m}>{fmtMonth(m)}</option>
-              ))}
-            </select>
-            <div style={{
-              display:         'flex',
-              alignItems:      'center',
-              gap:             '6px',
-              padding:         '5px 10px',
-              background:      'var(--surface-2)',
-              border:          '1px solid var(--border)',
-              borderRadius:    'var(--radius-btn)',
-              cursor:          'pointer',
-              userSelect:      'none',
-              minWidth:        '164px',
-              justifyContent:  'center',
-            }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-1)' }}>
-                {fmtMonth(selectedMonth)}
-              </span>
-              {selectedMonth === currentMonth && (
-                <span style={{ display: 'inline-block', background: 'rgba(22,163,74,0.15)', color: '#16A34A', borderRadius: '4px', padding: '1px 5px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  LIVE
-                </span>
-              )}
-              <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
-                <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </div>
+          {/* Month / All time pill */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
+            {(['month', 'alltime'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                style={{
+                  padding:      '4px 14px',
+                  borderRadius: '5px',
+                  fontSize:     '12px',
+                  fontWeight:   viewMode === mode ? 600 : 400,
+                  color:        viewMode === mode ? 'var(--text-1)' : 'var(--text-2)',
+                  background:   viewMode === mode ? 'var(--surface-1)' : 'transparent',
+                  border:       'none',
+                  cursor:       'pointer',
+                  boxShadow:    viewMode === mode ? 'var(--shadow-card)' : 'none',
+                  transition:   'all 120ms ease',
+                  whiteSpace:   'nowrap',
+                }}
+              >
+                {mode === 'month' ? 'Month' : 'All time'}
+              </button>
+            ))}
           </div>
 
-          <button
-            onClick={() => canGoForward && setSelectedMonth(availableMonths[selectedIdx - 1])}
-            disabled={!canGoForward}
-            style={{ ...NAV_BTN, opacity: canGoForward ? 1 : 0.3, cursor: canGoForward ? 'pointer' : 'not-allowed' }}
-            title="Next month"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-              <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-            </svg>
-          </button>
+          {/* Month navigation — only in month view */}
+          {viewMode === 'month' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={() => canGoBack && setSelectedMonth(availableMonths[selectedIdx + 1])}
+                disabled={!canGoBack}
+                style={{ ...NAV_BTN, opacity: canGoBack ? 1 : 0.3, cursor: canGoBack ? 'pointer' : 'not-allowed' }}
+                title="Previous month"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                  <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                </svg>
+              </button>
+
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                  aria-label="Jump to month"
+                >
+                  {availableMonths.map(m => (
+                    <option key={m} value={m}>{fmtMonth(m)}</option>
+                  ))}
+                </select>
+                <div style={{
+                  display:        'flex',
+                  alignItems:     'center',
+                  gap:            '6px',
+                  padding:        '5px 10px',
+                  background:     'var(--surface-2)',
+                  border:         '1px solid var(--border)',
+                  borderRadius:   'var(--radius-btn)',
+                  cursor:         'pointer',
+                  userSelect:     'none',
+                  minWidth:       '148px',
+                  justifyContent: 'center',
+                }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-1)' }}>
+                    {fmtMonth(selectedMonth)}
+                  </span>
+                  {selectedMonth === currentMonth && (
+                    <span style={{ display: 'inline-block', background: 'rgba(22,163,74,0.15)', color: '#16A34A', borderRadius: '4px', padding: '1px 5px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      LIVE
+                    </span>
+                  )}
+                  <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                    <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+
+              <button
+                onClick={() => canGoForward && setSelectedMonth(availableMonths[selectedIdx - 1])}
+                disabled={!canGoForward}
+                style={{ ...NAV_BTN, opacity: canGoForward ? 1 : 0.3, cursor: canGoForward ? 'pointer' : 'not-allowed' }}
+                title="Next month"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
+                  <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Compare mode switcher */}
+        {/* Compare mode switcher — only in month view */}
+        {viewMode === 'month' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
           <button
             onClick={() => setCompareMode('targets')}
@@ -738,6 +781,7 @@ export default function NumbersClient({
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Unlock modal ──────────────────────────────────────────────────────── */}
@@ -774,6 +818,9 @@ export default function NumbersClient({
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+        {/* ══ MONTH VIEW ═══════════════════════════════════════════════════════ */}
+        {viewMode === 'month' && (<>
 
         {/* No last month notice */}
         {compareMode === 'last_month' && last === null && (
@@ -935,51 +982,7 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Section 4: GROWTH ────────────────────────────────────────────── */}
-        <div>
-          <SectionLabel>Growth</SectionLabel>
-          <div className="grid grid-cols-3" style={{ gap: '10px' }}>
-
-            {/* New followers */}
-            <KpiCard
-              label="New followers"
-              value={snap?.new_followers ?? 0}
-              displayValue={String(snap?.new_followers ?? 0)}
-              target={followersTarget}
-              targetDisplay={followersTarget ? String(followersTarget) : undefined}
-              compareMode={compareMode}
-              lastValue={last?.new_followers ?? null}
-              lastDisplay={last?.new_followers != null ? String(last.new_followers) : undefined}
-              color={score(snap?.new_followers ?? 0, followersTarget)}
-              numSize={28}
-              subline="Added to pipeline this month"
-            />
-
-            {/* Leads replied */}
-            <KpiCard
-              label="Leads replied"
-              value={leadsReplied}
-              displayValue={String(leadsReplied)}
-              compareMode={compareMode}
-              color="neutral"
-              numSize={28}
-              subline="Replied to your DMs this month"
-            />
-
-            {/* Total followers in pipeline */}
-            <KpiCard
-              label="Total followers"
-              value={totalLeads}
-              displayValue={String(totalLeads)}
-              compareMode={compareMode}
-              color="neutral"
-              numSize={28}
-              subline="All leads ever in pipeline"
-            />
-          </div>
-        </div>
-
-        {/* ── Section 5: RETURN ON AD SPEND ────────────────────────────────── */}
+        {/* ── Section 4: RETURN ON AD SPEND ────────────────────────────────── */}
         <div>
           <SectionLabel>Return on ad spend</SectionLabel>
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '20px 18px', boxShadow: 'var(--shadow-card)' }}>
@@ -1041,7 +1044,32 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Section 6: PERFORMANCE OVER TIME ─────────────────────────────── */}
+        {/* ── Expenses & profit ─────────────────────────────────────────────── */}
+        <ExpensesSection
+          expenses={expenses}
+          adSpendTotal={adSpendTotal}
+          currency={baseCurrency}
+          currentMonth={currentMonth}
+          cashCollected={snap?.cash_collected ?? 0}
+        />
+
+        </>)}
+
+        {/* ══ ALL TIME VIEW ════════════════════════════════════════════════════ */}
+        {viewMode === 'alltime' && (<>
+
+        {/* Stats grid */}
+        <AllTimeTotals
+          totalContracted={totalContracted}
+          totalCashCollected={totalCashCollected}
+          totalOutstanding={totalOutstanding}
+          activePlanCount={activePlanCount}
+          totalClientsAcquired={totalClientsAcquired}
+          totalLeads={totalLeads}
+          baseCurrency={baseCurrency}
+        />
+
+        {/* Performance chart */}
         <div>
           <SectionLabel>Performance over time</SectionLabel>
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '20px', boxShadow: 'var(--shadow-card)' }}>
@@ -1053,7 +1081,7 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Section 7: MONTHLY HISTORY ────────────────────────────────────── */}
+        {/* History table */}
         <div>
           <SectionLabel>Monthly history</SectionLabel>
           <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '20px', boxShadow: 'var(--shadow-card)' }}>
@@ -1068,27 +1096,7 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Expenses & profit ─────────────────────────────────────────────── */}
-        <ExpensesSection
-          expenses={expenses}
-          adSpendTotal={adSpendTotal}
-          currency={baseCurrency}
-          currentMonth={currentMonth}
-          cashCollected={snap?.cash_collected ?? 0}
-        />
-
-        {/* ── Section 8: ALL TIME TOTALS ───────────────────────────────────── */}
-        <div>
-          <SectionLabel>All time</SectionLabel>
-          <AllTimeTotals
-            totalContracted={totalContracted}
-            totalCashCollected={totalCashCollected}
-            totalOutstanding={totalOutstanding}
-            activePlanCount={activePlanCount}
-            totalClientsAcquired={totalClientsAcquired}
-            baseCurrency={baseCurrency}
-          />
-        </div>
+        </>)}
 
       </div>
     </div>
