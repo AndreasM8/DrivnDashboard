@@ -3,7 +3,25 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
-import type { NonNegotiable, NonNegotiableCompletion, PowerTask, StorySchedule } from './page'
+import type { NonNegotiable, NonNegotiableCompletion, PowerTask } from './page'
+
+// ─── Story item types ─────────────────────────────────────────────────────────
+
+interface StoryItem {
+  id: string
+  user_id: string
+  title: string
+  repeat_days: number[] | null
+  one_time_date: string | null
+  active: boolean
+  created_at: string
+}
+
+interface StoryItemPost {
+  id: string
+  story_item_id: string
+  posted_date: string
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -966,192 +984,241 @@ function PerformanceSection({ userId: _userId, dragHandle }: { userId: string; d
 
 // ─── Weekly Story Schedule ────────────────────────────────────────────────────
 
-const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
-const DAY_LABELS: Record<typeof DAYS[number], string> = {
-  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu',
-  friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
-}
-// Map todayDow (0=Sun…6=Sat) to our day keys
-const DOW_TO_DAY: Record<number, typeof DAYS[number]> = {
-  0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
-  4: 'thursday', 5: 'friday', 6: 'saturday',
-}
-type DayKey = typeof DAYS[number]
-type ScheduleData = Record<DayKey, string>
-
-function emptySchedule(): ScheduleData {
-  return { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' }
-}
-
 function StoryScheduleSection({
-  initialStorySchedule,
   todayDow,
   dragHandle,
 }: {
-  initialStorySchedule: StorySchedule | null
   todayDow: number
   dragHandle?: React.ReactNode
 }) {
-  const [schedule, setSchedule] = useState<ScheduleData>(() =>
-    initialStorySchedule
-      ? { monday: initialStorySchedule.monday, tuesday: initialStorySchedule.tuesday,
-          wednesday: initialStorySchedule.wednesday, thursday: initialStorySchedule.thursday,
-          friday: initialStorySchedule.friday, saturday: initialStorySchedule.saturday,
-          sunday: initialStorySchedule.sunday }
-      : emptySchedule()
-  )
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [items, setItems] = useState<StoryItem[]>([])
+  const [posts, setPosts] = useState<StoryItemPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [addingForDow, setAddingForDow] = useState<number | null>(null)
+  const [newTitle, setNewTitle] = useState('')
+  const [newRepeatDays, setNewRepeatDays] = useState<number[]>([])
 
-  const todayKey = DOW_TO_DAY[todayDow]
   const ACCENT = '#EC4899'
+  const DOW_FULL_SS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const COLUMN_DOWS = [1, 2, 3, 4, 5, 6, 0]
+  const today = new Date().toISOString().slice(0, 10)
 
-  async function persist(data: ScheduleData) {
-    setSaving(true)
-    try {
-      await fetch('/api/story-schedule', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+  useEffect(() => {
+    fetch('/api/story-items')
+      .then(r => r.json())
+      .then((json: { items: StoryItem[]; posts: StoryItemPost[] }) => {
+        setItems(json.items ?? [])
+        setPosts(json.posts ?? [])
+        setLoading(false)
       })
-      setSavedFlash(true)
-      setTimeout(() => setSavedFlash(false), 1800)
-    } finally {
-      setSaving(false)
-    }
+      .catch(() => setLoading(false))
+  }, [])
+
+  function getDateForDow(dow: number): string {
+    const now = new Date()
+    const diff = dow - now.getDay()
+    const d = new Date(now)
+    d.setDate(d.getDate() + diff)
+    return d.toISOString().slice(0, 10)
   }
 
-  function handleChange(day: DayKey, value: string) {
-    const next = { ...schedule, [day]: value }
-    setSchedule(next)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => void persist(next), 800)
+  function itemsForDow(dow: number): StoryItem[] {
+    const dateForDow = getDateForDow(dow)
+    return items.filter(item => {
+      if (!item.active) return false
+      if (item.repeat_days !== null) return item.repeat_days.includes(dow)
+      return item.one_time_date === dateForDow && item.one_time_date >= today
+    })
   }
 
-  function handleDone() {
-    setEditing(false)
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-      debounceRef.current = null
+  function isPosted(itemId: string, dow: number): boolean {
+    const dateForDow = getDateForDow(dow)
+    return posts.some(p => p.story_item_id === itemId && p.posted_date === dateForDow)
+  }
+
+  async function addItem(dow: number) {
+    if (!newTitle.trim()) return
+    const isRecurring = newRepeatDays.length > 0
+    const body = {
+      title: newTitle.trim(),
+      repeat_days: isRecurring ? newRepeatDays : null,
+      one_time_date: isRecurring ? null : getDateForDow(dow),
     }
-    void persist(schedule)
+    const res = await fetch('/api/story-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const json = await res.json() as { item: StoryItem }
+    if (json.item) setItems(prev => [...prev, json.item])
+    setNewTitle('')
+    setNewRepeatDays([])
+    setAddingForDow(null)
+  }
+
+  async function togglePosted(itemId: string, dow: number, currentlyPosted: boolean) {
+    const dateForDow = getDateForDow(dow)
+    if (currentlyPosted) {
+      setPosts(prev => prev.filter(p => !(p.story_item_id === itemId && p.posted_date === dateForDow)))
+    } else {
+      setPosts(prev => [...prev, { id: crypto.randomUUID(), story_item_id: itemId, posted_date: dateForDow }])
+    }
+    await fetch(`/api/story-items/${itemId}/post`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posted_date: dateForDow, posted: !currentlyPosted }),
+    })
+  }
+
+  async function deleteItem(id: string) {
+    setItems(prev => prev.filter(i => i.id !== id))
+    await fetch(`/api/story-items/${id}`, { method: 'DELETE' })
+  }
+
+  function toggleNewRepeatDay(dow: number) {
+    setNewRepeatDays(prev =>
+      prev.includes(dow) ? prev.filter(d => d !== dow) : [...prev, dow]
+    )
   }
 
   return (
-    <SectionCard
-      section="story"
-      title="Weekly Story Schedule"
-      defaultOpen={false}
-      dragHandle={dragHandle}
-    >
-      {/* Edit / Done button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', gap: '8px' }}>
-        {savedFlash && (
-          <span style={{ fontSize: '11px', color: ACCENT, fontWeight: 500, opacity: savedFlash ? 1 : 0, transition: 'opacity 300ms' }}>
-            Saved
-          </span>
-        )}
-        {saving && !savedFlash && (
-          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Saving…</span>
-        )}
-        <button
-          onClick={() => editing ? handleDone() : setEditing(true)}
-          style={{
-            fontSize: '12px', fontWeight: 600, padding: '4px 12px', borderRadius: '20px',
-            border: `1px solid ${ACCENT}44`,
-            background: editing ? ACCENT : 'transparent',
-            color: editing ? '#fff' : ACCENT,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
-            transition: 'all 150ms ease',
-          }}
-        >
-          {editing ? (
-            <>
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2 7l3.5 3.5L12 3" />
-              </svg>
-              Done
-            </>
-          ) : (
-            <>
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" width="11" height="11">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
-              </svg>
-              Edit
-            </>
-          )}
-        </button>
-      </div>
+    <SectionCard section="story" title="Weekly Story Schedule" dragHandle={dragHandle}>
+      {loading ? (
+        <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading…</p>
+      ) : (
+        <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(110px, 1fr))',
+            gap: '8px',
+            minWidth: '700px',
+            paddingBottom: '4px',
+          }}>
+            {COLUMN_DOWS.map(dow => {
+              const colItems = itemsForDow(dow)
+              const isToday = dow === todayDow
+              const isAddingHere = addingForDow === dow
 
-      {/* 7-column grid — horizontal scroll on mobile */}
-      <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(100px, 1fr))',
-          gap: '8px',
-          minWidth: '700px',
-          paddingBottom: '4px',
-        }}>
-          {DAYS.map(day => {
-            const isToday = day === todayKey
-            const isEmpty = !schedule[day]
-            return (
-              <div
-                key={day}
-                onClick={() => { if (!editing) setEditing(true) }}
-                style={{
-                  borderRadius: '10px',
-                  border: `1px solid ${isToday ? ACCENT + '55' : 'var(--border)'}`,
-                  borderTop: `3px solid ${isToday ? ACCENT : ACCENT + '55'}`,
-                  background: isToday ? 'rgba(236,72,153,0.06)' : 'var(--surface-1)',
-                  boxShadow: isToday ? `0 0 0 1px ${ACCENT}22` : 'var(--shadow-card)',
-                  padding: '10px',
-                  cursor: editing ? 'default' : 'pointer',
-                  transition: 'box-shadow 150ms ease',
-                }}
-              >
-                {/* Day label */}
-                <div style={{
-                  fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
-                  color: isToday ? ACCENT : 'var(--text-3)',
-                  marginBottom: '6px',
+              return (
+                <div key={dow} style={{
+                  background: isToday ? `${ACCENT}08` : 'var(--surface-2)',
+                  border: `1px solid ${isToday ? ACCENT + '33' : 'var(--border)'}`,
+                  borderTop: isToday ? `2px solid ${ACCENT}` : '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  minHeight: '80px',
                 }}>
-                  {DAY_LABELS[day]}
-                </div>
-
-                {/* Content — textarea in edit, text in view */}
-                {editing ? (
-                  <textarea
-                    value={schedule[day]}
-                    onChange={e => handleChange(day, e.target.value)}
-                    rows={3}
-                    placeholder="Add story type…"
-                    style={{
-                      width: '100%', resize: 'none', border: 'none', outline: 'none',
-                      background: 'transparent', fontSize: '12px', lineHeight: '1.5',
-                      color: 'var(--text-1)', fontFamily: 'var(--font-sans)',
-                      padding: 0, margin: 0, boxSizing: 'border-box',
-                    }}
-                  />
-                ) : (
+                  {/* Day header */}
                   <p style={{
-                    fontSize: '12px', lineHeight: '1.5', margin: 0,
-                    color: isEmpty ? 'var(--text-3)' : 'var(--text-1)',
-                    fontStyle: isEmpty ? 'italic' : 'normal',
-                    minHeight: '48px',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
+                    fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                    letterSpacing: '0.07em', color: isToday ? ACCENT : 'var(--text-3)',
+                    marginBottom: '4px',
                   }}>
-                    {isEmpty ? 'Add story type…' : schedule[day]}
+                    {DOW_FULL_SS[dow]}
                   </p>
-                )}
-              </div>
-            )
-          })}
+
+                  {/* Story items */}
+                  {colItems.map(item => {
+                    const posted = isPosted(item.id, dow)
+                    return (
+                      <div key={item.id} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '5px',
+                        background: 'var(--surface-1)', borderRadius: '6px',
+                        padding: '5px 6px', fontSize: '11px',
+                        opacity: posted ? 0.55 : 1, transition: 'opacity 200ms',
+                      }}>
+                        {/* Posted checkbox */}
+                        <button
+                          onClick={() => void togglePosted(item.id, dow, posted)}
+                          style={{
+                            width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0, marginTop: '1px',
+                            border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
+                            background: posted ? ACCENT : 'transparent',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 150ms', padding: 0,
+                          }}
+                        >
+                          {posted && <svg viewBox="0 0 8 6" fill="none" width="8" height="8"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </button>
+                        {/* Title */}
+                        <span style={{ flex: 1, lineHeight: 1.4, color: 'var(--text-1)', textDecoration: posted ? 'line-through' : 'none' }}>
+                          {item.title}
+                        </span>
+                        {/* Repeat indicator */}
+                        {item.repeat_days !== null && (
+                          <span title={`Repeats: ${item.repeat_days.map(d => DOW_FULL_SS[d]).join(', ')}`} style={{ fontSize: '9px', color: ACCENT, flexShrink: 0 }}>↻</span>
+                        )}
+                        {/* Delete */}
+                        <button
+                          onClick={() => void deleteItem(item.id)}
+                          style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', lineHeight: 1, padding: '0 1px', opacity: 0.4, flexShrink: 0 }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
+                        >×</button>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add form or add button */}
+                  {isAddingHere ? (
+                    <div style={{ marginTop: '2px' }}>
+                      <input
+                        autoFocus
+                        value={newTitle}
+                        onChange={e => setNewTitle(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') void addItem(dow); if (e.key === 'Escape') { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) } }}
+                        placeholder="Story type…"
+                        style={{
+                          width: '100%', fontSize: '11px', border: `1px solid ${ACCENT}44`,
+                          borderRadius: '5px', padding: '4px 6px', background: 'var(--surface-1)',
+                          outline: 'none', color: 'var(--text-1)', boxSizing: 'border-box',
+                        }}
+                      />
+                      {/* Repeat day picker */}
+                      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '5px' }}>
+                        {[1,2,3,4,5,6,0].map(d => (
+                          <button
+                            key={d}
+                            onClick={() => toggleNewRepeatDay(d)}
+                            title={newRepeatDays.includes(d) ? `Remove ${DOW_FULL_SS[d]}` : `Add ${DOW_FULL_SS[d]}`}
+                            style={{
+                              width: '20px', height: '20px', borderRadius: '50%', fontSize: '9px', fontWeight: 700,
+                              border: `1.5px solid ${newRepeatDays.includes(d) ? ACCENT : 'var(--border-strong)'}`,
+                              background: newRepeatDays.includes(d) ? ACCENT : 'transparent',
+                              color: newRepeatDays.includes(d) ? '#fff' : 'var(--text-3)',
+                              cursor: 'pointer', transition: 'all 120ms', padding: 0,
+                            }}
+                          >
+                            {DOW_FULL_SS[d][0]}
+                          </button>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '9px', color: 'var(--text-3)', margin: '3px 0 0' }}>
+                        {newRepeatDays.length === 0 ? 'One-time (clears tomorrow)' : `Repeats ${newRepeatDays.map(d => DOW_FULL_SS[d]).join(', ')}`}
+                      </p>
+                      <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
+                        <button onClick={() => void addItem(dow)} style={{ flex: 1, fontSize: '10px', fontWeight: 600, padding: '3px', borderRadius: '4px', background: ACCENT, color: '#fff', border: 'none', cursor: 'pointer' }}>Add</button>
+                        <button onClick={() => { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingForDow(dow)}
+                      style={{
+                        marginTop: 'auto', paddingTop: '4px', fontSize: '10px', color: ACCENT,
+                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                        opacity: 0.6, transition: 'opacity 120ms',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </SectionCard>
   )
 }
@@ -1162,7 +1229,6 @@ export default function TasksClient({
   userId, userName, dailyFollowupTarget, resetHour: initialResetHour, todayKey,
   cycleStartIso, todayDow,
   initialNonNeg, initialCompletions, initialPowerTasks, initialTasks, followupsCompletedToday,
-  initialStorySchedule,
 }: {
   userId: string
   userName: string
@@ -1176,7 +1242,6 @@ export default function TasksClient({
   initialPowerTasks: PowerTask[]
   initialTasks: Task[]
   followupsCompletedToday: number
-  initialStorySchedule: StorySchedule | null
 }) {
   const [nonNeg, setNonNeg]             = useState(initialNonNeg)
   const [completions, setCompletions]   = useState(initialCompletions)
@@ -1503,7 +1568,7 @@ export default function TasksClient({
           )
           case 'story': return (
             <div key={key} style={wrapperStyle} {...dragProps}>
-              <StoryScheduleSection initialStorySchedule={initialStorySchedule} todayDow={todayDow} dragHandle={grip} />
+              <StoryScheduleSection todayDow={todayDow} dragHandle={grip} />
             </div>
           )
           case 'personal': return (

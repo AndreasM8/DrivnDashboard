@@ -298,3 +298,31 @@ alter table weekly_story_schedule enable row level security;
 drop policy if exists "Users manage own story schedule" on weekly_story_schedule;
 create policy "Users manage own story schedule"
   on weekly_story_schedule for all using (auth.uid() = user_id);
+
+-- ── 16. Story items (replaces weekly_story_schedule text columns) ──────────────
+create table if not exists story_items (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references users on delete cascade,
+  title         text not null,
+  repeat_days   integer[],   -- null = one-time; [0..6] = days of week it repeats
+  one_time_date date,        -- for one-time items: the day it was added for
+  active        boolean not null default true,
+  created_at    timestamp with time zone default now()
+);
+alter table story_items enable row level security;
+drop policy if exists "Users manage own story items" on story_items;
+create policy "Users manage own story items"
+  on story_items for all using (auth.uid() = user_id);
+
+create table if not exists story_item_posts (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users on delete cascade,
+  story_item_id  uuid not null references story_items on delete cascade,
+  posted_date    date not null,
+  created_at     timestamp with time zone default now(),
+  unique(story_item_id, posted_date)
+);
+alter table story_item_posts enable row level security;
+drop policy if exists "Users manage own story item posts" on story_item_posts;
+create policy "Users manage own story item posts"
+  on story_item_posts for all using (auth.uid() = user_id);
