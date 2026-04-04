@@ -31,6 +31,7 @@ export default async function NumbersPage() {
     { data: repliedLeads },
     { count: totalLeadsCount },
     { count: totalClientsCount },
+    { data: allExpensesData },
   ] = await Promise.all([
     supabase.from('users').select('base_currency, name').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
@@ -52,8 +53,8 @@ export default async function NumbersPage() {
       .lt('due_date', nextMonthStart),
     // Expenses for current month
     supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
-    // Ad spend log for current month
-    supabase.from('ad_spend_log').select('actual_amount').eq('user_id', user.id).eq('month', currentMonth),
+    // Ad spend log for all months
+    supabase.from('ad_spend_log').select('month, actual_amount').eq('user_id', user.id),
     // Leads replied this month = leads created this month NOT still in 'follower' stage
     supabase.from('leads').select('id').eq('user_id', user.id)
       .neq('stage', 'follower')
@@ -62,6 +63,8 @@ export default async function NumbersPage() {
     supabase.from('leads').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     // Total clients ever acquired (including inactive)
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    // All expenses ever (for all-time profit)
+    supabase.from('expenses').select('amount').eq('user_id', user.id),
   ])
 
   // ── Build live current-month snapshot from real data ──────────────────────
@@ -130,7 +133,11 @@ export default async function NumbersPage() {
 
   const lastMonthSnapshot = snapshots?.find(s => s.month === lastMonth)
 
-  const adSpendTotal = (adSpend ?? []).reduce((sum, row) => sum + ((row as { actual_amount: number }).actual_amount ?? 0), 0)
+  type AdSpendRow = { month: string; actual_amount: number }
+  const adSpendLog = (adSpend ?? []) as AdSpendRow[]
+  const adSpendTotal = adSpendLog.filter(r => r.month === currentMonth).reduce((sum, row) => sum + row.actual_amount, 0)
+  const totalAdSpend = adSpendLog.reduce((s, r) => s + r.actual_amount, 0)
+  const totalAllExpenses = ((allExpensesData ?? []) as { amount: number }[]).reduce((s, e) => s + e.amount, 0)
 
   // ── All-time / current business overview (all active clients, not just this month) ──
   const allClients = (clients ?? []) as Client[]
@@ -163,6 +170,9 @@ export default async function NumbersPage() {
       currentMonth={currentMonth}
       expenses={(expenses as Expense[]) ?? []}
       adSpendTotal={adSpendTotal}
+      adSpendLog={adSpendLog}
+      totalAdSpend={totalAdSpend}
+      totalAllExpenses={totalAllExpenses}
       monthlyRevenueDue={monthlyRevenueDue}
       totalContracted={totalContracted}
       totalCashCollected={totalCashCollected}

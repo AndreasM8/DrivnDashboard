@@ -18,6 +18,9 @@ interface Props {
   currentMonth: string
   expenses: Expense[]
   adSpendTotal: number
+  adSpendLog: { month: string; actual_amount: number }[]
+  totalAdSpend: number
+  totalAllExpenses: number
   monthlyRevenueDue: number
   totalContracted: number
   totalCashCollected: number
@@ -307,13 +310,13 @@ function SalesFunnel({ steps, leadsReplied }: { steps: FunnelStep[]; leadsReplie
 // ─── History table ────────────────────────────────────────────────────────────
 
 function HistoryTable({
-  history, currentMonth, baseCurrency, adSpendTotal,
+  history, currentMonth, baseCurrency, adSpendByMonth,
   showUpTarget, closeTarget,
 }: {
   history: MonthlySnapshot[]
   currentMonth: string
   baseCurrency: string
-  adSpendTotal: number
+  adSpendByMonth: Record<string, number>
   showUpTarget: number
   closeTarget: number
 }) {
@@ -340,7 +343,7 @@ function HistoryTable({
 
   const sorted = [...history].sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12)
 
-  const columns = ['Month', 'Cash in', 'Contracts', 'Clients', 'Calls', 'Show-up %', 'Close %', 'Avg deal', 'Ad spend', 'Cash ROAS']
+  const columns = ['Month', 'Cash in', 'Contracts', 'Clients', 'Calls', 'Show-up %', 'Close %', 'Avg deal', 'Ad spend', 'Cash ROAS', 'Profit']
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -371,8 +374,7 @@ function HistoryTable({
           {sorted.map(s => {
             const isCurrent = s.month === currentMonth
             const avgDeal   = s.clients_signed > 0 ? fmtCurrency(s.revenue_contracted / s.clients_signed, baseCurrency) : '—'
-            // For current month use live adSpendTotal prop; historical snapshots don't store ad spend — show "—"
-            const adSpend   = isCurrent ? adSpendTotal : null
+            const adSpend   = adSpendByMonth[s.month] ?? null
             const cashRoas  = adSpend && adSpend > 0 ? s.cash_collected / adSpend : null
 
             return (
@@ -407,12 +409,21 @@ function HistoryTable({
                   {adSpend != null ? fmtCurrency(adSpend, baseCurrency) : '—'}
                 </td>
                 <td style={{ padding: '10px 12px', textAlign: 'right' }}>{roasPill(cashRoas)}</td>
+                <td style={{ padding: '10px 12px', fontSize: '12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {adSpend != null
+                    ? (() => {
+                        const p = s.cash_collected - adSpend
+                        return <span style={{ color: p >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>{p >= 0 ? '' : '−'}{fmtCurrency(Math.abs(p), baseCurrency)}</span>
+                      })()
+                    : <span style={{ fontSize: '12px', color: 'var(--text-3)' }}>—</span>
+                  }
+                </td>
               </tr>
             )
           })}
           {sorted.length === 0 && (
             <tr>
-              <td colSpan={10} style={{ padding: '32px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>
+              <td colSpan={11} style={{ padding: '32px 0', textAlign: 'center', fontSize: '13px', color: 'var(--text-3)' }}>
                 No history yet. Data will appear at the end of each month.
               </td>
             </tr>
@@ -428,6 +439,7 @@ function HistoryTable({
 function AllTimeTotals({
   totalContracted, totalCashCollected, totalOutstanding, activePlanCount,
   totalClientsAcquired, totalLeads, totalCalls, baseCurrency,
+  totalAdSpend, totalAllExpenses,
 }: {
   totalContracted: number
   totalCashCollected: number
@@ -437,8 +449,13 @@ function AllTimeTotals({
   totalLeads: number
   totalCalls: number
   baseCurrency: string
+  totalAdSpend: number
+  totalAllExpenses: number
 }) {
   const collectedPct = totalContracted > 0 ? Math.round((totalCashCollected / totalContracted) * 100) : 0
+  const totalProfit = totalCashCollected - totalAdSpend - totalAllExpenses
+  const profitPositive = totalProfit >= 0
+  const profitMargin = totalCashCollected > 0 ? Math.round((totalProfit / totalCashCollected) * 100) : 0
 
   const items: { label: string; display: string; accent: string; sub: string }[] = [
     {
@@ -480,6 +497,30 @@ function AllTimeTotals({
   ]
 
   return (
+    <>
+    <div style={{
+      background:   profitPositive ? 'rgba(22,163,74,0.06)' : 'rgba(220,38,38,0.06)',
+      border:       `1px solid ${profitPositive ? 'rgba(22,163,74,0.25)' : 'rgba(220,38,38,0.25)'}`,
+      borderLeft:   `3px solid ${profitPositive ? '#16A34A' : '#DC2626'}`,
+      borderRadius: 'var(--radius-card)',
+      padding:      '16px 18px',
+      marginBottom: '10px',
+      display:      'flex',
+      alignItems:   'center',
+      justifyContent: 'space-between',
+    }}>
+      <div>
+        <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '4px' }}>All-time profit</p>
+        <p style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em', color: profitPositive ? '#16A34A' : '#DC2626', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          {profitPositive ? '' : '−'}{fmtCurrency(Math.abs(totalProfit), baseCurrency)}
+        </p>
+        <p style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '4px' }}>Cash collected − ad spend − expenses</p>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '4px' }}>Margin</p>
+        <p style={{ fontSize: '22px', fontWeight: 700, color: profitPositive ? '#16A34A' : '#DC2626', lineHeight: 1 }}>{profitMargin}%</p>
+      </div>
+    </div>
     <div className="grid grid-cols-2" style={{ gap: '10px' }}>
       {items.map(s => (
         <div
@@ -501,6 +542,94 @@ function AllTimeTotals({
         </div>
       ))}
     </div>
+    </>
+  )
+}
+
+// ─── AllTimeAdKpis ────────────────────────────────────────────────────────────
+
+function AllTimeAdKpis({
+  totalAdSpend, allTimeCashRoas, allTimeRevRoas, allTimeProfitRoas,
+  allTimeCpa, allTimeCpl, baseCurrency,
+}: {
+  totalAdSpend: number
+  allTimeCashRoas: number | null
+  allTimeRevRoas: number | null
+  allTimeProfitRoas: number | null
+  allTimeCpa: number | null
+  allTimeCpl: number | null
+  baseCurrency: string
+}) {
+  if (totalAdSpend === 0) {
+    return (
+      <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '24px', textAlign: 'center', color: 'var(--text-3)', fontSize: '13px' }}>
+        No ad spend logged yet — add spend data to see performance metrics.
+      </div>
+    )
+  }
+
+  function roasColor(v: number | null) {
+    if (v === null) return 'var(--text-1)'
+    return v >= 5 ? '#16A34A' : v >= 2 ? '#D97706' : '#DC2626'
+  }
+
+  const kpis: { label: string; display: string; sub: string; color?: string }[] = [
+    {
+      label:   'Total ad spend',
+      display: fmtCurrency(totalAdSpend, baseCurrency),
+      sub:     'Across all months',
+    },
+    {
+      label:   'Cash ROAS',
+      display: allTimeCashRoas != null ? `${allTimeCashRoas.toFixed(1)}x` : '—',
+      sub:     'Cash collected per spend',
+      color:   roasColor(allTimeCashRoas),
+    },
+    {
+      label:   'Revenue ROAS',
+      display: allTimeRevRoas != null ? `${allTimeRevRoas.toFixed(1)}x` : '—',
+      sub:     'Contracted per spend',
+      color:   roasColor(allTimeRevRoas),
+    },
+    {
+      label:   'Profit ROAS',
+      display: allTimeProfitRoas != null ? `${allTimeProfitRoas.toFixed(1)}x` : '—',
+      sub:     'Net profit per spend',
+      color:   roasColor(allTimeProfitRoas),
+    },
+    {
+      label:   'CPA',
+      display: allTimeCpa != null ? fmtCurrency(allTimeCpa, baseCurrency) : '—',
+      sub:     'Cost per client acquired',
+    },
+    {
+      label:   'CPL',
+      display: allTimeCpl != null ? fmtCurrency(allTimeCpl, baseCurrency) : '—',
+      sub:     'Cost per lead',
+    },
+  ]
+
+  return (
+    <div className="grid grid-cols-3" style={{ gap: '10px' }}>
+      {kpis.map(k => (
+        <div
+          key={k.label}
+          style={{
+            background:   'var(--surface-1)',
+            border:       '1px solid var(--border)',
+            borderRadius: 'var(--radius-card)',
+            padding:      '14px 16px',
+            boxShadow:    'var(--shadow-card)',
+          }}
+        >
+          <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{k.label}</p>
+          <p style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: k.color ?? 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+            {k.display}
+          </p>
+          <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{k.sub}</p>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -509,6 +638,7 @@ function AllTimeTotals({
 export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
   clients, installments, currentMonth, expenses, adSpendTotal,
+  adSpendLog, totalAdSpend, totalAllExpenses,
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
 }: Props) {
@@ -628,6 +758,20 @@ export default function NumbersClient({
 
   // All-time call total across all recorded months (booked, matches history table CALLS column)
   const totalCalls = chartHistory.reduce((sum, s) => sum + (s.meetings_booked ?? 0), 0)
+
+  // All-time ad spend map (month → amount)
+  const adSpendByMonth = adSpendLog.reduce<Record<string, number>>((acc, r) => {
+    acc[r.month] = (acc[r.month] ?? 0) + r.actual_amount
+    return acc
+  }, {})
+
+  // All-time financial summary
+  const totalProfit       = totalCashCollected - totalAdSpend - totalAllExpenses
+  const allTimeCashRoas   = totalAdSpend > 0 ? totalCashCollected / totalAdSpend : null
+  const allTimeRevRoas    = totalAdSpend > 0 ? totalContracted / totalAdSpend : null
+  const allTimeProfitRoas = totalAdSpend > 0 ? totalProfit / totalAdSpend : null
+  const allTimeCpa        = totalClientsAcquired > 0 && totalAdSpend > 0 ? totalAdSpend / totalClientsAcquired : null
+  const allTimeCpl        = totalLeads > 0 && totalAdSpend > 0 ? totalAdSpend / totalLeads : null
 
   return (
     <div
@@ -1096,8 +1240,24 @@ export default function NumbersClient({
           totalClientsAcquired={totalClientsAcquired}
           totalLeads={totalLeads}
           totalCalls={totalCalls}
+          totalAdSpend={totalAdSpend}
+          totalAllExpenses={totalAllExpenses}
           baseCurrency={baseCurrency}
         />
+
+        {/* Ad performance KPIs */}
+        <div>
+          <SectionLabel>Ad performance</SectionLabel>
+          <AllTimeAdKpis
+            totalAdSpend={totalAdSpend}
+            allTimeCashRoas={allTimeCashRoas}
+            allTimeRevRoas={allTimeRevRoas}
+            allTimeProfitRoas={allTimeProfitRoas}
+            allTimeCpa={allTimeCpa}
+            allTimeCpl={allTimeCpl}
+            baseCurrency={baseCurrency}
+          />
+        </div>
 
         {/* Performance chart */}
         <div>
@@ -1119,7 +1279,7 @@ export default function NumbersClient({
               history={chartHistory}
               currentMonth={currentMonth}
               baseCurrency={baseCurrency}
-              adSpendTotal={adSpendTotal}
+              adSpendByMonth={adSpendByMonth}
               showUpTarget={targets?.show_up_target ?? DEFAULT_SHOW_UP}
               closeTarget={targets?.close_rate_target ?? DEFAULT_CLOSE}
             />
