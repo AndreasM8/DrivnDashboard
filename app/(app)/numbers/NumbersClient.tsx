@@ -472,10 +472,10 @@ function AllTimeTotals({
       sub:     'All leads in pipeline',
     },
     {
-      label:   'Total calls',
+      label:   'Calls booked',
       display: String(totalCalls),
       accent:  'var(--border-strong)',
-      sub:     'Calls held across all months',
+      sub:     'Booked across all months',
     },
   ]
 
@@ -603,8 +603,8 @@ export default function NumbersClient({
     ...history.filter(s => s.month !== currentMonth),
   ]
 
-  // All-time call total across all recorded months
-  const totalCalls = chartHistory.reduce((sum, s) => sum + (s.calls_held ?? 0), 0)
+  // All-time call total across all recorded months (booked, matches history table CALLS column)
+  const totalCalls = chartHistory.reduce((sum, s) => sum + (s.meetings_booked ?? 0), 0)
 
   return (
     <div
@@ -888,15 +888,15 @@ export default function NumbersClient({
           {/* Bottom row: 2 medium cards */}
           <div className="grid grid-cols-2" style={{ gap: '10px' }}>
 
-            {/* Card 3: Outstanding */}
+            {/* Card 3: Pending this month */}
             <KpiCard
-              label="Outstanding"
-              value={totalOutstanding}
-              displayValue={fmtCurrency(totalOutstanding, baseCurrency)}
+              label="Pending"
+              value={cashPending}
+              displayValue={cashPending > 0 ? fmtCurrency(cashPending, baseCurrency) : '—'}
               compareMode={compareMode}
               overrideAccent="#2563EB"
               numSize={28}
-              subline={`From ${activePlanCount} active payment plan${activePlanCount !== 1 ? 's' : ''}`}
+              subline="Still to collect this month"
             />
 
             {/* Card 4: Avg deal size */}
