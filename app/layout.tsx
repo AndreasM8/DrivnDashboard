@@ -1,11 +1,25 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
+import { Geist, Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import DarkModeProvider from '@/components/providers/DarkModeProvider'
 
 const geist = Geist({
   variable: '--font-geist',
   subsets: ['latin'],
+})
+
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains',
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -29,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full`}>
+    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full`}>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
