@@ -280,3 +280,21 @@ alter table power_task_completions enable row level security;
 drop policy if exists "Users manage own power task completions" on power_task_completions;
 create policy "Users manage own power task completions"
   on power_task_completions for all using (auth.uid() = user_id);
+
+-- ── 15. Weekly story schedule ──────────────────────────────────────────────────
+create table if not exists weekly_story_schedule (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references users on delete cascade unique,
+  monday     text not null default '',
+  tuesday    text not null default '',
+  wednesday  text not null default '',
+  thursday   text not null default '',
+  friday     text not null default '',
+  saturday   text not null default '',
+  sunday     text not null default '',
+  updated_at timestamp with time zone default now()
+);
+alter table weekly_story_schedule enable row level security;
+drop policy if exists "Users manage own story schedule" on weekly_story_schedule;
+create policy "Users manage own story schedule"
+  on weekly_story_schedule for all using (auth.uid() = user_id);

@@ -891,7 +891,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {l.name} <span style={{ opacity: 0.75 }}>{count}</span>
+                  {l.name} <span style={{ opacity: 0.75 }}>({count})</span>
                 </button>
               )
             })}

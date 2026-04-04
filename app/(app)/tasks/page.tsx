@@ -36,6 +36,19 @@ export interface PowerTask {
   recurrence_days: number[] | null
 }
 
+export interface StorySchedule {
+  id: string
+  user_id: string
+  monday: string
+  tuesday: string
+  wednesday: string
+  thursday: string
+  friday: string
+  saturday: string
+  sunday: string
+  updated_at: string
+}
+
 // Compute the "current cycle date" for non-negotiables.
 // If the user's reset hour is e.g. 5 AM and it's currently 3 AM,
 // we're still in the previous cycle — so return yesterday's date.
@@ -93,6 +106,7 @@ export default async function TasksPage() {
     { data: powerTasks },
     { data: tasks },
     { count: followupsCompletedToday },
+    { data: storySchedule },
   ] = await Promise.all([
     supabase.from('non_negotiables').select('*').eq('user_id', user.id).eq('active', true).order('position'),
     supabase.from('non_negotiable_completions').select('*').eq('user_id', user.id).eq('date', todayKey),
@@ -103,6 +117,7 @@ export default async function TasksPage() {
     supabase.from('tasks').select('*', { count: 'exact', head: true })
       .eq('user_id', user.id).eq('type', 'follow_up').eq('completed', true)
       .gte('completed_at', today + 'T00:00:00.000Z'),
+    supabase.from('weekly_story_schedule').select('*').eq('user_id', user.id).maybeSingle(),
   ])
 
   return (
@@ -119,6 +134,7 @@ export default async function TasksPage() {
       initialPowerTasks={(powerTasks as PowerTask[]) ?? []}
       initialTasks={(tasks as Task[]) ?? []}
       followupsCompletedToday={followupsCompletedToday ?? 0}
+      initialStorySchedule={(storySchedule as StorySchedule) ?? null}
     />
   )
 }

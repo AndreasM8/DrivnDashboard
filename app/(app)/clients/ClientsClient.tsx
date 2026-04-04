@@ -409,7 +409,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         <div
           className="hidden md:block"
           style={{
-            width: '300px',
+            width: '45%',
+            maxWidth: '520px',
             flexShrink: 0,
             borderLeft: '1px solid var(--border)',
             overflowY: 'auto',

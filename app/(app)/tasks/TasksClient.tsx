@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
-import type { NonNegotiable, NonNegotiableCompletion, PowerTask } from './page'
+import type { NonNegotiable, NonNegotiableCompletion, PowerTask, StorySchedule } from './page'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -13,6 +13,7 @@ const SECTION_STYLES = {
   personal:    { border: '#10B981', bg: 'rgba(16,185,129,0.04)', title: 'Personal' },
   followups:   { border: '#EF4444', bg: 'rgba(239,68,68,0.03)',  title: 'Follow-ups' },
   performance: { border: '#8B5CF6', bg: 'rgba(139,92,246,0.04)', title: 'Performance' },
+  story:       { border: '#EC4899', bg: 'rgba(236,72,153,0.04)', title: 'Weekly Story Schedule' },
 } as const
 
 const BUSINESS_CATS = [
@@ -952,12 +953,202 @@ function PerformanceSection({ userId: _userId }: { userId: string }) {
   )
 }
 
+// ─── Weekly Story Schedule ────────────────────────────────────────────────────
+
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+const DAY_LABELS: Record<typeof DAYS[number], string> = {
+  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu',
+  friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
+}
+// Map todayDow (0=Sun…6=Sat) to our day keys
+const DOW_TO_DAY: Record<number, typeof DAYS[number]> = {
+  0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+  4: 'thursday', 5: 'friday', 6: 'saturday',
+}
+type DayKey = typeof DAYS[number]
+type ScheduleData = Record<DayKey, string>
+
+function emptySchedule(): ScheduleData {
+  return { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' }
+}
+
+function StoryScheduleSection({
+  initialStorySchedule,
+  todayDow,
+}: {
+  initialStorySchedule: StorySchedule | null
+  todayDow: number
+}) {
+  const [schedule, setSchedule] = useState<ScheduleData>(() =>
+    initialStorySchedule
+      ? { monday: initialStorySchedule.monday, tuesday: initialStorySchedule.tuesday,
+          wednesday: initialStorySchedule.wednesday, thursday: initialStorySchedule.thursday,
+          friday: initialStorySchedule.friday, saturday: initialStorySchedule.saturday,
+          sunday: initialStorySchedule.sunday }
+      : emptySchedule()
+  )
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedFlash, setSavedFlash] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const todayKey = DOW_TO_DAY[todayDow]
+  const ACCENT = '#EC4899'
+
+  async function persist(data: ScheduleData) {
+    setSaving(true)
+    try {
+      await fetch('/api/story-schedule', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      setSavedFlash(true)
+      setTimeout(() => setSavedFlash(false), 1800)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleChange(day: DayKey, value: string) {
+    const next = { ...schedule, [day]: value }
+    setSchedule(next)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => void persist(next), 800)
+  }
+
+  function handleDone() {
+    setEditing(false)
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    void persist(schedule)
+  }
+
+  return (
+    <SectionCard
+      section="story"
+      title="Weekly Story Schedule"
+      defaultOpen={false}
+    >
+      {/* Edit / Done button row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '12px', gap: '8px' }}>
+        {savedFlash && (
+          <span style={{ fontSize: '11px', color: ACCENT, fontWeight: 500, opacity: savedFlash ? 1 : 0, transition: 'opacity 300ms' }}>
+            Saved
+          </span>
+        )}
+        {saving && !savedFlash && (
+          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>Saving…</span>
+        )}
+        <button
+          onClick={() => editing ? handleDone() : setEditing(true)}
+          style={{
+            fontSize: '12px', fontWeight: 600, padding: '4px 12px', borderRadius: '20px',
+            border: `1px solid ${ACCENT}44`,
+            background: editing ? ACCENT : 'transparent',
+            color: editing ? '#fff' : ACCENT,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+            transition: 'all 150ms ease',
+          }}
+        >
+          {editing ? (
+            <>
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2 7l3.5 3.5L12 3" />
+              </svg>
+              Done
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" width="11" height="11">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z" />
+              </svg>
+              Edit
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* 7-column grid — horizontal scroll on mobile */}
+      <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, minmax(100px, 1fr))',
+          gap: '8px',
+          minWidth: '700px',
+          paddingBottom: '4px',
+        }}>
+          {DAYS.map(day => {
+            const isToday = day === todayKey
+            const isEmpty = !schedule[day]
+            return (
+              <div
+                key={day}
+                onClick={() => { if (!editing) setEditing(true) }}
+                style={{
+                  borderRadius: '10px',
+                  border: `1px solid ${isToday ? ACCENT + '55' : 'var(--border)'}`,
+                  borderTop: `3px solid ${isToday ? ACCENT : ACCENT + '55'}`,
+                  background: isToday ? 'rgba(236,72,153,0.06)' : 'var(--surface-1)',
+                  boxShadow: isToday ? `0 0 0 1px ${ACCENT}22` : 'var(--shadow-card)',
+                  padding: '10px',
+                  cursor: editing ? 'default' : 'pointer',
+                  transition: 'box-shadow 150ms ease',
+                }}
+              >
+                {/* Day label */}
+                <div style={{
+                  fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
+                  color: isToday ? ACCENT : 'var(--text-3)',
+                  marginBottom: '6px',
+                }}>
+                  {DAY_LABELS[day]}
+                </div>
+
+                {/* Content — textarea in edit, text in view */}
+                {editing ? (
+                  <textarea
+                    value={schedule[day]}
+                    onChange={e => handleChange(day, e.target.value)}
+                    rows={3}
+                    placeholder="Add story type…"
+                    style={{
+                      width: '100%', resize: 'none', border: 'none', outline: 'none',
+                      background: 'transparent', fontSize: '12px', lineHeight: '1.5',
+                      color: 'var(--text-1)', fontFamily: 'var(--font-sans)',
+                      padding: 0, margin: 0, boxSizing: 'border-box',
+                    }}
+                  />
+                ) : (
+                  <p style={{
+                    fontSize: '12px', lineHeight: '1.5', margin: 0,
+                    color: isEmpty ? 'var(--text-3)' : 'var(--text-1)',
+                    fontStyle: isEmpty ? 'italic' : 'normal',
+                    minHeight: '48px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}>
+                    {isEmpty ? 'Add story type…' : schedule[day]}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function TasksClient({
   userId, userName, dailyFollowupTarget, resetHour: initialResetHour, todayKey,
   cycleStartIso, todayDow,
   initialNonNeg, initialCompletions, initialPowerTasks, initialTasks, followupsCompletedToday,
+  initialStorySchedule,
 }: {
   userId: string
   userName: string
@@ -971,6 +1162,7 @@ export default function TasksClient({
   initialPowerTasks: PowerTask[]
   initialTasks: Task[]
   followupsCompletedToday: number
+  initialStorySchedule: StorySchedule | null
 }) {
   const [nonNeg, setNonNeg]             = useState(initialNonNeg)
   const [completions, setCompletions]   = useState(initialCompletions)
@@ -1191,6 +1383,9 @@ export default function TasksClient({
         onDelete={deletePowerTask}
         onSetRecurrence={setRecurrence}
       />
+
+      {/* ── Story Schedule ─────────────────────────────────────────────── */}
+      <StoryScheduleSection initialStorySchedule={initialStorySchedule} todayDow={todayDow} />
 
       {/* ── Section 3: Personal ──────────────────────────────────────────── */}
       <PersonalSection
