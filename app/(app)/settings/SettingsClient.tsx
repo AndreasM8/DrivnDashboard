@@ -1479,7 +1479,6 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
         flexDirection: 'column',
         width: 192,
         borderRight: '1px solid var(--border)',
-        background: 'var(--surface-1)',
         padding: '24px 12px',
         flexShrink: 0,
       }}>
