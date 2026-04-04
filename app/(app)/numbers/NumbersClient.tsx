@@ -551,13 +551,13 @@ function AllTimeTotals({
 // ─── AllTimeAdKpis ────────────────────────────────────────────────────────────
 
 function AllTimeAdKpis({
-  totalAdSpend, allTimeCashRoas, allTimeRevRoas, allTimeProfitRoas,
+  totalAdSpend, allTimeCashRoas, allTimeRevRoas, allTimeCostPerCall,
   allTimeCpa, allTimeCpl, baseCurrency,
 }: {
   totalAdSpend: number
   allTimeCashRoas: number | null
   allTimeRevRoas: number | null
-  allTimeProfitRoas: number | null
+  allTimeCostPerCall: number | null
   allTimeCpa: number | null
   allTimeCpl: number | null
   baseCurrency: string
@@ -594,10 +594,9 @@ function AllTimeAdKpis({
       color:   roasColor(allTimeRevRoas),
     },
     {
-      label:   'Profit ROAS',
-      display: allTimeProfitRoas != null ? `${allTimeProfitRoas.toFixed(1)}x` : '—',
-      sub:     'Net profit per spend',
-      color:   roasColor(allTimeProfitRoas),
+      label:   'Cost per call',
+      display: allTimeCostPerCall != null ? fmtCurrency(allTimeCostPerCall, baseCurrency) : '—',
+      sub:     'Ad spend per call held',
     },
     {
       label:   'CPA',
@@ -772,7 +771,8 @@ export default function NumbersClient({
   const totalProfit       = totalCashCollected - totalAdSpend - totalAllExpenses
   const allTimeCashRoas   = totalAdSpend > 0 ? totalCashCollected / totalAdSpend : null
   const allTimeRevRoas    = totalAdSpend > 0 ? totalContracted / totalAdSpend : null
-  const allTimeProfitRoas = totalAdSpend > 0 ? totalProfit / totalAdSpend : null
+  const totalCallsHeld    = [...history, currentSnapshot].reduce((s, snap) => s + (snap?.calls_held ?? 0), 0)
+  const allTimeCostPerCall = totalAdSpend > 0 && totalCallsHeld > 0 ? totalAdSpend / totalCallsHeld : null
   const allTimeCpa        = totalClientsAcquired > 0 && totalAdSpend > 0 ? totalAdSpend / totalClientsAcquired : null
   const allTimeCpl        = totalLeads > 0 && totalAdSpend > 0 ? totalAdSpend / totalLeads : null
 
@@ -1114,49 +1114,6 @@ export default function NumbersClient({
           </div>
         </div>
 
-        {/* ── Section 3: IN-DEPTH METRICS ──────────────────────────────────── */}
-        <div>
-          <SectionLabel>In-depth metrics</SectionLabel>
-          <div className="grid grid-cols-2" style={{ gap: '10px' }}>
-            {(() => {
-              const callsBooked  = snap?.meetings_booked ?? 0
-              const showed       = snap?.calls_held ?? 0
-              const revDue       = selectedMonth === currentMonth ? monthlyRevenueDue : (snap?.revenue_contracted ?? 0)
-              const revPerCall   = callsBooked > 0 ? revDue / callsBooked : null
-              const revPerShow   = showed > 0 ? revDue / showed : null
-              const ltvCash      = clients.length > 0 ? clients.reduce((s, c) => s + c.total_amount, 0) / clients.length : null
-              const planClients  = clients.filter(c => c.payment_type === 'plan' || c.payment_type === 'split')
-              const avgMonths    = planClients.length > 0
-                ? planClients.reduce((s, c) => s + (c.plan_months ?? 0), 0) / planClients.length
-                : null
-
-              const metric = (label: string, display: string | null, sub: string) => (
-                <div style={{
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-card)',
-                  padding: '16px 18px',
-                  boxShadow: 'var(--shadow-card)',
-                }}>
-                  <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{label}</p>
-                  <p style={{ fontSize: '26px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
-                    {display ?? '—'}
-                  </p>
-                  <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{sub}</p>
-                </div>
-              )
-
-              return (
-                <>
-                  {metric('Revenue per call', revPerCall !== null ? fmtCurrency(revPerCall, baseCurrency) : null, `Based on ${callsBooked} call${callsBooked !== 1 ? 's' : ''} booked`)}
-                  {metric('Revenue per show', revPerShow !== null ? fmtCurrency(revPerShow, baseCurrency) : null, `Based on ${showed} call${showed !== 1 ? 's' : ''} showed up`)}
-                  {metric('LTV (cash)', ltvCash !== null ? fmtCurrency(ltvCash, baseCurrency) : null, `Across ${clients.length} active client${clients.length !== 1 ? 's' : ''}`)}
-                  {metric('LTV (months)', avgMonths !== null ? `${avgMonths.toFixed(1)} mo` : null, planClients.length > 0 ? `Avg of ${planClients.length} plan/split client${planClients.length !== 1 ? 's' : ''}` : 'No plan/split clients yet')}
-                </>
-              )
-            })()}
-          </div>
-        </div>
 
         {/* ── Section 4: RETURN ON AD SPEND ────────────────────────────────── */}
         <div>
@@ -1253,6 +1210,32 @@ export default function NumbersClient({
           baseCurrency={baseCurrency}
         />
 
+        {/* LTV */}
+        {(() => {
+          const ltvCash     = clients.length > 0 ? clients.reduce((s, c) => s + c.total_amount, 0) / clients.length : null
+          const planClients = clients.filter(c => c.payment_type === 'plan' || c.payment_type === 'split')
+          const avgMonths   = planClients.length > 0
+            ? planClients.reduce((s, c) => s + (c.plan_months ?? 0), 0) / planClients.length
+            : null
+          return (
+            <div>
+              <SectionLabel>Client LTV</SectionLabel>
+              <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+                {[
+                  { label: 'LTV (cash)', display: ltvCash != null ? fmtCurrency(ltvCash, baseCurrency) : '—', sub: `Across ${clients.length} active client${clients.length !== 1 ? 's' : ''}` },
+                  { label: 'LTV (months)', display: avgMonths != null ? `${avgMonths.toFixed(1)} mo` : '—', sub: planClients.length > 0 ? `Avg of ${planClients.length} plan/split client${planClients.length !== 1 ? 's' : ''}` : 'No plan/split clients yet' },
+                ].map(k => (
+                  <div key={k.label} style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', padding: '16px 18px', boxShadow: 'var(--shadow-card)' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{k.label}</p>
+                    <p style={{ fontSize: '26px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>{k.display}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-3)' }}>{k.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Ad performance KPIs */}
         <div>
           <SectionLabel>Ad performance</SectionLabel>
@@ -1260,7 +1243,7 @@ export default function NumbersClient({
             totalAdSpend={totalAdSpend}
             allTimeCashRoas={allTimeCashRoas}
             allTimeRevRoas={allTimeRevRoas}
-            allTimeProfitRoas={allTimeProfitRoas}
+            allTimeCostPerCall={allTimeCostPerCall}
             allTimeCpa={allTimeCpa}
             allTimeCpl={allTimeCpl}
             baseCurrency={baseCurrency}

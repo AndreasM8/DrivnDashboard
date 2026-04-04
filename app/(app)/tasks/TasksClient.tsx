@@ -429,9 +429,10 @@ function NonNegSection({
 // ─── Business powerlist section ────────────────────────────────────────────────
 
 function BusinessSection({
-  tasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence,
+  tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence,
 }: {
   tasks: PowerTask[]
+  scheduledTasks: PowerTask[]
   cycleStart: Date
   onAdd: (title: string, category: 'product' | 'content' | 'operations') => Promise<void>
   onComplete: (id: string) => Promise<void>
@@ -447,6 +448,7 @@ function BusinessSection({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {BUSINESS_CATS.map(cat => {
           const catTasks = tasks.filter(t => t.category === cat.key)
+          const catScheduled = scheduledTasks.filter(t => t.category === cat.key)
           const isOpen = openCats[cat.key] !== false
 
           return (
@@ -482,6 +484,22 @@ function BusinessSection({
                       </p>
                     )}
                   </div>
+                  {/* Scheduled (off-day weekly) tasks — dimmed */}
+                  {catScheduled.length > 0 && (
+                    <div style={{ marginTop: '10px', borderTop: '1px dashed var(--border)', paddingTop: '8px', opacity: 0.45 }}>
+                      <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Scheduled</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {catScheduled.map(task => (
+                          <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '24px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--text-2)', flex: 1 }}>{task.title}</span>
+                            <span style={{ fontSize: '10px', fontWeight: 600, color, background: `${color}15`, border: `1px solid ${color}30`, borderRadius: '8px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                              ↻ {fmtDays(task.recurrence_days)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <AddInline placeholder="+ Add a task…" color={color} onAdd={t => onAdd(t, cat.key)} />
                 </div>
               )}
@@ -600,8 +618,9 @@ function PowerTaskRow({
 
 // ─── Personal section ──────────────────────────────────────────────────────────
 
-function PersonalSection({ tasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence }: {
+function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete, onDelete, onSetRecurrence }: {
   tasks: PowerTask[]
+  scheduledTasks: PowerTask[]
   cycleStart: Date
   onAdd: (title: string) => Promise<void>
   onComplete: (id: string) => Promise<void>
@@ -613,12 +632,28 @@ function PersonalSection({ tasks, cycleStart, onAdd, onComplete, onDelete, onSet
   return (
     <SectionCard section="personal" title="Personal" count={tasks.length}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {tasks.length === 0 && (
+        {tasks.length === 0 && scheduledTasks.length === 0 && (
           <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>Book dentist appointment…</p>
         )}
         {tasks.map(task => (
           <PowerTaskRow key={task.id} task={task} color={color} cycleStart={cycleStart} onComplete={onComplete} onDelete={onDelete} onSetRecurrence={onSetRecurrence} />
         ))}
+        {/* Scheduled (off-day weekly) tasks — dimmed */}
+        {scheduledTasks.length > 0 && (
+          <div style={{ marginTop: tasks.length > 0 ? '10px' : '2px', borderTop: tasks.length > 0 ? '1px dashed var(--border)' : 'none', paddingTop: tasks.length > 0 ? '8px' : '0', opacity: 0.45 }}>
+            <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Scheduled</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {scheduledTasks.map(task => (
+                <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', minHeight: '24px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-2)', flex: 1 }}>{task.title}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 600, color, background: `${color}15`, border: `1px solid ${color}30`, borderRadius: '8px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                    ↻ {fmtDays(task.recurrence_days)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <AddInline placeholder="Add a personal task…" color={color} onAdd={onAdd} />
     </SectionCard>
@@ -798,16 +833,13 @@ export default function TasksClient({
 
   const cycleStart = new Date(cycleStartIso)
 
-  const businessTasks = powerTasks.filter(t => {
-    if (t.category === 'personal') return false
-    if (t.recurrence === 'weekly' && t.recurrence_days && !t.recurrence_days.includes(todayDow)) return false
-    return true
-  })
-  const personalTasks = powerTasks.filter(t => {
-    if (t.category !== 'personal') return false
-    if (t.recurrence === 'weekly' && t.recurrence_days && !t.recurrence_days.includes(todayDow)) return false
-    return true
-  })
+  const isScheduledOffDay = (t: PowerTask) =>
+    t.recurrence === 'weekly' && t.recurrence_days != null && t.recurrence_days.length > 0 && !t.recurrence_days.includes(todayDow)
+
+  const businessTasks     = powerTasks.filter(t => t.category !== 'personal' && !isScheduledOffDay(t))
+  const businessScheduled = powerTasks.filter(t => t.category !== 'personal' && isScheduledOffDay(t))
+  const personalTasks     = powerTasks.filter(t => t.category === 'personal' && !isScheduledOffDay(t))
+  const personalScheduled = powerTasks.filter(t => t.category === 'personal' && isScheduledOffDay(t))
 
   // Status chips for header
   const nonNegDone = completions.filter(c => c.completed).length
@@ -987,6 +1019,7 @@ export default function TasksClient({
       {/* ── Section 2: Business Powerlist ────────────────────────────────── */}
       <BusinessSection
         tasks={businessTasks}
+        scheduledTasks={businessScheduled}
         cycleStart={cycleStart}
         onAdd={addPowerTask}
         onComplete={completePowerTask}
@@ -997,6 +1030,7 @@ export default function TasksClient({
       {/* ── Section 3: Personal ──────────────────────────────────────────── */}
       <PersonalSection
         tasks={personalTasks}
+        scheduledTasks={personalScheduled}
         cycleStart={cycleStart}
         onAdd={addPersonalTask}
         onComplete={completePowerTask}
