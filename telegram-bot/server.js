@@ -92,13 +92,34 @@ bot.on('message', async (msg) => {
     return
   }
 
-  // Pass any other message to Claude Code CLI
+  // Pass any other message to Claude via Anthropic SDK
+  if (!process.env.ANTHROPIC_API_KEY) {
+    await bot.sendMessage(chatId,
+      '⚠️ Add `ANTHROPIC_API_KEY` to `.env.local` to enable free-text instructions.\n\nGet one at: console.anthropic.com → API Keys\n\nQuick commands still work:\n/status /log /diff /build /errors',
+      { parse_mode: 'Markdown' }
+    )
+    return
+  }
+
   await bot.sendMessage(chatId, `⏳ Thinking...\n_"${text}"_`, { parse_mode: 'Markdown' })
 
-  const CLAUDE_BIN = '/Users/andreasmeberg/Library/Application Support/Claude/claude-code-vm/2.1.78/claude'
-  const escaped = text.replace(/"/g, '\\"').replace(/`/g, '\\`')
-  const output = await runCommand(`"${CLAUDE_BIN}" --print "${escaped}" 2>&1`)
-  await sendLongMessage(chatId, output || '✅ Done — no output returned')
+  try {
+    const gitStatus = await runCommand('git status --short')
+    const gitLog    = await runCommand('git log --oneline -5')
+    const client    = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+    const response = await client.messages.create({
+      model: 'claude-opus-4-5',
+      max_tokens: 4096,
+      system: `You are a coding assistant for DrivnDashboardr — a Next.js 16 CRM for online fitness coaches. Tech: Next.js 16 App Router, TypeScript, Supabase, Tailwind CSS v4, Vercel. Project root: ${PROJECT_ROOT}\n\nGit status:\n${gitStatus}\nRecent commits:\n${gitLog}\n\nBe concise and actionable.`,
+      messages: [{ role: 'user', content: text }],
+    })
+
+    const answer = response.content[0]?.type === 'text' ? response.content[0].text : '✅ Done'
+    await sendLongMessage(chatId, answer)
+  } catch (err) {
+    await bot.sendMessage(chatId, `❌ Error: ${err.message}`)
+  }
 })
 
 bot.on('polling_error', (error) => console.error('Polling error:', error))
