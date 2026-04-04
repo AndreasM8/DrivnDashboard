@@ -1001,7 +1001,12 @@ function StoryScheduleSection({
   const ACCENT = '#EC4899'
   const DOW_FULL_SS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const COLUMN_DOWS = [1, 2, 3, 4, 5, 6, 0]
-  const today = new Date().toISOString().slice(0, 10)
+
+  // Use LOCAL date (not UTC) to avoid midnight timezone mismatches
+  function localDateStr(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  const today = localDateStr(new Date())
 
   useEffect(() => {
     fetch('/api/story-items')
@@ -1019,7 +1024,7 @@ function StoryScheduleSection({
     const diff = dow - now.getDay()
     const d = new Date(now)
     d.setDate(d.getDate() + diff)
-    return d.toISOString().slice(0, 10)
+    return localDateStr(d)
   }
 
   function itemsForDow(dow: number): StoryItem[] {
@@ -1039,17 +1044,35 @@ function StoryScheduleSection({
   async function addItem(dow: number) {
     if (!newTitle.trim()) return
     const isRecurring = newRepeatDays.length > 0
-    const body = {
-      title: newTitle.trim(),
-      repeat_days: isRecurring ? newRepeatDays : null,
-      one_time_date: isRecurring ? null : getDateForDow(dow),
-    }
-    const res = await fetch('/api/story-items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    const json = await res.json() as { item: StoryItem }
-    if (json.item) setItems(prev => [...prev, json.item])
+    const title = newTitle.trim()
+    const repeat_days = isRecurring ? newRepeatDays : null
+    const one_time_date = isRecurring ? null : getDateForDow(dow)
+
+    // Optimistic insert — appears immediately
+    const tempId = crypto.randomUUID()
+    const optimistic: StoryItem = { id: tempId, user_id: '', title, repeat_days, one_time_date, active: true, created_at: new Date().toISOString() }
+    setItems(prev => [...prev, optimistic])
     setNewTitle('')
     setNewRepeatDays([])
     setAddingForDow(null)
+
+    try {
+      const res = await fetch('/api/story-items', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, repeat_days, one_time_date }),
+      })
+      const json = await res.json() as { item: StoryItem }
+      if (json.item) {
+        // Swap temp ID for real DB item
+        setItems(prev => prev.map(i => i.id === tempId ? json.item : i))
+      } else {
+        // API responded but no item — revert
+        setItems(prev => prev.filter(i => i.id !== tempId))
+      }
+    } catch {
+      // Network error — revert
+      setItems(prev => prev.filter(i => i.id !== tempId))
+    }
   }
 
   async function togglePosted(itemId: string, dow: number, currentlyPosted: boolean) {
