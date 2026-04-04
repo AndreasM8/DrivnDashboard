@@ -188,3 +188,61 @@ alter table tasks
 -- Controls per-tier follow-up thresholds in the task generator.
 alter table leads
   add column if not exists tier int check (tier in (1, 2, 3)) default 2;
+
+
+-- ── 11. Tasks v2 — Non-Negotiables + Power Tasks ──────────────────────────────
+
+create table if not exists non_negotiables (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references users on delete cascade,
+  title      text not null,
+  position   integer not null default 0,
+  active     boolean not null default true,
+  created_at timestamp with time zone default now()
+);
+alter table non_negotiables enable row level security;
+drop policy if exists "Users manage own non_negotiables" on non_negotiables;
+create policy "Users manage own non_negotiables"
+  on non_negotiables for all using (auth.uid() = user_id);
+
+create table if not exists non_negotiable_completions (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid not null references users on delete cascade,
+  non_negotiable_id   uuid not null references non_negotiables on delete cascade,
+  date                date not null default current_date,
+  completed           boolean not null default false,
+  completed_at        timestamp with time zone,
+  unique (user_id, non_negotiable_id, date)
+);
+alter table non_negotiable_completions enable row level security;
+drop policy if exists "Users manage own completions" on non_negotiable_completions;
+create policy "Users manage own completions"
+  on non_negotiable_completions for all using (auth.uid() = user_id);
+
+create table if not exists power_tasks (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references users on delete cascade,
+  title        text not null,
+  category     text not null check (category in ('product','content','operations','personal')),
+  due_date     date,
+  completed    boolean not null default false,
+  completed_at timestamp with time zone,
+  position     integer not null default 0,
+  created_at   timestamp with time zone default now()
+);
+alter table power_tasks enable row level security;
+drop policy if exists "Users manage own power_tasks" on power_tasks;
+create policy "Users manage own power_tasks"
+  on power_tasks for all using (auth.uid() = user_id);
+
+-- New columns on existing tables
+alter table users add column if not exists daily_followup_target integer not null default 10;
+alter table users add column if not exists nonneg_reset_hour integer not null default 0;
+alter table users add column if not exists timezone text not null default 'Europe/Oslo';
+
+alter table power_tasks
+  add column if not exists recurrence text check (recurrence in ('daily', 'weekly')),
+  add column if not exists recurrence_days integer[];
+
+alter table non_negotiables
+  add column if not exists days_of_week integer[];

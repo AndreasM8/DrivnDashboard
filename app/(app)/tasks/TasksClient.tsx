@@ -235,7 +235,7 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
     void onUpdateDays(item.id, normalised)
   }
 
-  const hasSchedule = item.days_of_week !== null && item.days_of_week.length < 7
+  const hasSchedule = item.days_of_week != null && item.days_of_week.length < 7
 
   return (
     <div>

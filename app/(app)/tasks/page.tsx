@@ -68,7 +68,7 @@ export default async function TasksPage() {
   // Fetch profile first so we can compute the timezone-aware cycle date
   const { data: profile } = await supabase
     .from('users')
-    .select('name, daily_followup_target, nonneg_reset_hour, timezone')
+    .select('*')
     .eq('id', user.id)
     .single()
 
