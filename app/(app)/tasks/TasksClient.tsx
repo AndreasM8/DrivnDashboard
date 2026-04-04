@@ -80,49 +80,60 @@ function isCompletedInCycle(task: PowerTask, cycleStart: Date): boolean {
 // ─── Section card wrapper ──────────────────────────────────────────────────────
 
 function SectionCard({
-  section, title, count, badge, collapsible, defaultOpen, children,
+  section, title, count, badge, defaultOpen, children,
 }: {
   section: keyof typeof SECTION_STYLES
   title: string
   count?: number
   badge?: string
-  collapsible?: boolean
   defaultOpen?: boolean
   children: React.ReactNode
 }) {
   const s = SECTION_STYLES[section]
-  const [open, setOpen] = useState(defaultOpen !== false)
+  const [open, setOpen] = useState(defaultOpen === true)
 
   return (
     <div style={{
-      background: s.bg,
-      border: `1px solid ${s.border}33`,
+      background: open ? s.bg : 'var(--surface-1)',
+      border: `1px solid ${open ? s.border + '33' : 'var(--border)'}`,
       borderTop: `3px solid ${s.border}`,
       borderRadius: '12px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+      boxShadow: open ? '0 2px 8px rgba(0,0,0,0.06)' : 'var(--shadow-card)',
       overflow: 'hidden',
+      transition: 'background 200ms ease, box-shadow 200ms ease',
     }}>
-      {/* Header */}
+      {/* Header — always clickable */}
       <div
-        style={{ padding: '16px 18px 14px', display: 'flex', alignItems: 'center', gap: '8px', cursor: collapsible ? 'pointer' : 'default' }}
-        onClick={() => collapsible && setOpen(v => !v)}
+        onClick={() => setOpen(v => !v)}
+        style={{
+          padding: open ? '14px 18px 12px' : '11px 18px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          cursor: 'pointer', userSelect: 'none',
+          transition: 'padding 200ms ease',
+        }}
       >
-        <h2 style={{ fontSize: '15px', fontWeight: 600, color: s.border, margin: 0, flex: 1 }}>{title}</h2>
+        <h2 style={{ fontSize: '14px', fontWeight: 600, color: s.border, margin: 0, flex: 1, letterSpacing: '-0.01em' }}>{title}</h2>
+
+        {/* Summary chips — always visible */}
         {count !== undefined && (
-          <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '20px', background: `${s.border}22`, color: s.border }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px',
+            background: `${s.border}18`, color: s.border,
+          }}>
             {count}
           </span>
         )}
         {badge && (
-          <span style={{ fontSize: '11px', color: 'var(--text-3)' }}>{badge}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{badge}</span>
         )}
-        {collapsible && (
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"
-            style={{ color: 'var(--text-3)', transition: 'transform 200ms', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
-          </svg>
-        )}
+
+        {/* Chevron */}
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"
+          style={{ color: 'var(--text-3)', flexShrink: 0, transition: 'transform 220ms ease', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
+        </svg>
       </div>
+
       {open && <div style={{ padding: '0 18px 18px' }}>{children}</div>}
     </div>
   )
@@ -327,7 +338,7 @@ function NonNegSection({
   const pct = total > 0 ? (done / total) * 100 : 0
 
   return (
-    <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`}>
+    <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`} defaultOpen>
       {/* Progress bar */}
       <div style={{ height: '4px', borderRadius: '2px', background: `${color}22`, marginBottom: '16px', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
@@ -432,7 +443,7 @@ function BusinessSection({
   const activeCount = tasks.length
 
   return (
-    <SectionCard section="business" title="Business Powerlist" count={activeCount} collapsible defaultOpen>
+    <SectionCard section="business" title="Business Powerlist" count={activeCount}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {BUSINESS_CATS.map(cat => {
           const catTasks = tasks.filter(t => t.category === cat.key)
@@ -600,7 +611,7 @@ function PersonalSection({ tasks, cycleStart, onAdd, onComplete, onDelete, onSet
   const color = SECTION_STYLES.personal.border
 
   return (
-    <SectionCard section="personal" title="Personal" count={tasks.length} collapsible defaultOpen>
+    <SectionCard section="personal" title="Personal" count={tasks.length}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {tasks.length === 0 && (
           <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>Book dentist appointment…</p>
@@ -635,8 +646,6 @@ function FollowupsSection({
       title="Follow-ups"
       count={tasks.length}
       badge={needsAttention > 0 ? `${needsAttention} need attention` : undefined}
-      collapsible
-      defaultOpen
     >
       {/* Refresh button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', marginTop: '-4px' }}>
