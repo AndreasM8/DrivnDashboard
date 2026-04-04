@@ -229,8 +229,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       {/* ── Client cards + Products panel ─────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Left: client list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 88px' }}>
+        {/* Left: client list — 50% on desktop */}
+        <div style={{ flex: '0 0 50%', overflowY: 'auto', padding: '16px 24px 88px' }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
             {clients.length === 0 ? (
@@ -409,9 +409,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         <div
           className="hidden md:block"
           style={{
-            width: '45%',
-            maxWidth: '520px',
-            flexShrink: 0,
+            flex: '0 0 50%',
             borderLeft: '1px solid var(--border)',
             overflowY: 'auto',
             paddingBottom: 88,
