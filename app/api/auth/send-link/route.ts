@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://drivn-dashboard-2gzs.vercel.app'
 
     // Generate a real (non-PKCE) magic link via admin API
+    // No redirectTo — we build our own verify URL from the token hash
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: { redirectTo: `${appUrl}/auth/verify` },
     })
 
     if (error) {
