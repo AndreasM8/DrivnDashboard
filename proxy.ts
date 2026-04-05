@@ -8,6 +8,8 @@ export async function proxy(request: NextRequest) {
   const publicRoutes = [
     '/auth/login',
     '/auth/callback',
+    '/auth/verify',
+    '/api/auth/',            // auth API routes (send-link, etc.)
     '/api/webhooks/',        // inbound webhooks: Zapier, Calendly, Stripe
     '/api/calendly/oauth/',  // Calendly OAuth callback
     '/api/google/oauth/',    // Google OAuth callback (if added later)
