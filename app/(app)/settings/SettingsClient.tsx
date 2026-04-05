@@ -13,6 +13,7 @@ import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 interface Props {
   userId: string
   userEmail: string
+  isAdmin?: boolean
   profile: User
   targets: KpiTargets | null
   setters: Setter[]
@@ -1493,7 +1494,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'appearance', label: 'Appearance' },
 ]
 
-export default function SettingsClient({ userId, userEmail, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
+export default function SettingsClient({ userId, userEmail, isAdmin = false, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
   const [navHover, setNavHover] = useState<Section | null>(null)
   const [expandedSection, setExpandedSection] = useState<Section | null>('targets')
@@ -1547,6 +1548,28 @@ export default function SettingsClient({ userId, userEmail, profile, targets, se
               </button>
             )
           })}
+          {isAdmin && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', margin: '8px 4px' }} />
+              <a
+                href="/admin"
+                style={{
+                  display: 'block',
+                  width: '100%', textAlign: 'left',
+                  padding: '7px 12px',
+                  borderRadius: 'var(--radius-btn)',
+                  borderLeft: '2px solid #7C3AED',
+                  background: 'rgba(124,58,237,0.08)',
+                  color: '#7C3AED',
+                  fontSize: 13, fontWeight: 500,
+                  textDecoration: 'none',
+                  transition: 'background 120ms ease',
+                }}
+              >
+                🛡 Admin panel
+              </a>
+            </>
+          )}
         </nav>
       </div>
 
@@ -1598,6 +1621,29 @@ export default function SettingsClient({ userId, userEmail, profile, targets, se
             )}
           </div>
         ))}
+        {isAdmin && (
+          <div style={{ borderBottom: '1px solid var(--border)' }}>
+            <a
+              href="/admin"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 16px',
+                height: 48,
+                background: 'rgba(124,58,237,0.06)',
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#7C3AED',
+                textDecoration: 'none',
+              }}
+            >
+              <span>🛡 Admin panel</span>
+              <span style={{ fontSize: 12, color: '#7C3AED', opacity: 0.7 }}>→</span>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   )
