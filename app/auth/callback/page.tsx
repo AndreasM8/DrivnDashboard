@@ -12,23 +12,25 @@ function AuthCallbackInner() {
     const supabase = createClient()
 
     async function handle() {
-      const code       = params.get('code')
-      const token_hash = params.get('token_hash')
-      const type       = params.get('type') as 'magiclink' | 'email' | 'signup' | 'recovery' | null
+      // Implicit flow: Supabase puts access_token in the URL hash.
+      // Calling getSession() makes the Supabase client parse the hash
+      // and set the session automatically — no code verifier needed.
+      const { data: { session }, error } = await supabase.auth.getSession()
 
-      let error = null
-
-      if (code) {
-        // PKCE flow — browser client reads code_verifier from localStorage
-        const result = await supabase.auth.exchangeCodeForSession(code)
-        error = result.error
-      } else if (token_hash && type) {
-        // OTP / implicit magic link flow
-        const result = await supabase.auth.verifyOtp({ token_hash, type })
-        error = result.error
-      } else {
-        router.replace('/auth/login?error=auth_failed')
-        return
+      // Fallback: OTP token_hash flow (non-PKCE)
+      if (!session && !error) {
+        const token_hash = params.get('token_hash')
+        const type       = params.get('type') as 'magiclink' | 'email' | 'signup' | 'recovery' | null
+        if (token_hash && type) {
+          const result = await supabase.auth.verifyOtp({ token_hash, type })
+          if (result.error) {
+            router.replace('/auth/login?error=auth_failed')
+            return
+          }
+        } else {
+          router.replace('/auth/login?error=auth_failed')
+          return
+        }
       }
 
       if (error) {
@@ -36,7 +38,7 @@ function AuthCallbackInner() {
         return
       }
 
-      // Check onboarding status
+      // Check onboarding
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
@@ -44,7 +46,6 @@ function AuthCallbackInner() {
           .select('onboarding_complete')
           .eq('id', user.id)
           .single()
-
         if (!profile?.onboarding_complete) {
           router.replace('/onboarding')
           return
