@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 // Stripe sends webhooks with a signature we verify using the webhook secret.
 // Set STRIPE_WEBHOOK_SECRET in .env.local (from Stripe Dashboard → Webhooks).
@@ -46,7 +46,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
 
     if (event.type === 'payment_intent.succeeded') {
       const pi = event.data.object

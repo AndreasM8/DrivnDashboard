@@ -326,3 +326,60 @@ alter table story_item_posts enable row level security;
 drop policy if exists "Users manage own story item posts" on story_item_posts;
 create policy "Users manage own story item posts"
   on story_item_posts for all using (auth.uid() = user_id);
+
+-- ─── Migration 17: AI Coaches ───────────────────────────────────────────────
+
+create table if not exists assistant_conversations (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users on delete cascade,
+  assistant_slug text not null,
+  messages       jsonb not null default '[]',
+  created_at     timestamp with time zone default now(),
+  updated_at     timestamp with time zone default now()
+);
+alter table assistant_conversations enable row level security;
+drop policy if exists "Users manage own conversations" on assistant_conversations;
+create policy "Users manage own conversations"
+  on assistant_conversations for all using (auth.uid() = user_id);
+
+create table if not exists assistant_memory (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users on delete cascade,
+  assistant_slug text not null,
+  key            text not null,
+  value          text not null,
+  created_at     timestamp with time zone default now(),
+  updated_at     timestamp with time zone default now(),
+  unique(user_id, assistant_slug, key)
+);
+alter table assistant_memory enable row level security;
+drop policy if exists "Users manage own assistant memory" on assistant_memory;
+create policy "Users manage own assistant memory"
+  on assistant_memory for all using (auth.uid() = user_id);
+
+create table if not exists knowledge_chunks (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users on delete cascade,
+  assistant_slug text not null,
+  content        text not null,
+  embedding      vector(1536),
+  metadata       jsonb default '{}',
+  created_at     timestamp with time zone default now()
+);
+alter table knowledge_chunks enable row level security;
+drop policy if exists "Users manage own knowledge chunks" on knowledge_chunks;
+create policy "Users manage own knowledge chunks"
+  on knowledge_chunks for all using (auth.uid() = user_id);
+
+create table if not exists assistant_outputs (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users on delete cascade,
+  assistant_slug text not null,
+  tool_name      text not null,
+  content        text not null,
+  created_at     timestamp with time zone default now()
+);
+alter table assistant_outputs enable row level security;
+drop policy if exists "Users manage own assistant outputs" on assistant_outputs;
+create policy "Users manage own assistant outputs"
+  on assistant_outputs for all using (auth.uid() = user_id);
