@@ -160,7 +160,7 @@ function SectionCard({
         </svg>
       </div>
 
-      {open && <div style={{ padding: '0 18px 18px' }}>{children}</div>}
+      {open && <div className="px-3 pb-3 md:px-[18px] md:pb-[18px]">{children}</div>}
     </div>
   )
 }
@@ -169,24 +169,27 @@ function SectionCard({
 
 function Checkbox({ checked, onChange, color }: { checked: boolean; onChange: () => void; color: string }) {
   return (
-    <button
+    <span
+      style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
       onClick={onChange}
-      style={{
-        width: '20px', height: '20px', minWidth: '20px',
-        borderRadius: '4px',
-        border: checked ? 'none' : `1.5px solid ${color}66`,
-        background: checked ? color : 'transparent',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', padding: 0,
-        transition: 'all 150ms ease', flexShrink: 0,
-      }}
     >
-      {checked && (
-        <svg viewBox="0 0 10 8" fill="none" width="11" height="11">
-          <path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="check-draw" />
-        </svg>
-      )}
-    </button>
+      <span
+        style={{
+          width: '20px', height: '20px', minWidth: '20px',
+          borderRadius: '4px',
+          border: checked ? 'none' : `1.5px solid ${color}66`,
+          background: checked ? color : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 150ms ease', flexShrink: 0,
+        }}
+      >
+        {checked && (
+          <svg viewBox="0 0 10 8" fill="none" width="11" height="11">
+            <path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="check-draw" />
+          </svg>
+        )}
+      </span>
+    </span>
   )
 }
 
@@ -211,7 +214,7 @@ function AddInline({ placeholder, color, onAdd }: { placeholder: string; color: 
     <div style={{
       display: 'flex', alignItems: 'center', gap: '8px',
       border: `1.5px dashed ${color}44`, borderRadius: '8px',
-      padding: '8px 12px', marginTop: '8px',
+      padding: '8px 12px', marginTop: '8px', width: '100%', boxSizing: 'border-box',
     }}>
       <span style={{ color: `${color}88`, fontSize: '14px', userSelect: 'none' }}>+</span>
       <input
@@ -265,10 +268,10 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px' }}>
         <Checkbox checked={checked} onChange={() => onToggle(item.id, !checked)} color={color} />
         <span style={{
-          flex: 1, fontSize: '14px',
+          flex: 1, minWidth: 0, fontSize: '14px',
           color: checked ? 'var(--text-3)' : 'var(--text-1)',
           textDecoration: checked ? 'line-through' : 'none',
           transition: 'all 200ms ease',
@@ -316,12 +319,14 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
                 key={dow}
                 onClick={() => toggleDay(dow)}
                 style={{
-                  width: '26px', height: '26px', borderRadius: '50%',
+                  minWidth: '32px', minHeight: '44px', borderRadius: '50%',
                   fontSize: '11px', fontWeight: 600, cursor: 'pointer',
                   border: `1.5px solid ${active ? color : 'var(--border-strong)'}`,
                   background: active ? color : 'transparent',
                   color: active ? '#fff' : 'var(--text-3)',
                   transition: 'all 150ms ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 4px',
                 }}
               >
                 {label}
@@ -591,14 +596,14 @@ function PowerTaskRow({
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minHeight: '44px' }}>
         <Checkbox
           checked={showAsCompleted}
           onChange={() => { if (!showAsCompleted) void onComplete(task.id) }}
           color={color}
         />
         <span style={{
-          flex: 1, fontSize: '13px',
+          flex: 1, minWidth: 0, fontSize: '13px',
           color: showAsCompleted ? 'var(--text-3)' : 'var(--text-1)',
           textDecoration: showAsCompleted ? 'line-through' : 'none',
           transition: 'all 200ms',
@@ -938,8 +943,9 @@ function PerformanceSection({ userId: _userId, dragHandle }: { userId: string; d
                 key={p}
                 onClick={() => setPeriod(p)}
                 style={{
+                  flex: 1,
                   fontSize: '12px', fontWeight: 500,
-                  padding: '4px 12px', borderRadius: '20px',
+                  padding: '6px 12px', borderRadius: '20px',
                   border: `1px solid ${period === p ? '#8B5CF6' : 'var(--border)'}`,
                   background: period === p ? 'rgba(139,92,246,0.1)' : 'transparent',
                   color: period === p ? '#8B5CF6' : 'var(--text-2)',
@@ -1104,12 +1110,12 @@ function StoryScheduleSection({
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading…</p>
       ) : (
-        <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px' }}>
+        <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(110px, 1fr))',
+            gridTemplateColumns: 'repeat(7, minmax(80px, 1fr))',
             gap: '8px',
-            minWidth: '700px',
+            minWidth: '600px',
             paddingBottom: '4px',
           }}>
             {COLUMN_DOWS.map(dow => {
@@ -1128,6 +1134,7 @@ function StoryScheduleSection({
                   flexDirection: 'column',
                   gap: '4px',
                   minHeight: '80px',
+                  scrollSnapAlign: 'start',
                 }}>
                   {/* Day header */}
                   <p style={{
@@ -1152,14 +1159,22 @@ function StoryScheduleSection({
                         <button
                           onClick={() => void togglePosted(item.id, dow, posted)}
                           style={{
-                            width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0, marginTop: '1px',
-                            border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
-                            background: posted ? ACCENT : 'transparent',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 150ms', padding: 0,
+                            minWidth: 44, minHeight: 44, flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '0 10px',
+                            margin: '-10px -10px -10px 0',
+                            background: 'none', border: 'none', cursor: 'pointer',
                           }}
                         >
-                          {posted && <svg viewBox="0 0 8 6" fill="none" width="8" height="8"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          <span style={{
+                            width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
+                            border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
+                            background: posted ? ACCENT : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 150ms',
+                          }}>
+                            {posted && <svg viewBox="0 0 8 6" fill="none" width="8" height="8"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </span>
                         </button>
                         {/* Title */}
                         <span style={{ flex: 1, lineHeight: 1.4, color: 'var(--text-1)', textDecoration: posted ? 'line-through' : 'none' }}>
@@ -1172,7 +1187,14 @@ function StoryScheduleSection({
                         {/* Delete */}
                         <button
                           onClick={() => void deleteItem(item.id)}
-                          style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', lineHeight: 1, padding: '0 1px', opacity: 0.4, flexShrink: 0 }}
+                          style={{
+                            color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: '12px', lineHeight: 1, opacity: 0.4, flexShrink: 0,
+                            minWidth: 44, minHeight: 44,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '0 10px',
+                            margin: '-10px -10px -10px 0',
+                          }}
                           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                           onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
                         >×</button>
@@ -1297,6 +1319,9 @@ export default function TasksClient({
   })
   const draggedKey = useRef<SectionKey | null>(null)
   const [dragOverKey, setDragOverKey] = useState<SectionKey | null>(null)
+  const touchDragKey = useRef<SectionKey | null>(null)
+  const touchStartY = useRef<number>(0)
+  const touchCurrentTarget = useRef<Element | null>(null)
 
   const cycleStart = new Date(cycleStartIso)
 
@@ -1487,6 +1512,40 @@ export default function TasksClient({
         onDragStart={e => { e.stopPropagation(); handleDragStart(key) }}
         onDragEnd={e => { e.stopPropagation(); handleDragEnd() }}
         onClick={e => e.stopPropagation()}
+        onTouchStart={e => {
+          touchDragKey.current = key
+          touchStartY.current = e.touches[0].clientY
+          touchCurrentTarget.current = e.currentTarget
+          e.currentTarget.closest('[data-section-key]')?.setAttribute('style', 'opacity: 0.5')
+        }}
+        onTouchMove={e => {
+          e.preventDefault()
+          const touch = e.touches[0]
+          const el = document.elementFromPoint(touch.clientX, touch.clientY)
+          const sectionEl = el?.closest('[data-section-key]')
+          if (sectionEl) {
+            const overKey = sectionEl.getAttribute('data-section-key') as SectionKey
+            if (overKey && overKey !== touchDragKey.current) {
+              setDragOverKey(overKey)
+            }
+          }
+        }}
+        onTouchEnd={e => {
+          if (touchDragKey.current && dragOverKey) {
+            setSectionOrder(prev => {
+              const from = prev.indexOf(touchDragKey.current!)
+              const to = prev.indexOf(dragOverKey)
+              if (from === -1 || to === -1) return prev
+              const next = [...prev]
+              next.splice(from, 1)
+              next.splice(to, 0, touchDragKey.current!)
+              return next
+            })
+          }
+          setDragOverKey(null)
+          touchDragKey.current = null
+          e.currentTarget.closest('[data-section-key]')?.setAttribute('style', '')
+        }}
         title="Drag to reorder"
         style={{
           background: 'none', border: 'none', cursor: 'grab', padding: '2px 6px 2px 0',
@@ -1494,6 +1553,7 @@ export default function TasksClient({
           display: 'flex', alignItems: 'center', flexShrink: 0,
           transition: 'opacity 150ms',
           userSelect: 'none',
+          touchAction: 'none',
         }}
         onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
         onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
@@ -1557,7 +1617,7 @@ export default function TasksClient({
 
         switch (key) {
           case 'nonneg': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <NonNegSection
                 items={nonNeg}
                 completions={completions}
@@ -1576,7 +1636,7 @@ export default function TasksClient({
             </div>
           )
           case 'business': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <BusinessSection
                 tasks={businessTasks}
                 scheduledTasks={businessScheduled}
@@ -1590,12 +1650,12 @@ export default function TasksClient({
             </div>
           )
           case 'story': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <StoryScheduleSection todayDow={todayDow} dragHandle={grip} />
             </div>
           )
           case 'personal': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <PersonalSection
                 tasks={personalTasks}
                 scheduledTasks={personalScheduled}
@@ -1609,7 +1669,7 @@ export default function TasksClient({
             </div>
           )
           case 'followups': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <FollowupsSection
                 tasks={tasks}
                 onComplete={completeFollowup}
@@ -1620,7 +1680,7 @@ export default function TasksClient({
             </div>
           )
           case 'performance': return (
-            <div key={key} style={wrapperStyle} {...dragProps}>
+            <div key={key} style={wrapperStyle} {...dragProps} data-section-key={key}>
               <PerformanceSection userId={userId} dragHandle={grip} />
             </div>
           )
