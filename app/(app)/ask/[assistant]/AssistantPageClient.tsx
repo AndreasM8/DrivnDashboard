@@ -633,7 +633,7 @@ export default function AssistantPageClient({
       </div>}
 
       {/* Input — hidden during onboarding */}
-      {memoryReady && <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
+      {memoryReady && <div style={{ padding: '12px 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', borderTop: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea
             ref={textareaRef}

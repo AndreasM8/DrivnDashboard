@@ -153,8 +153,8 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
           <p className="section-title" style={{ marginBottom: 16 }}>{g.title}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {g.fields.map(f => (
-              <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <label style={{ flex: 1, fontSize: 13, color: 'var(--text-1)' }}>{f.label}</label>
+              <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <label style={{ flex: 1, minWidth: 120, fontSize: 13, color: 'var(--text-1)' }}>{f.label}</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="number"
@@ -901,7 +901,7 @@ function CalendlyCard({
 
   async function handleDisconnect() {
     setDisconnecting(true)
-    await fetch('/api/calendly/disconnect', { method: 'POST' })
+    await fetch('/api/calendly/status', { method: 'DELETE' })
     setConnected(false)
     setDisconnecting(false)
   }
@@ -1471,10 +1471,22 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
 export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
   const [navHover, setNavHover] = useState<Section | null>(null)
+  const [expandedSection, setExpandedSection] = useState<Section | null>('targets')
+
+  function renderSection(key: Section) {
+    switch (key) {
+      case 'targets':      return <TargetsSection userId={userId} targets={targets} />
+      case 'setters':      return <SettersSection userId={userId} initialSetters={setters} />
+      case 'integrations': return <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />
+      case 'notifications': return <NotificationsSection userId={userId} />
+      case 'account':      return <AccountSection userId={userId} profile={profile} />
+      case 'appearance':   return <AppearanceSection />
+    }
+  }
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      {/* Left nav — desktop */}
+      {/* Left nav — desktop only */}
       <div className="hidden md:flex" style={{
         flexDirection: 'column',
         width: 192,
@@ -1513,50 +1525,54 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
         </nav>
       </div>
 
-      {/* Mobile section nav */}
-      <div className="md:hidden" style={{
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface-1)',
-        padding: '10px 16px',
-        overflowX: 'auto',
-        display: 'flex',
-        gap: 6,
-        flexShrink: 0,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 20,
-      }}>
-        {NAV_ITEMS.map(item => (
-          <button
-            key={item.key}
-            onClick={() => setSection(item.key)}
-            style={{
-              padding: '5px 12px',
-              borderRadius: 'var(--radius-btn)',
-              border: 'none',
-              background: section === item.key ? 'var(--surface-2)' : 'transparent',
-              color: section === item.key ? 'var(--accent)' : 'var(--text-2)',
-              fontSize: 12, fontWeight: section === item.key ? 500 : 400,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'background 120ms ease, color 120ms ease',
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
+      {/* Desktop content panel */}
+      <div className="hidden md:block" style={{ flex: 1, overflowY: 'auto', padding: 24, paddingBottom: 88, maxWidth: 640 }}>
+        {renderSection(section)}
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24, paddingBottom: 88, maxWidth: 640 }}>
-        {section === 'targets' && <TargetsSection userId={userId} targets={targets} />}
-        {section === 'setters' && <SettersSection userId={userId} initialSetters={setters} />}
-        {section === 'integrations' && <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />}
-        {section === 'notifications' && <NotificationsSection userId={userId} />}
-        {section === 'account' && <AccountSection userId={userId} profile={profile} />}
-        {section === 'appearance' && <AppearanceSection />}
+      {/* Mobile accordion — full width, all sections inline */}
+      <div className="md:hidden" style={{ flex: 1, overflowY: 'auto', paddingBottom: 88 }}>
+        {/* Page title */}
+        <div style={{ padding: '16px 16px 4px', borderBottom: '1px solid var(--border)' }}>
+          <h1 className="page-title">Settings</h1>
+        </div>
+        {NAV_ITEMS.map(item => (
+          <div key={item.key} style={{ borderBottom: '1px solid var(--border)' }}>
+            {/* Section header — 48px, tappable */}
+            <button
+              onClick={() => setExpandedSection(expandedSection === item.key ? null : item.key)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 16px',
+                height: 48,
+                background: 'var(--bg-base)',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--text-1)',
+                textAlign: 'left',
+              }}
+            >
+              <span>{item.label}</span>
+              <span style={{
+                transition: 'transform 200ms',
+                transform: expandedSection === item.key ? 'rotate(180deg)' : 'rotate(0deg)',
+                color: 'var(--text-2)',
+                fontSize: 12,
+              }}>▼</span>
+            </button>
+            {/* Section content — shown when expanded */}
+            {expandedSection === item.key && (
+              <div style={{ padding: '0 16px 20px', background: 'var(--bg-base)' }}>
+                {renderSection(item.key)}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )
