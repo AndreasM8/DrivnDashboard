@@ -647,14 +647,14 @@ const stripeSteps: GuideStep[] = [
     ),
   },
   {
-    title: 'Click Webhooks → Add endpoint',
-    description: 'Inside Developers, click "Webhooks" in the sub-menu, then hit "Add endpoint" in the top right.',
+    title: 'Click Webhooks → Add destination',
+    description: 'Inside Developers, click "Webhooks" in the sub-menu, then hit "Add destination" in the top right.',
     visual: (
       <div className="flex flex-col w-full h-full bg-white p-3">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-gray-800">Webhooks</span>
           <div className="relative px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium ring-2 ring-indigo-300 ring-offset-1 animate-pulse">
-            + Add endpoint
+            + Add destination
           </div>
         </div>
         <div className="border border-gray-100 rounded-lg divide-y divide-gray-50">
@@ -669,8 +669,8 @@ const stripeSteps: GuideStep[] = [
     ),
   },
   {
-    title: 'Paste your endpoint URL',
-    description: 'Paste the webhook URL from above into the "Endpoint URL" field, then continue.',
+    title: 'Paste your destination URL',
+    description: 'Paste the webhook URL from above into the "Destination URL" field, then continue.',
     visual: (
       <div className="flex flex-col w-full h-full bg-white justify-center p-4 gap-3">
         <div>
@@ -719,7 +719,7 @@ const stripeSteps: GuideStep[] = [
   },
   {
     title: 'Copy the signing secret',
-    description: 'After saving the endpoint, click "Reveal" next to Signing secret and copy the whsec_… value.',
+    description: 'After saving the destination, click "Reveal" next to Signing secret and copy the whsec_… value.',
     visual: (
       <div className="flex flex-col w-full h-full bg-white justify-center p-4 gap-2">
         <label className="text-xs font-semibold text-gray-600 mb-1">Signing secret</label>
