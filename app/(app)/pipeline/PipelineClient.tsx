@@ -10,6 +10,8 @@ import LeadDrawer from '@/components/pipeline/LeadDrawer'
 import CallBookedModal from '@/components/modals/CallBookedModal'
 import CallOutcomeModal from '@/components/modals/CallOutcomeModal'
 import LabelManager from '@/components/pipeline/LabelManager'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import FAB from '@/components/ui/FAB'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -294,7 +296,7 @@ function LeadCard({
         el.style.boxShadow = ''
         el.style.borderColor = 'var(--border)'
         const tierBtns = el.querySelector('[data-tier-btns]') as HTMLElement | null
-        if (tierBtns) tierBtns.style.opacity = '0'
+        if (tierBtns) tierBtns.style.opacity = '0.35'
       }}
     >
       {/* Top row: username + timestamp + urgency dot */}
@@ -363,7 +365,7 @@ function LeadCard({
         {/* Tier selector — slides in on hover */}
         <div
           data-tier-btns=""
-          style={{ display: 'flex', gap: '2px', opacity: 0, transition: 'opacity 100ms ease', flexShrink: 0 }}
+          style={{ display: 'flex', gap: '2px', opacity: 0.35, transition: 'opacity 100ms ease', flexShrink: 0 }}
           title="Change tier"
         >
           {([1, 2, 3] as const).map(t => (
@@ -413,6 +415,63 @@ function LeadCard({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Mobile lead card ─────────────────────────────────────────────────────────
+
+function MobileLeadCard({ lead, labels, assignedLabelIds, onClick }: {
+  lead: Lead
+  labels: LeadLabel[]
+  assignedLabelIds: string[]
+  onClick: () => void
+}) {
+  const days = daysSince(lead.last_contact_at)
+  const assignedLabels = labels.filter(l => assignedLabelIds.includes(l.id))
+  const tier = (lead.tier ?? 2) as 1 | 2 | 3
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        padding: '12px 16px',
+        borderBottom: '1px solid var(--border)',
+        cursor: 'pointer',
+        minHeight: 72,
+        background: 'var(--bg-base)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 500, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          @{lead.ig_username}
+        </span>
+        {days != null && (
+          <span style={{ fontSize: 11, color: days > 7 ? 'var(--danger)' : 'var(--text-2)', whiteSpace: 'nowrap' }}>
+            {days}d
+          </span>
+        )}
+      </div>
+      {lead.setter_notes && (
+        <span style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {lead.setter_notes}
+        </span>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {tier && (
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: tier === 1 ? '#FEF3C7' : tier === 2 ? '#DBEAFE' : '#F3F4F6', color: tier === 1 ? '#92400E' : tier === 2 ? '#1E40AF' : '#374151' }}>
+            T{tier}
+          </span>
+        )}
+        {assignedLabels.slice(0, 3).map(label => (
+          <span key={label.id} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: label.bg_color + '44', color: label.text_color, fontWeight: 500 }}>
+            {label.name}
+          </span>
+        ))}
       </div>
     </div>
   )
@@ -641,6 +700,7 @@ function StageColumn({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets }: Props) {
+  const isMobile = useIsMobile()
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [labels, setLabels] = useState<LeadLabel[]>(initialLabels)
   const [assignments, setAssignments] = useState<LeadLabelAssignment[]>(initialAssignments)
@@ -648,6 +708,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [tierFilter, setTierFilter] = useState<TierFilter>('all')
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [search, setSearch] = useState('')
+  const [mobileStage, setMobileStage] = useState<LeadStage | null>(null)
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<LeadStage>>(loadHiddenColumns)
   const [showColumnToggles, setShowColumnToggles] = useState(false)
@@ -723,6 +784,16 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       return true
     })
   }, [leads, tierFilter, selectedLabels, search, assignments])
+
+  // ─── Mobile filtered leads ─────────────────────────────────────────────────
+
+  const filteredMobileLeads = useMemo(() => {
+    const allLeads = STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).flatMap(col =>
+      leads.filter(l => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false))
+    )
+    if (mobileStage) return allLeads.filter(l => l.stage === mobileStage || (STAGE_COLUMNS.find(c => c.stage === mobileStage)?.extraStages?.includes(l.stage) ?? false))
+    return allLeads
+  }, [leads, mobileStage, hiddenColumns])
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -956,11 +1027,52 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         </div>
       </div>
 
-      {/* Conversion funnel */}
-      <PipelineFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
+      {/* Conversion funnel — desktop only */}
+      <div className="hidden md:block">
+        <PipelineFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
+      </div>
 
-      {/* Kanban columns */}
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+      {/* Mobile stage filter strip */}
+      <div className="md:hidden" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4, marginBottom: 12, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, padding: '0 16px', minWidth: 'max-content' }}>
+          {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map((col, i, visibleCols) => {
+            const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
+            const count = leads.filter(inStage).length
+            const prevCol = i > 0 ? visibleCols[i - 1] : null
+            const prevCount = prevCol ? leads.filter(l => l.stage === prevCol.stage || (prevCol.extraStages?.includes(l.stage) ?? false)).length : null
+            const conversion = prevCount && prevCount > 0 ? Math.round((count / prevCount) * 100) : null
+            const isActive = mobileStage === col.stage
+            return (
+              <button
+                key={col.stage}
+                onClick={() => setMobileStage(isActive ? null : col.stage)}
+                style={{
+                  background: isActive ? 'var(--accent)' : 'var(--surface-2)',
+                  color: isActive ? '#fff' : 'var(--text-1)',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                  minWidth: 88,
+                }}
+              >
+                <span style={{ fontWeight: 600, fontSize: 14 }}>{count}</span>
+                <span style={{ opacity: 0.8 }}>{col.label}</span>
+                {conversion !== null && <span style={{ fontSize: 10, opacity: 0.65 }}>{conversion}%</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Kanban columns — desktop only */}
+      <div className="hidden md:block" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ display: 'flex', gap: '12px', padding: '16px 24px', height: '100%', minWidth: 'max-content' }}>
           {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => {
             const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
@@ -983,6 +1095,29 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
             )
           })}
         </div>
+      </div>
+
+      {/* Mobile lead list */}
+      <div className="md:hidden" style={{ overflowY: 'auto', flex: 1, paddingBottom: 88 }}>
+        {filteredMobileLeads.map(lead => {
+          const assignedLabelIds = assignments
+            .filter(a => a.lead_id === lead.id)
+            .map(a => a.label_id)
+          return (
+            <MobileLeadCard
+              key={lead.id}
+              lead={lead}
+              labels={labels}
+              assignedLabelIds={assignedLabelIds}
+              onClick={() => setDrawerLead(lead)}
+            />
+          )
+        })}
+        {filteredMobileLeads.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '48px 24px', fontSize: 13, color: 'var(--text-3)' }}>
+            No leads found
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -1050,6 +1185,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           onRemoved={onLabelRemoved}
         />
       )}
+
+      <FAB onClick={() => { setAddLeadStage('follower'); setAddLeadOpen(true) }} />
     </div>
   )
 }
