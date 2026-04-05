@@ -6,6 +6,7 @@ import type { Client, PaymentInstallment, Product } from '@/types'
 import ClientDrawer from '@/components/clients/ClientDrawer'
 import AddClientModal from '@/components/modals/AddClientModal'
 import ProductsPanel from '@/components/clients/ProductsPanel'
+import FAB from '@/components/ui/FAB'
 
 interface Props {
   initialClients: Client[]
@@ -58,6 +59,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   const [search, setSearch]   = useState('')
   const [drawerClient, setDrawerClient] = useState<Client | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'clients' | 'products'>('clients')
 
   const allInstallments = installments
 
@@ -141,8 +143,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         <h1 className="page-title">Clients</h1>
         <button
           onClick={() => setAddOpen(true)}
-          className="btn-primary"
-          style={{ fontSize: '12px', padding: '5px 12px' }}
+          className="btn-primary hidden md:inline-flex"
+          style={{ fontSize: '13px', padding: '10px 14px' }}
         >
           + Add client
         </button>
@@ -196,6 +198,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
             onClick={() => setFilter(f.key)}
             style={{
               padding: '4px 10px',
+              minHeight: 36,
               borderRadius: 'var(--radius-badge)',
               fontSize: '11px',
               fontWeight: '500',
@@ -229,183 +232,276 @@ export default function ClientsClient({ initialClients, installments, userId, ba
       {/* ── Client cards + Products panel ─────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Left: client list — 50% on desktop */}
-        <div style={{ flex: '0 0 50%', overflowY: 'auto', padding: '16px 24px 88px' }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
-            {clients.length === 0 ? (
-              <>
-                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>No clients yet</p>
-                <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>
-                  Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.
-                </p>
-                <button onClick={() => setAddOpen(true)} className="btn-primary">Add client</button>
-              </>
+        {/* Left: client list — full width on mobile, 50% on desktop */}
+        <div
+          className="w-full md:flex-[0_0_50%]"
+          style={{ overflowY: 'auto', padding: '16px 24px 88px', height: '100%' }}
+        >
+          {/* ── Mobile segmented tab control ──────────────────────────────── */}
+          <div className="md:hidden" style={{ display: 'flex', gap: 4, marginBottom: 12, background: 'var(--surface-1)' }}>
+            {(['clients', 'products'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setMobileTab(tab)}
+                style={{
+                  flex: 1,
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  background: mobileTab === tab ? 'var(--accent)' : 'var(--surface-2)',
+                  color: mobileTab === tab ? '#fff' : 'var(--text-2)',
+                  transition: 'background 120ms, color 120ms',
+                }}
+              >
+                {tab === 'clients' ? 'Clients' : 'Products'}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Mobile: Products tab ──────────────────────────────────────── */}
+          <div className="md:hidden" style={{ display: mobileTab === 'products' ? 'block' : 'none', height: '100%', overflowY: 'auto', paddingBottom: 88 }}>
+            <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />
+          </div>
+
+          {/* ── Client list (shown always on desktop; on mobile when tab = clients) ── */}
+          <div style={{ display: mobileTab === 'clients' ? 'block' : 'none' }} className="md:block">
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
+                {clients.length === 0 ? (
+                  <>
+                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>No clients yet</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>
+                      Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.
+                    </p>
+                    <button onClick={() => setAddOpen(true)} className="btn-primary">Add client</button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>No clients match this filter</p>
+                    <button onClick={() => setFilter('all')} className="btn-ghost">Clear filter</button>
+                  </>
+                )}
+              </div>
             ) : (
-              <>
-                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>No clients match this filter</p>
-                <button onClick={() => setFilter('all')} className="btn-ghost">Clear filter</button>
-              </>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '800px' }}>
+                {filtered.map(client => {
+                  const insts     = getClientInstallments(client.id)
+                  const nextDate  = nextInvoiceDate(client.id)
+                  const hasOverdue = insts.some(i => !i.paid && new Date(i.due_date) < new Date())
+                  const isUpsell  = client.upsell_reminder_set
+                  const borderColor = hasOverdue ? 'var(--danger)' : isUpsell ? 'var(--purple)' : 'var(--border)'
+
+                  return (
+                    <div
+                      key={client.id}
+                      onClick={() => setDrawerClient(client)}
+                      style={{
+                        borderRadius: 'var(--radius-card)',
+                        background: 'var(--surface-1)',
+                        border: `1px solid ${borderColor}`,
+                        borderLeft: `3px solid ${borderColor}`,
+                        boxShadow: 'var(--shadow-card)',
+                        cursor: 'pointer',
+                        transition: 'border-color 120ms ease, box-shadow 120ms ease',
+                        overflow: 'hidden',
+                      }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLDivElement
+                        el.style.boxShadow = 'var(--shadow-raised)'
+                        if (!hasOverdue && !isUpsell) el.style.borderColor = 'var(--border-strong)'
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLDivElement
+                        el.style.boxShadow = 'var(--shadow-card)'
+                        el.style.borderColor = borderColor
+                      }}
+                    >
+                      {/* ── Mobile card layout ── */}
+                      <div className="md:hidden" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+                        {/* Avatar */}
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: 'rgba(37,99,235,0.12)',
+                            color: 'var(--accent)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 13,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {(client.full_name || client.ig_username).charAt(0).toUpperCase()}
+                        </div>
+                        {/* Name + details */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                            {client.full_name || client.ig_username}
+                          </p>
+                          <p style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {client.monthly_amount
+                              ? `${formatCurrency(client.monthly_amount, baseCurrency)}/mo`
+                              : formatCurrency(client.total_amount, baseCurrency)
+                            }
+                            {nextDate ? ` · ${new Date(nextDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}` : ''}
+                          </p>
+                        </div>
+                        {/* Status badge */}
+                        <div style={{ flexShrink: 0 }}>
+                          {hasOverdue ? (
+                            <span className="badge" style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--danger)', fontSize: 10 }}>
+                              Overdue
+                            </span>
+                          ) : isUpsell ? (
+                            <span className="badge" style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--purple)', fontSize: 10 }}>
+                              Upsell set
+                            </span>
+                          ) : (
+                            <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 10 }}>
+                              {client.payment_type === 'pif' ? 'PIF' : client.payment_type === 'split' ? 'Split' : `${client.plan_months}mo`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ── Desktop card layout ── */}
+                      <div
+                        className="hidden md:flex"
+                        style={{
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 14px',
+                        }}
+                      >
+                        {/* Avatar */}
+                        <div
+                          style={{
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '50%',
+                            background: 'rgba(37,99,235,0.12)',
+                            color: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {(client.full_name || client.ig_username).charAt(0).toUpperCase()}
+                        </div>
+
+                        {/* Name + handle */}
+                        <div style={{ minWidth: 0, flex: '0 0 160px' }}>
+                          <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                            {client.full_name || client.ig_username}
+                          </p>
+                          <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            @{client.ig_username}
+                          </p>
+                        </div>
+
+                        {/* Payment type */}
+                        <div style={{ flex: '0 0 100px' }}>
+                          <span
+                            className="badge"
+                            style={{ background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: '10px' }}
+                          >
+                            {client.payment_type === 'pif' ? 'Paid in full' : client.payment_type === 'split' ? 'Split pay' : `Plan (${client.plan_months}mo)`}
+                          </span>
+                        </div>
+
+                        {/* Monthly */}
+                        <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
+                          <p style={{ fontSize: '12px', color: 'var(--text-2)' }}>
+                            {client.monthly_amount ? formatCurrency(client.monthly_amount, baseCurrency) : '—'}
+                          </p>
+                          <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>/ month</p>
+                        </div>
+
+                        {/* LTV */}
+                        <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
+                          <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-1)' }}>
+                            {formatCurrency(client.total_amount, baseCurrency)}
+                          </p>
+                          <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>total</p>
+                        </div>
+
+                        {/* Payment dots */}
+                        <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                          <PaymentDots installments={insts} />
+                        </div>
+
+                        {/* Next invoice */}
+                        <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
+                          {nextDate ? (
+                            <p style={{ fontSize: '12px', color: daysUntil(nextDate) <= 3 ? 'var(--warning)' : 'var(--text-2)', fontWeight: daysUntil(nextDate) <= 3 ? '600' : '400' }}>
+                              {new Date(nextDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                            </p>
+                          ) : (
+                            <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>—</p>
+                          )}
+                          <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>next invoice</p>
+                        </div>
+
+                        {/* Actions */}
+                        <div
+                          style={{ flex: '0 0 auto', display: 'flex', gap: '6px' }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {isUpsell ? (
+                            <span
+                              className="badge"
+                              style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--purple)', fontSize: '10px' }}
+                            >
+                              Upsell set
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setDrawerClient(client)}
+                              className="btn-ghost"
+                              style={{ fontSize: '11px', padding: '3px 8px' }}
+                              onMouseEnter={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.1)'
+                                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--purple)'
+                                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(124,58,237,0.3)'
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'
+                                ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)'
+                              }}
+                            >
+                              Set upsell
+                            </button>
+                          )}
+                          {hasOverdue && (
+                            <button
+                              onClick={() => setDrawerClient(client)}
+                              className="badge"
+                              style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--danger)', fontSize: '10px', border: 'none', cursor: 'pointer' }}
+                            >
+                              Overdue
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '800px' }}>
-            {filtered.map(client => {
-              const insts     = getClientInstallments(client.id)
-              const nextDate  = nextInvoiceDate(client.id)
-              const hasOverdue = insts.some(i => !i.paid && new Date(i.due_date) < new Date())
-              const isUpsell  = client.upsell_reminder_set
-              const borderColor = hasOverdue ? 'var(--danger)' : isUpsell ? 'var(--purple)' : 'var(--border)'
-
-              return (
-                <div
-                  key={client.id}
-                  onClick={() => setDrawerClient(client)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 14px',
-                    borderRadius: 'var(--radius-card)',
-                    background: 'var(--surface-1)',
-                    border: `1px solid ${borderColor}`,
-                    borderLeft: `3px solid ${borderColor}`,
-                    boxShadow: 'var(--shadow-card)',
-                    cursor: 'pointer',
-                    transition: 'border-color 120ms ease, box-shadow 120ms ease',
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.boxShadow = 'var(--shadow-raised)'
-                    if (!hasOverdue && !isUpsell) el.style.borderColor = 'var(--border-strong)'
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.boxShadow = 'var(--shadow-card)'
-                    el.style.borderColor = borderColor
-                  }}
-                >
-                  {/* Avatar */}
-                  <div
-                    style={{
-                      width: '34px',
-                      height: '34px',
-                      borderRadius: '50%',
-                      background: 'rgba(37,99,235,0.12)',
-                      color: 'var(--accent)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {(client.full_name || client.ig_username).charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* Name + handle */}
-                  <div style={{ minWidth: 0, flex: '0 0 160px' }}>
-                    <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
-                      {client.full_name || client.ig_username}
-                    </p>
-                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      @{client.ig_username}
-                    </p>
-                  </div>
-
-                  {/* Payment type */}
-                  <div style={{ flex: '0 0 100px' }}>
-                    <span
-                      className="badge"
-                      style={{ background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: '10px' }}
-                    >
-                      {client.payment_type === 'pif' ? 'Paid in full' : client.payment_type === 'split' ? 'Split pay' : `Plan (${client.plan_months}mo)`}
-                    </span>
-                  </div>
-
-                  {/* Monthly */}
-                  <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
-                    <p style={{ fontSize: '12px', color: 'var(--text-2)' }}>
-                      {client.monthly_amount ? formatCurrency(client.monthly_amount, baseCurrency) : '—'}
-                    </p>
-                    <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>/ month</p>
-                  </div>
-
-                  {/* LTV */}
-                  <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
-                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-1)' }}>
-                      {formatCurrency(client.total_amount, baseCurrency)}
-                    </p>
-                    <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>total</p>
-                  </div>
-
-                  {/* Payment dots */}
-                  <div style={{ flex: '1 1 0', minWidth: 0 }}>
-                    <PaymentDots installments={insts} />
-                  </div>
-
-                  {/* Next invoice */}
-                  <div style={{ flex: '0 0 80px', textAlign: 'right' }}>
-                    {nextDate ? (
-                      <p style={{ fontSize: '12px', color: daysUntil(nextDate) <= 3 ? 'var(--warning)' : 'var(--text-2)', fontWeight: daysUntil(nextDate) <= 3 ? '600' : '400' }}>
-                        {new Date(nextDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                      </p>
-                    ) : (
-                      <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>—</p>
-                    )}
-                    <p style={{ fontSize: '10px', color: 'var(--text-3)' }}>next invoice</p>
-                  </div>
-
-                  {/* Actions */}
-                  <div
-                    style={{ flex: '0 0 auto', display: 'flex', gap: '6px' }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    {isUpsell ? (
-                      <span
-                        className="badge"
-                        style={{ background: 'rgba(124,58,237,0.1)', color: 'var(--purple)', fontSize: '10px' }}
-                      >
-                        Upsell set
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setDrawerClient(client)}
-                        className="btn-ghost"
-                        style={{ fontSize: '11px', padding: '3px 8px' }}
-                        onMouseEnter={e => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.1)'
-                          ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--purple)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(124,58,237,0.3)'
-                        }}
-                        onMouseLeave={e => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                          ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)'
-                        }}
-                      >
-                        Set upsell
-                      </button>
-                    )}
-                    {hasOverdue && (
-                      <button
-                        onClick={() => setDrawerClient(client)}
-                        className="badge"
-                        style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--danger)', fontSize: '10px', border: 'none', cursor: 'pointer' }}
-                      >
-                        Overdue
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
         </div>
 
-        {/* Right: products panel */}
+        {/* Right: products panel — desktop only */}
         <div
           className="hidden md:block"
           style={{
@@ -439,6 +535,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
           onAdded={onClientAdded}
         />
       )}
+
+      <FAB onClick={() => setAddOpen(true)} />
     </div>
   )
 }
