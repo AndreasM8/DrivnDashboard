@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const { email } = await req.json()
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://drivn-dashboard-2gzs.vercel.app'
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://drivn-dashboard-2gzs.vercel.app').replace(/[./\s]+$/, '')
 
     // Generate a real (non-PKCE) magic link via admin API
     // No redirectTo — we build our own verify URL from the token hash
