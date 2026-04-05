@@ -57,12 +57,13 @@ function StatCard({
 }) {
   return (
     <div
+      className="stat-card"
       style={{
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow-card)',
-        padding: '16px',
+        padding: '14px',
         borderLeft: `3px solid ${statusColor}`,
       }}
     >
@@ -91,7 +92,7 @@ function TaskRow({ task }: { task: Task }) {
         borderBottom: '1px solid var(--border)',
         borderLeft: `3px solid ${borderColor}`,
         paddingLeft: '12px',
-        marginLeft: '-16px',
+        marginLeft: '-20px',
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -311,9 +312,11 @@ export default async function DashboardPage() {
           marginBottom: '24px',
           paddingBottom: '16px',
           borderBottom: '1px solid var(--border)',
+          flexWrap: 'wrap',
+          gap: '8px',
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <h1 className="page-title">
             {greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
           </h1>
@@ -326,6 +329,7 @@ export default async function DashboardPage() {
             border: '1px solid var(--border)',
             borderRadius: 'var(--radius-badge)',
             padding: '4px 10px',
+            flexShrink: 0,
           }}
         >
           {todayLabel()}
@@ -333,8 +337,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}
-        className="lg:grid-cols-4"
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '24px' }}
+        className="md:grid-cols-4"
       >
         <StatCard
           label="Money in this month"
@@ -409,7 +413,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '16px' }}>
               {pipelineCols.map(col => (
                 <PipelineChip
                   key={col.key}
@@ -436,80 +440,57 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  {['Client', 'Payment', 'Monthly'].map((h, i) => (
-                    <th
-                      key={h}
-                      className="label-caps"
-                      style={{
-                        padding: '0 0 10px',
-                        textAlign: i === 2 ? 'right' : 'left',
-                        borderBottom: '1px solid var(--border)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(clients as Client[]).map(c => (
-                  <tr
-                    key={c.id}
-                    style={{ borderBottom: '1px solid var(--border)' }}
+          <div>
+            {(clients as Client[]).map(c => (
+              <div
+                key={c.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  borderBottom: '1px solid var(--border)',
+                  minHeight: '44px',
+                  padding: '6px 0',
+                }}
+              >
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'rgba(37,99,235,0.12)',
+                    color: 'var(--accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    flexShrink: 0,
+                  }}
+                >
+                  {(c.full_name || c.ig_username).charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 500, color: 'var(--text-1)', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.full_name || c.ig_username}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-3)' }}>
+                    @{c.ig_username}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                  <span
+                    className="badge"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
                   >
-                    <td style={{ padding: '10px 16px 10px 0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            background: 'rgba(37,99,235,0.12)',
-                            color: 'var(--accent)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {(c.full_name || c.ig_username).charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p style={{ fontWeight: 500, color: 'var(--text-1)' }}>{c.full_name || c.ig_username}</p>
-                          <p
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: '11px',
-                              color: 'var(--text-3)',
-                            }}
-                          >
-                            @{c.ig_username}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 16px 10px 0' }}>
-                      <span
-                        className="badge"
-                        style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-                      >
-                        {c.payment_type === 'pif' ? 'Paid in full' : c.payment_type === 'split' ? 'Split' : `Plan`}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 500, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
-                      {c.monthly_amount ? formatCurrency(c.monthly_amount, currency) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    {c.payment_type === 'pif' ? 'PIF' : c.payment_type === 'split' ? 'Split' : 'Plan'}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-1)', fontVariantNumeric: 'tabular-nums' }}>
+                    {c.monthly_amount ? formatCurrency(c.monthly_amount, currency) : '—'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </SectionCard>

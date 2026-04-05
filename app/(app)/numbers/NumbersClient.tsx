@@ -250,7 +250,24 @@ function SalesFunnel({ steps, leadsReplied }: { steps: FunnelStep[]; leadsReplie
   }
 
   return (
-    <div style={{ overflowX: 'auto', paddingBottom: '4px' }}>
+    <>
+    {/* Mobile: horizontal scroll chips */}
+    <div className="md:hidden" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {boxes.map((box, i) => (
+          <div key={box.label} style={{ flexShrink: 0, width: '100px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px' }}>
+            <p style={{ fontSize: '10px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '4px' }}>{box.label}</p>
+            <p style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-1)', lineHeight: 1, marginBottom: '2px' }}>{box.value}</p>
+            {i > 0 && rates[i - 1] !== null && (
+              <p style={{ fontSize: '11px', fontWeight: 500, color: rateColor(rates[i - 1]) }}>{rates[i - 1]!.toFixed(0)}%</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Desktop: full funnel */}
+    <div className="hidden md:block" style={{ overflowX: 'auto', paddingBottom: '4px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0', minWidth: '560px' }}>
         {boxes.map((box, i) => (
           <div key={box.label} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -306,6 +323,7 @@ function SalesFunnel({ steps, leadsReplied }: { steps: FunnelStep[]; leadsReplie
         ))}
       </div>
     </div>
+    </>
   )
 }
 
@@ -348,7 +366,7 @@ function HistoryTable({
   const columns = ['Month', 'Cash in', 'Contracts', 'Clients', 'Calls', 'Show-up %', 'Close %', 'Avg deal', 'Ad spend', 'Cash ROAS', 'Profit']
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
       <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -365,6 +383,7 @@ function HistoryTable({
                   color: 'var(--text-3)',
                   borderBottom: '1px solid var(--border)',
                   whiteSpace: 'nowrap',
+                  ...(i === 0 ? { position: 'sticky', left: 0, background: 'var(--surface-1)', zIndex: 1 } : {}),
                 }}
               >
                 {h}
@@ -388,7 +407,7 @@ function HistoryTable({
                   fontWeight:   isCurrent ? '600' : '400',
                 }}
               >
-                <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
+                <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', color: 'var(--text-1)', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'var(--surface-1)', zIndex: 1 }}>
                   {fmtMonth(s.month)}
                   {isCurrent && (
                     <span style={{ display: 'inline-block', background: 'rgba(22,163,74,0.15)', color: '#16A34A', borderRadius: '4px', padding: '1px 5px', fontSize: '9px', fontWeight: 700, marginLeft: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -993,7 +1012,7 @@ export default function NumbersClient({
       )}
 
       {/* ── Body ─────────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '20px 24px 40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ padding: '20px 24px 88px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* ══ MONTH VIEW ═══════════════════════════════════════════════════════ */}
         {viewMode === 'month' && (<>
@@ -1129,7 +1148,7 @@ export default function NumbersClient({
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <div className="grid grid-cols-1 md:grid-cols-3">
                 {([
                   {
                     label:   'Cash ROAS',
@@ -1152,9 +1171,9 @@ export default function NumbersClient({
                 ] as { label: string; value: number | null; sub: string; formula: string | null }[]).map((col, i) => (
                   <div
                     key={col.label}
+                    className={i < 2 ? 'md:border-r border-b md:border-b-0' : ''}
                     style={{
-                      padding:     '0 16px',
-                      borderRight: i < 2 ? '1px solid var(--border)' : 'none',
+                      padding:     '12px 16px',
                       paddingLeft: i === 0 ? 0 : '16px',
                     }}
                   >
