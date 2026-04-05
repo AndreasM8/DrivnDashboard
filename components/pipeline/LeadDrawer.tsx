@@ -41,6 +41,7 @@ const STAGE_STYLE: Record<LeadStage, { background: string; color: string; dot: s
   replied:        { background: 'rgba(37,99,235,0.1)',        color: 'var(--accent)',    dot: 'var(--accent)' },
   freebie_sent:   { background: 'rgba(139,92,246,0.1)',       color: 'var(--purple)',    dot: 'var(--purple)' },
   call_booked:    { background: 'rgba(245,158,11,0.1)',       color: 'var(--warning)',   dot: 'var(--warning)' },
+  second_call:    { background: 'rgba(234,179,8,0.12)',       color: '#A16207',          dot: '#CA8A04' },
   closed:         { background: 'rgba(22,163,74,0.1)',        color: 'var(--success)',   dot: 'var(--success)' },
   nurture:        { background: 'rgba(20,184,166,0.1)',       color: '#0D9488',          dot: '#0D9488' },
   bad_fit:        { background: 'rgba(220,38,38,0.08)',       color: 'var(--danger)',    dot: 'var(--danger)' },

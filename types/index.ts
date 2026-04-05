@@ -112,6 +112,7 @@ export type LeadStage =
   | 'replied'
   | 'freebie_sent'
   | 'call_booked'
+  | 'second_call'
   | 'closed'
   | 'nurture'
   | 'bad_fit'
@@ -325,6 +326,7 @@ export const STAGE_LABELS: Record<LeadStage, string> = {
   replied:        'Replied',
   freebie_sent:   'Freebie sent',
   call_booked:    'Call booked',
+  second_call:    '2nd call',
   closed:         'Closed',
   nurture:        'Nurture',
   bad_fit:        'Bad fit',

@@ -45,8 +45,8 @@ function contactColor(days: number | null) {
 function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTargets | null }) {
   const total = leads.length
 
-  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const callBookedStages: LeadStage[] = ['call_booked', 'closed']
+  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const callBookedStages: LeadStage[] = ['call_booked', 'second_call', 'closed']
 
   const steps = [
     { label: 'LEADS',       count: total },
@@ -186,6 +186,7 @@ const STAGE_COLUMNS: StageColumnConfig[] = [
   { stage: 'follower',       label: 'Followers',      auto: true,  bg: 'bg-white', accent: '#3B82F6',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#3B82F6' },
   { stage: 'replied',        label: 'Replied',        auto: true,  bg: 'bg-white', accent: '#8B5CF6',  extraStages: ['freebie_sent'], hideable: false, defaultHidden: false, dotColor: '#8B5CF6' },
   { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white', accent: '#F97316',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#F97316' },
+  { stage: 'second_call',    label: '2nd call',       auto: false, bg: 'bg-white', accent: '#EAB308',  extraStages: undefined,        hideable: true,  defaultHidden: false, dotColor: '#EAB308' },
   { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white', accent: '#10B981',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#10B981' },
   { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white', accent: '#F59E0B',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#F59E0B' },
   { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white', accent: '#94A3B8',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#94A3B8' },
@@ -687,6 +688,7 @@ function StageColumn({
             {stage === 'replied' && 'Move leads here when they reply'}
             {stage === 'call_booked' && 'Move leads here when a call is booked'}
             {stage === 'closed' && 'Move leads here when you close a deal'}
+            {stage === 'second_call' && 'Leads who need a second call to close'}
             {stage === 'nurture' && 'Leads to keep warm over time'}
             {stage === 'not_interested' && 'Leads who passed for now'}
             {stage === 'bad_fit' && 'Leads that are not a good fit'}
