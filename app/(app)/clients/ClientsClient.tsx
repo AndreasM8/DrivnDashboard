@@ -320,7 +320,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                       }}
                     >
                       {/* ── Mobile card layout ── */}
-                      <div className="md:hidden" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+                      <div className="flex md:hidden" style={{ alignItems: 'center', gap: 10, padding: '12px 14px' }}>
                         {/* Avatar */}
                         <div
                           style={{
