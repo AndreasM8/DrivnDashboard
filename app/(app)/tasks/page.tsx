@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getEffectiveUserId } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import TasksClient from './TasksClient'
 import type { Task } from '@/types'
@@ -65,6 +66,8 @@ export default async function TasksPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const uid = await getEffectiveUserId()
+
   // Fetch profile first so we can compute the timezone-aware cycle date
   const { data: profile } = await supabase
     .from('users')
@@ -94,14 +97,14 @@ export default async function TasksPage() {
     { data: tasks },
     { count: followupsCompletedToday },
   ] = await Promise.all([
-    supabase.from('non_negotiables').select('*').eq('user_id', user.id).eq('active', true).order('position'),
-    supabase.from('non_negotiable_completions').select('*').eq('user_id', user.id).eq('date', todayKey),
-    supabase.from('power_tasks').select('*').eq('user_id', user.id)
+    supabase.from('non_negotiables').select('*').eq('user_id', uid).eq('active', true).order('position'),
+    supabase.from('non_negotiable_completions').select('*').eq('user_id', uid).eq('date', todayKey),
+    supabase.from('power_tasks').select('*').eq('user_id', uid)
       .or(`completed.eq.false,completed_at.gte.${cycleStartIso}`)
       .order('position'),
-    supabase.from('tasks').select('*').eq('user_id', user.id).eq('completed', false).order('due_at'),
+    supabase.from('tasks').select('*').eq('user_id', uid).eq('completed', false).order('due_at'),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id).eq('type', 'follow_up').eq('completed', true)
+      .eq('user_id', uid).eq('type', 'follow_up').eq('completed', true)
       .gte('completed_at', today + 'T00:00:00.000Z'),
   ])
 

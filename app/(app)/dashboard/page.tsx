@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import { getEffectiveUserId } from '@/lib/admin'
 import { TASK_TYPE_STYLES } from '@/types'
 import type { Task, Lead, Client } from '@/types'
 import Link from 'next/link'
@@ -200,6 +201,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const uid = await getEffectiveUserId()
   const now = new Date()
   const monthStart = `${now.toISOString().slice(0, 7)}-01`
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
@@ -223,7 +225,7 @@ export default async function DashboardPage() {
     supabase
       .from('tasks')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .eq('completed', false)
       .in('priority', ['overdue', 'today'])
       .order('priority')
@@ -231,31 +233,31 @@ export default async function DashboardPage() {
     supabase
       .from('clients')
       .select('id, started_at, payment_type, total_amount')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .eq('active', true),
     supabase
       .from('clients')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .eq('active', true)
       .order('created_at', { ascending: false })
       .limit(5),
     supabase
       .from('leads')
       .select('ig_username, stage')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .not('stage', 'in', '("closed","bad_fit","not_interested")'),
-    supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
+    supabase.from('kpi_targets').select('*').eq('user_id', uid).single(),
     supabase
       .from('monthly_snapshots')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .eq('month', new Date().toISOString().slice(0, 7))
       .single(),
-    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStart),
+    supabase.from('leads').select('id').eq('user_id', uid).gte('created_at', monthStart),
     supabase.from('payment_installments').select('amount, clients!inner(user_id)')
       .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', monthStart),
-    supabase.from('leads').select('id').eq('user_id', user.id).eq('call_outcome', 'showed')
+    supabase.from('leads').select('id').eq('user_id', uid).eq('call_outcome', 'showed')
       .gte('updated_at', monthStart),
     supabase.from('payment_installments').select('amount, clients!inner(user_id)')
       .eq('clients.user_id', user.id).eq('paid', false)

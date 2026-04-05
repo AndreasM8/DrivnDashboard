@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getEffectiveUserId } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import NumbersClient from './NumbersClient'
 import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
@@ -7,6 +8,8 @@ export default async function NumbersPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
+
+  const uid = await getEffectiveUserId()
 
   const now = new Date()
   const currentMonth = now.toISOString().slice(0, 7)
@@ -34,15 +37,15 @@ export default async function NumbersPage() {
     { data: allExpensesData },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
-    supabase.from('kpi_targets').select('*').eq('user_id', user.id).single(),
-    supabase.from('monthly_snapshots').select('*').eq('user_id', user.id).order('month', { ascending: false }).limit(7),
-    supabase.from('clients').select('*').eq('user_id', user.id).eq('active', true),
+    supabase.from('kpi_targets').select('*').eq('user_id', uid).single(),
+    supabase.from('monthly_snapshots').select('*').eq('user_id', uid).order('month', { ascending: false }).limit(7),
+    supabase.from('clients').select('*').eq('user_id', uid).eq('active', true),
     // Join through clients so RLS + explicit user filter both apply
     supabase.from('payment_installments').select('*, clients!inner(user_id)').eq('clients.user_id', user.id),
     // All leads created this month = new followers
-    supabase.from('leads').select('id').eq('user_id', user.id).gte('created_at', monthStartTs),
+    supabase.from('leads').select('id').eq('user_id', uid).gte('created_at', monthStartTs),
     // Leads with a call booked THIS month — attribute meetings + outcomes to booking month
-    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', user.id)
+    supabase.from('leads').select('call_booked_at, call_outcome').eq('user_id', uid)
       .gte('call_booked_at', monthStartTs)
       .lt('call_booked_at', nextMonthStart + 'T00:00:00.000Z'),
     // Installments DUE this month (paid + unpaid) — include client_id + payment_type to exclude PIF
@@ -52,19 +55,19 @@ export default async function NumbersPage() {
       .gte('due_date', monthStart)
       .lt('due_date', nextMonthStart),
     // Expenses for current month
-    supabase.from('expenses').select('*').eq('user_id', user.id).eq('month', currentMonth).order('created_at', { ascending: true }),
+    supabase.from('expenses').select('*').eq('user_id', uid).eq('month', currentMonth).order('created_at', { ascending: true }),
     // Ad spend log for all months
-    supabase.from('ad_spend_log').select('month, actual_amount, currency_code').eq('user_id', user.id),
+    supabase.from('ad_spend_log').select('month, actual_amount, currency_code').eq('user_id', uid),
     // Leads replied this month = leads created this month NOT still in 'follower' stage
-    supabase.from('leads').select('id').eq('user_id', user.id)
+    supabase.from('leads').select('id').eq('user_id', uid)
       .neq('stage', 'follower')
       .gte('created_at', monthStartTs),
     // Total leads ever in pipeline
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('user_id', uid),
     // Total clients ever acquired (including inactive)
-    supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', uid),
     // All expenses ever (for all-time profit)
-    supabase.from('expenses').select('amount').eq('user_id', user.id),
+    supabase.from('expenses').select('amount').eq('user_id', uid),
   ])
 
   // ── Exchange rate for ad spend currency conversion ────────────────────────
