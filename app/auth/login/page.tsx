@@ -145,7 +145,7 @@ export default function LoginPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={loading || code.length < 6}
+                  disabled={loading || code.length < 5}
                   className="btn-primary"
                   style={{ width: '100%', justifyContent: 'center' }}
                 >
