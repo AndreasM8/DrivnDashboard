@@ -128,13 +128,13 @@ export default function LoginPage() {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={6}
+                    maxLength={10}
                     required
                     value={code}
                     onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="000000"
+                    placeholder="········"
                     className="input-base"
-                    style={{ width: '100%', fontSize: 24, letterSpacing: 8, textAlign: 'center' }}
+                    style={{ width: '100%', fontSize: 24, letterSpacing: 6, textAlign: 'center' }}
                     autoFocus
                   />
                 </div>
@@ -145,7 +145,7 @@ export default function LoginPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={loading || code.length < 5}
+                  disabled={loading || code.length < 4}
                   className="btn-primary"
                   style={{ width: '100%', justifyContent: 'center' }}
                 >
