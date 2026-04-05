@@ -45,6 +45,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
+  // Gate /admin routes — only users with role = 'admin' may enter
+  if (pathname.startsWith('/admin')) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
   return response
 }
 

@@ -49,7 +49,13 @@ export interface User {
   ad_spend_currency: string
   timezone: string
   notification_prefs: Partial<NotificationPrefs>
+  role: 'coach' | 'admin'
   created_at: string
+}
+
+export interface AdminViewAs {
+  coachId: string
+  coachName: string
 }
 
 // ─── Currencies ───────────────────────────────────────────────────────────────

@@ -102,9 +102,10 @@ function NavLink({ href, label, icon, badge }: NavItem) {
 interface SidebarProps {
   taskBadge?: number
   isOwner?: boolean
+  isAdmin?: boolean
 }
 
-export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps) {
+export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false }: SidebarProps) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -184,7 +185,12 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
           <NavLink href="/team" label="Team" icon={<TeamIcon />} />
         )}
 
-        <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
+        {isAdmin && (
+          <>
+            <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
+            <NavLink href="/admin" label="Admin" icon={<AdminIcon />} />
+          </>
+        )}
 
         {/* AI Coaches — coming in v2 */}
       </nav>
@@ -291,10 +297,10 @@ function TeamIcon() {
   )
 }
 
-function AskIcon() {
+function AdminIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
-      <path d="M11.983 1.907a.75.75 0 0 0-1.292-.657l-8.5 9.5A.75.75 0 0 0 2.75 12h6.572l-1.305 6.093a.75.75 0 0 0 1.292.657l8.5-9.5A.75.75 0 0 0 17.25 8h-6.572l1.305-6.093Z" />
+      <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
     </svg>
   )
 }
