@@ -12,6 +12,7 @@ import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 
 interface Props {
   userId: string
+  userEmail: string
   profile: User
   targets: KpiTargets | null
   setters: Setter[]
@@ -1240,7 +1241,7 @@ function NotificationsSection({ userId }: { userId: string }) {
 
 // ─── Section: Account ─────────────────────────────────────────────────────────
 
-function AccountSection({ userId, profile }: { userId: string; profile: User }) {
+function AccountSection({ userId, userEmail, profile }: { userId: string; userEmail: string; profile: User }) {
   const [profileData, setProfileData] = useState({
     name: profile.name,
     business_name: profile.business_name,
@@ -1284,6 +1285,27 @@ function AccountSection({ userId, profile }: { userId: string; profile: User }) 
       <div style={CARD}>
         <p className="section-title" style={{ marginBottom: 16 }}>Profile</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Email — read-only, from Supabase auth */}
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+              Email address
+            </label>
+            <div style={{
+              padding: '9px 12px',
+              borderRadius: 'var(--radius-input)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-2)',
+              fontSize: 13,
+              color: 'var(--text-2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}>
+              <span>{userEmail}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', flexShrink: 0 }}>Login email</span>
+            </div>
+          </div>
           {[
             { key: 'name', label: 'Your name', placeholder: 'Alex' },
             { key: 'business_name', label: 'Business name', placeholder: 'Alex Coaching' },
@@ -1471,7 +1493,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'appearance', label: 'Appearance' },
 ]
 
-export default function SettingsClient({ userId, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
+export default function SettingsClient({ userId, userEmail, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
   const [navHover, setNavHover] = useState<Section | null>(null)
   const [expandedSection, setExpandedSection] = useState<Section | null>('targets')
@@ -1482,7 +1504,7 @@ export default function SettingsClient({ userId, profile, targets, setters, seco
       case 'setters':      return <SettersSection userId={userId} initialSetters={setters} />
       case 'integrations': return <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />
       case 'notifications': return <NotificationsSection userId={userId} />
-      case 'account':      return <AccountSection userId={userId} profile={profile} />
+      case 'account':      return <AccountSection userId={userId} userEmail={userEmail} profile={profile} />
       case 'appearance':   return <AppearanceSection />
     }
   }

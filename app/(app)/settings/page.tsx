@@ -24,6 +24,7 @@ export default async function SettingsPage({
   return (
     <SettingsClient
       userId={user.id}
+      userEmail={user.email ?? ''}
       profile={profile as User}
       targets={targets as KpiTargets ?? null}
       setters={(setters as Setter[]) ?? []}
