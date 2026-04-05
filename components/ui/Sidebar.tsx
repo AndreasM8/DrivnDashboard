@@ -186,7 +186,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true }: SidebarProps)
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/ask" label="AI Coaches" icon={<AskIcon />} />
+        {/* AI Coaches — coming in v2 */}
       </nav>
 
       {/* Bottom: Settings + Logout */}

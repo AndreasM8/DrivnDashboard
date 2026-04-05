@@ -931,6 +931,9 @@ function CalendlyCard({
           <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
             Automatically moves leads to &ldquo;Meeting booked&rdquo; when they schedule a call with you.
           </p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.5 }}>
+            ⚠️ Requires Calendly Professional or higher to use webhooks.
+          </p>
 
           {oauthResult === 'ok' && (
             <p style={{ marginTop: 8, fontSize: 12, color: 'var(--success)', fontWeight: 500 }}>
