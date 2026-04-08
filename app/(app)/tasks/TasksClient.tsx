@@ -120,7 +120,7 @@ function SectionCard({
       borderTop: `3px solid ${s.border}`,
       borderRadius: '12px',
       boxShadow: open ? '0 2px 8px rgba(0,0,0,0.06)' : 'var(--shadow-card)',
-      overflow: 'clip',
+      overflow: 'hidden',
       transition: 'background 200ms ease, box-shadow 200ms ease',
     }}>
       {/* Header — always clickable */}
@@ -1122,205 +1122,174 @@ function StoryScheduleSection({
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading…</p>
       ) : (
-        // Negative margin breaks out of SectionCard's padding so the scroll goes edge-to-edge
-        <div style={{ margin: '0 -18px -18px', paddingBottom: '2px' }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '8px' }}>
           <div style={{
-            overflowX: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: '12px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(160px, 1fr))',
+            gap: '6px',
+            minWidth: '1120px',
           }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(7, minmax(140px, 1fr))`,
-              gap: '6px',
-              minWidth: '980px',
-              padding: '4px 18px 0',
-            }}>
-              {COLUMN_DOWS.map(dow => {
-                const colItems = itemsForDow(dow)
-                const isToday = dow === todayDow
-                const isAddingHere = addingForDow === dow
+            {COLUMN_DOWS.map(dow => {
+              const colItems = itemsForDow(dow)
+              const isToday = dow === todayDow
+              const isAddingHere = addingForDow === dow
 
-                return (
-                  <div key={dow} style={{
-                    background: isToday ? `${ACCENT}08` : 'var(--surface-2)',
-                    border: `1px solid ${isToday ? ACCENT + '44' : 'var(--border)'}`,
-                    borderTop: `2px solid ${isToday ? ACCENT : 'var(--border)'}`,
-                    borderRadius: '8px',
-                    padding: '8px 10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    minHeight: '90px',
+              return (
+                <div key={dow} style={{
+                  background: isToday ? `${ACCENT}08` : 'var(--surface-2)',
+                  border: `1px solid ${isToday ? ACCENT + '44' : 'var(--border)'}`,
+                  borderTop: `2px solid ${isToday ? ACCENT : 'transparent'}`,
+                  borderRadius: '8px',
+                  padding: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px',
+                  minHeight: '80px',
+                }}>
+                  {/* Day header */}
+                  <p style={{
+                    fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                    letterSpacing: '0.07em',
+                    color: isToday ? ACCENT : 'var(--text-3)',
+                    marginBottom: '5px',
                   }}>
-                    {/* Day header */}
-                    <p style={{
-                      fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      color: isToday ? ACCENT : 'var(--text-2)',
-                      marginBottom: '6px',
-                    }}>
-                      {DOW_FULL_SS[dow]}
-                    </p>
+                    {DOW_FULL_SS[dow]}
+                  </p>
 
-                    {/* Story items */}
-                    {colItems.map(item => {
-                      const posted = isPosted(item.id, dow)
-                      const repeatLabel = item.repeat_days !== null
-                        ? `Repeats: ${item.repeat_days.map(d => DOW_FULL_SS[d]).join(', ')}`
-                        : 'One-time'
-                      return (
-                        <div
-                          key={item.id}
-                          className="story-item-row"
-                          title={item.title + ` · ${repeatLabel}`}
+                  {/* Story items — ultra-lean rows, delete abs-positioned */}
+                  {colItems.map(item => {
+                    const posted = isPosted(item.id, dow)
+                    const repeatLabel = item.repeat_days !== null
+                      ? `Repeats: ${item.repeat_days.map(d => DOW_FULL_SS[d]).join(', ')}`
+                      : 'One-time this week'
+                    return (
+                      <div
+                        key={item.id}
+                        className="story-item-row"
+                        title={`${item.title} · ${repeatLabel}`}
+                        style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          minWidth: 0,
+                          padding: '4px 20px 4px 4px', // right pad = space for abs delete
+                          borderRadius: '5px',
+                          background: posted ? `${ACCENT}12` : 'transparent',
+                          transition: 'background 150ms',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => void togglePosted(item.id, dow, posted)}
+                      >
+                        {/* Checkbox */}
+                        <span style={{
+                          flexShrink: 0,
+                          width: 13, height: 13, borderRadius: '3px',
+                          border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
+                          background: posted ? ACCENT : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 150ms',
+                        }}>
+                          {posted && (
+                            <svg viewBox="0 0 8 6" fill="none" width="8" height="8">
+                              <path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </span>
+
+                        {/* Title — takes all remaining space, truncates */}
+                        <span style={{
+                          flex: 1, minWidth: 0,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontSize: 12, fontWeight: 500, lineHeight: 1.3,
+                          color: posted ? 'var(--text-3)' : 'var(--text-1)',
+                          textDecoration: posted ? 'line-through' : 'none',
+                          transition: 'all 150ms',
+                        }}>
+                          {item.title}
+                        </span>
+
+                        {/* Delete — absolutely positioned, 0 layout cost */}
+                        <button
+                          onClick={e => { e.stopPropagation(); void deleteItem(item.id) }}
+                          className="story-delete-btn"
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            minWidth: 0,
-                            overflow: 'hidden',
-                            background: posted ? `${ACCENT}14` : 'var(--surface-1)',
-                            border: `1px solid ${posted ? ACCENT + '30' : 'var(--border)'}`,
-                            borderRadius: '6px',
-                            padding: '5px 6px 5px 4px',
-                            transition: 'background 200ms, border-color 200ms',
-                            cursor: 'default',
+                            position: 'absolute', right: 2, top: '50%', transform: 'translateY(-50%)',
+                            width: 16, height: 16, borderRadius: '3px',
+                            background: 'var(--surface-3)', border: 'none',
+                            color: 'var(--text-2)', cursor: 'pointer', fontSize: 13,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: 0, transition: 'opacity 100ms', padding: 0, lineHeight: 1,
                           }}
-                        >
-                          {/* Checkbox */}
+                        >×</button>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add form or add button */}
+                  {isAddingHere ? (
+                    <div style={{ marginTop: '4px' }} onClick={e => e.stopPropagation()}>
+                      <input
+                        autoFocus
+                        value={newTitle}
+                        onChange={e => setNewTitle(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') void addItem(dow)
+                          if (e.key === 'Escape') { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }
+                        }}
+                        placeholder="Story type…"
+                        style={{
+                          width: '100%', fontSize: '12px',
+                          border: `1px solid ${ACCENT}55`,
+                          borderRadius: '5px', padding: '5px 7px',
+                          background: 'var(--surface-1)',
+                          outline: 'none', color: 'var(--text-1)',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '6px' }}>
+                        {[1,2,3,4,5,6,0].map(d => (
                           <button
-                            onClick={() => void togglePosted(item.id, dow, posted)}
+                            key={d}
+                            onClick={() => toggleNewRepeatDay(d)}
+                            title={DOW_FULL_SS[d]}
                             style={{
-                              flexShrink: 0, width: 26, height: 26,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                              width: '20px', height: '20px', borderRadius: '50%', fontSize: '9px', fontWeight: 700,
+                              border: `1.5px solid ${newRepeatDays.includes(d) ? ACCENT : 'var(--border-strong)'}`,
+                              background: newRepeatDays.includes(d) ? ACCENT : 'transparent',
+                              color: newRepeatDays.includes(d) ? '#fff' : 'var(--text-3)',
+                              cursor: 'pointer', transition: 'all 120ms', padding: 0,
                             }}
                           >
-                            <span style={{
-                              width: 15, height: 15, borderRadius: '3px',
-                              border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
-                              background: posted ? ACCENT : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              flexShrink: 0, transition: 'all 150ms',
-                            }}>
-                              {posted && (
-                                <svg viewBox="0 0 8 6" fill="none" width="9" height="9">
-                                  <path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </span>
+                            {DOW_FULL_SS[d][0]}
                           </button>
-
-                          {/* Title */}
-                          <span style={{
-                            flex: 1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontSize: 12,
-                            fontWeight: 500,
-                            lineHeight: 1.3,
-                            color: posted ? 'var(--text-3)' : 'var(--text-1)',
-                            transition: 'color 200ms',
-                            textDecoration: posted ? 'line-through' : 'none',
-                          }}>
-                            {item.title}
-                          </span>
-
-                          {/* Repeat indicator */}
-                          {item.repeat_days !== null && (
-                            <span style={{ fontSize: 10, color: ACCENT, opacity: 0.7, flexShrink: 0, lineHeight: 1 }}>↻</span>
-                          )}
-
-                          {/* Delete — show on hover via CSS class */}
-                          <button
-                            onClick={() => void deleteItem(item.id)}
-                            className="story-delete-btn"
-                            style={{
-                              flexShrink: 0, width: 18, height: 18,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: 'var(--text-3)', background: 'none', border: 'none',
-                              cursor: 'pointer', fontSize: 14, opacity: 0,
-                              padding: 0, transition: 'opacity 120ms', lineHeight: 1,
-                            }}
-                          >×</button>
-                        </div>
-                      )
-                    })}
-
-                    {/* Add form or add button */}
-                    {isAddingHere ? (
-                      <div style={{ marginTop: '4px' }}>
-                        <input
-                          autoFocus
-                          value={newTitle}
-                          onChange={e => setNewTitle(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') void addItem(dow)
-                            if (e.key === 'Escape') { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }
-                          }}
-                          placeholder="Story type…"
-                          style={{
-                            width: '100%', fontSize: '12px',
-                            border: `1px solid ${ACCENT}55`,
-                            borderRadius: '5px', padding: '5px 7px',
-                            background: 'var(--surface-1)',
-                            outline: 'none', color: 'var(--text-1)',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                        {/* Repeat day picker */}
-                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '6px' }}>
-                          {[1,2,3,4,5,6,0].map(d => (
-                            <button
-                              key={d}
-                              onClick={() => toggleNewRepeatDay(d)}
-                              title={`${DOW_FULL_SS[d]}`}
-                              style={{
-                                width: '22px', height: '22px', borderRadius: '50%', fontSize: '9px', fontWeight: 700,
-                                border: `1.5px solid ${newRepeatDays.includes(d) ? ACCENT : 'var(--border-strong)'}`,
-                                background: newRepeatDays.includes(d) ? ACCENT : 'transparent',
-                                color: newRepeatDays.includes(d) ? '#fff' : 'var(--text-3)',
-                                cursor: 'pointer', transition: 'all 120ms', padding: 0,
-                              }}
-                            >
-                              {DOW_FULL_SS[d][0]}
-                            </button>
-                          ))}
-                        </div>
-                        <p style={{ fontSize: '10px', color: 'var(--text-3)', margin: '4px 0 0' }}>
-                          {newRepeatDays.length === 0 ? 'One-time this week' : `Repeats ${newRepeatDays.map(d => DOW_FULL_SS[d]).join(', ')}`}
-                        </p>
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
-                          <button
-                            onClick={() => void addItem(dow)}
-                            style={{ flex: 1, fontSize: '11px', fontWeight: 600, padding: '4px', borderRadius: '5px', background: ACCENT, color: '#fff', border: 'none', cursor: 'pointer' }}
-                          >Add</button>
-                          <button
-                            onClick={() => { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }}
-                            style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '5px', background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', cursor: 'pointer' }}
-                          >Cancel</button>
-                        </div>
+                        ))}
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setAddingForDow(dow)}
-                        style={{
-                          marginTop: 'auto', paddingTop: '6px', fontSize: '11px', color: ACCENT,
-                          background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                          opacity: 0.55, transition: 'opacity 120ms',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.55')}
-                      >
-                        + Add
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                      <p style={{ fontSize: '10px', color: 'var(--text-3)', margin: '4px 0 0' }}>
+                        {newRepeatDays.length === 0 ? 'One-time this week' : `Repeats ${newRepeatDays.map(d => DOW_FULL_SS[d]).join(', ')}`}
+                      </p>
+                      <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                        <button onClick={() => void addItem(dow)} style={{ flex: 1, fontSize: '11px', fontWeight: 600, padding: '4px', borderRadius: '5px', background: ACCENT, color: '#fff', border: 'none', cursor: 'pointer' }}>Add</button>
+                        <button onClick={() => { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }} style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '5px', background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingForDow(dow)}
+                      style={{
+                        marginTop: 'auto', paddingTop: '6px', fontSize: '11px', color: ACCENT,
+                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                        opacity: 0.5, transition: 'opacity 120ms',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

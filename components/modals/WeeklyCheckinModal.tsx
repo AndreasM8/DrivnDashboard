@@ -369,8 +369,12 @@ export default function WeeklyCheckinModal({
                   )}
                   <input
                     type="number"
-                    value={row.value}
-                    onChange={e => row.onChange(Number(e.target.value))}
+                    value={row.value ?? ''}
+                    onChange={e => {
+                      const raw = e.target.value
+                      row.onChange(raw === '' ? 0 : Number(raw))
+                    }}
+                    onFocus={e => e.target.select()}
                     style={{
                       flex: 1, height: 44,
                       padding: '0 12px',
@@ -381,6 +385,8 @@ export default function WeeklyCheckinModal({
                       fontSize: 18, fontWeight: 500,
                       outline: 'none',
                       boxSizing: 'border-box',
+                      MozAppearance: 'textfield',
+                      WebkitAppearance: 'none',
                     }}
                   />
                 </div>

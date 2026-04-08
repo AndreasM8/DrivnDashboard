@@ -51,17 +51,26 @@ export default async function AdminPage() {
 
   if (!coaches) return <div style={{ padding: 40, color: 'var(--text-2)' }}>No coaches found.</div>
 
+  // This week's Monday
+  const now = new Date()
+  const dayOfWeek = now.getUTCDay()
+  const monday = new Date(now)
+  monday.setUTCDate(now.getUTCDate() - ((dayOfWeek + 6) % 7))
+  const thisWeekStart = monday.toISOString().slice(0, 10)
+
   // Fetch everything in parallel
   const [
     { data: allClients },
     { data: allLeads },
     { data: allSnapshots },
     { data: authData },
+    { data: thisWeekCheckins },
   ] = await Promise.all([
     supabase.from('clients').select('user_id, total_amount, payment_type, active'),
     supabase.from('leads').select('id, user_id, stage'),
     supabase.from('monthly_snapshots').select('*').eq('month', currentMonth),
     adminClient.auth.admin.listUsers({ perPage: 1000 }),
+    supabase.from('weekly_checkins').select('user_id, submitted_at').eq('week_start', thisWeekStart),
   ])
 
   // Build lookup maps
@@ -117,5 +126,11 @@ export default async function AdminPage() {
     }
   })
 
-  return <AdminClient coachStats={coachStats} currentMonth={currentMonth} />
+  // Which coaches haven't submitted this week
+  const submittedIds = new Set((thisWeekCheckins ?? []).filter(c => c.submitted_at).map(c => c.user_id))
+  const missingCheckins = coachStats
+    .filter(c => !submittedIds.has(c.userId))
+    .map(c => c.name)
+
+  return <AdminClient coachStats={coachStats} currentMonth={currentMonth} missingCheckins={missingCheckins} />
 }

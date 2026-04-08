@@ -7,6 +7,7 @@ import type { CoachStats } from './page'
 interface Props {
   coachStats: CoachStats[]
   currentMonth: string
+  missingCheckins: string[]
 }
 
 type SortKey = 'name' | 'totalLeads' | 'replyRate' | 'bookingRate' | 'closeRate'
@@ -184,7 +185,7 @@ function AggregateFunnel({ coaches }: { coaches: CoachStats[] }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function AdminClient({ coachStats, currentMonth }: Props) {
+export default function AdminClient({ coachStats, currentMonth, missingCheckins }: Props) {
   const router    = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [tab,       setTab]       = useState<'overview' | 'numbers' | 'coaches'>('overview')
@@ -321,6 +322,34 @@ export default function AdminClient({ coachStats, currentMonth }: Props) {
       {/* ══ OVERVIEW TAB ═══════════════════════════════════════════════════════ */}
       {tab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Missing check-ins alert */}
+          {missingCheckins.length > 0 && (
+            <a
+              href="/admin/checkins"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px',
+                background: 'rgba(220,38,38,0.06)',
+                border: '1px solid rgba(220,38,38,0.25)',
+                borderLeft: '3px solid #DC2626',
+                borderRadius: 'var(--radius-card)',
+                textDecoration: 'none',
+                transition: 'background 120ms',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#DC2626', marginBottom: 2 }}>
+                  {missingCheckins.length} coach{missingCheckins.length > 1 ? 'es haven\'t' : ' hasn\'t'} submitted this week&apos;s check-in
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                  {missingCheckins.join(', ')}
+                </p>
+              </div>
+              <span style={{ fontSize: 12, color: '#DC2626', fontWeight: 500, flexShrink: 0 }}>View →</span>
+            </a>
+          )}
 
           {/* Top stat row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
