@@ -24,7 +24,7 @@ interface Props {
   calendlyErrorDetail?: string
 }
 
-type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance'
+type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance' | 'checkins'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -387,13 +387,14 @@ function IntegrationIcon({ type }: { type: 'webhook' | 'stripe' | 'calendly' | '
 }
 
 function WebhookCard({
-  name, desc, configured, webhookUrl, instructions, docsUrl,
+  name, desc, configured, webhookUrl, webhookSecret, instructions, docsUrl,
 }: {
   emoji?: string
   name: string
   desc: string
   configured: boolean
   webhookUrl: string
+  webhookSecret?: string | null
   instructions: string[]
   docsUrl?: string
 }) {
@@ -422,19 +423,42 @@ function WebhookCard({
           <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{desc}</p>
 
           {/* Webhook URL */}
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <code style={{
-              flex: 1, fontSize: 12,
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-btn)', padding: '6px 10px',
-              color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              display: 'block',
-            }}>
-              {webhookUrl}
-            </code>
-            <CopyButton value={webhookUrl} />
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Webhook URL</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <code style={{
+                flex: 1, fontSize: 12,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-btn)', padding: '6px 10px',
+                color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                display: 'block',
+              }}>
+                {webhookUrl}
+              </code>
+              <CopyButton value={webhookUrl} />
+            </div>
           </div>
+
+          {/* Webhook secret */}
+          {webhookSecret && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Secret header value <span style={{ fontWeight: 400 }}>(x-zapier-secret)</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <code style={{
+                  flex: 1, fontSize: 12,
+                  background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-btn)', padding: '6px 10px',
+                  color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  display: 'block',
+                }}>
+                  {webhookSecret}
+                </code>
+                <CopyButton value={webhookSecret} />
+              </div>
+            </div>
+          )}
 
           {/* Setup instructions toggle */}
           <button
@@ -465,7 +489,7 @@ function WebhookCard({
 }
 
 interface IntegrationStatus {
-  zapier: { configured: boolean; webhook_url: string }
+  zapier: { configured: boolean; webhook_url: string; webhook_secret: string | null }
   stripe: { configured: boolean; webhook_url: string }
 }
 
@@ -1022,15 +1046,35 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
 
       <WebhookCard
         name="ManyChat"
-        desc="Automatically adds new followers to your pipeline when they DM you. Uses ManyChat's built-in HTTP action — no Zapier needed. Skip this and add followers manually instead."
+        desc="Automatically adds new followers to your pipeline when they DM you via ManyChat. Uses ManyChat's built-in HTTP action."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
+        webhookSecret={status?.zapier.webhook_secret}
         instructions={[
-          'In ManyChat, open the flow you use for new DMs → click the + button to add a step → choose Actions → Send Request',
-          'Set Method to POST, paste the URL above into the URL field, set Content Type to JSON',
-          'In the Request Body, add: { "ig_username": "{{last name}}", "full_name": "{{full name}}", "source": "manychat" } → Save and publish the flow',
+          'In ManyChat, open the flow you want to trigger on new DMs → click + to add a step → choose External Request (or "Actions → Send Request")',
+          'Set Method to POST, paste the Webhook URL above, set Content Type to JSON',
+          'Add a Header: Key = x-zapier-secret, Value = (copy from Secret header value above)',
+          'In the Request Body, paste: { "type": "new_lead", "data": { "ig_username": "{{last name}}", "full_name": "{{full name}}", "source_flow": "manychat" } }',
+          'Save and publish the flow — new followers who DM will appear in your pipeline under Followers.',
         ]}
         docsUrl="https://manychat.com"
+      />
+
+      <WebhookCard
+        name="Zapier"
+        desc="Connect any app to your pipeline via Zapier. Use this to push leads from Instagram Lead Ads, forms, or any other source."
+        configured={status?.zapier.configured ?? false}
+        webhookUrl={zapierUrl}
+        webhookSecret={status?.zapier.webhook_secret}
+        instructions={[
+          'In Zapier, create a new Zap. Set the Trigger to your lead source (e.g. Instagram Lead Ads, Typeform, Google Forms, etc.)',
+          'For the Action, choose Webhooks by Zapier → POST',
+          'Paste the Webhook URL above into the URL field. Set Payload Type to JSON.',
+          'Under Headers, add: Key = x-zapier-secret, Value = (copy from Secret header value above)',
+          'In the Data section set: type = new_lead. Then add a nested "data" object with: ig_username → Instagram handle field, full_name → full name field, source_flow → "zapier"',
+          'Turn on the Zap and test it — a new lead should appear in your pipeline under Followers.',
+        ]}
+        docsUrl="https://zapier.com"
       />
 
       <StripeCard webhookUrl={stripeUrl} />
@@ -1082,12 +1126,12 @@ function NotificationsSection({ userId }: { userId: string }) {
     if (prefs) save(prefs)
   }
 
-  function NotifToggle({ k }: { k: 'followup_enabled' | 'call_outcome_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
+  function NotifToggle({ k }: { k: 'followup_enabled' | 'noshow_followup_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
     const on = prefs?.[k] ?? true
     return <Toggle on={!!on} onClick={() => toggle(k)} />
   }
 
-  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'call_outcome_hours' | 'payment_days_before' | 'upsell_months'; min: number; max: number; unit: string }) {
+  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'noshow_followup_days' | 'payment_days_before' | 'upsell_months'; min: number; max: number; unit: string }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
@@ -1157,19 +1201,19 @@ function NotificationsSection({ userId }: { userId: string }) {
         )}
       </div>
 
-      {/* Call outcome */}
+      {/* No-show follow-up */}
       <div style={notifCard}>
         <div style={rowBetween}>
           <div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Log call outcome</p>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Reminds you to log what happened after a call</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>No-show follow-up</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Creates a task to re-book when a lead no-showed, canceled, or rescheduled</p>
           </div>
-          <NotifToggle k="call_outcome_enabled" />
+          <NotifToggle k="noshow_followup_enabled" />
         </div>
-        {prefs.call_outcome_enabled && (
+        {prefs.noshow_followup_enabled && (
           <div style={{ ...divider, ...rowBetween }}>
-            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Remind me</span>
-            <NumberInput k="call_outcome_hours" min={0} max={24} unit="hours after call" />
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Remind me after</span>
+            <NumberInput k="noshow_followup_days" min={1} max={14} unit="days" />
           </div>
         )}
       </div>
@@ -1483,6 +1527,122 @@ function AppearanceSection() {
   )
 }
 
+// ─── Section: Check-ins ───────────────────────────────────────────────────────
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function CheckinsSection({ userId }: { userId: string }) {
+  const supabase = createClient()
+  const [enabled, setEnabled] = useState(true)
+  const [day, setDay] = useState(0)
+  const [loaded, setLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('users').select('checkin_enabled, checkin_day').eq('id', userId).single()
+      .then(({ data }) => {
+        if (data) {
+          const d = data as { checkin_enabled: boolean | null; checkin_day: number | null }
+          setEnabled(d.checkin_enabled !== false)
+          setDay(d.checkin_day ?? 0)
+        }
+        setLoaded(true)
+      })
+  }, [userId])
+
+  async function save(newEnabled: boolean, newDay: number) {
+    setSaving(true)
+    await supabase.from('users').update({ checkin_enabled: newEnabled, checkin_day: newDay }).eq('id', userId)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  if (!loaded) {
+    return <p style={{ fontSize: 13, color: 'var(--text-3)', padding: '32px 0', textAlign: 'center' }}>Loading…</p>
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {saved && (
+        <div style={{
+          padding: '8px 14px',
+          background: 'rgba(22,163,74,0.07)',
+          border: '1px solid rgba(22,163,74,0.2)',
+          borderRadius: 'var(--radius-card)',
+          fontSize: 12, color: 'var(--success)', fontWeight: 500,
+        }}>
+          Saved ✓
+        </div>
+      )}
+
+      <div style={CARD}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: enabled ? 16 : 0 }}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Weekly check-in enabled</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Show a weekly check-in prompt on your dashboard</p>
+          </div>
+          <Toggle
+            on={enabled}
+            onClick={() => {
+              const newVal = !enabled
+              setEnabled(newVal)
+              save(newVal, day)
+            }}
+          />
+        </div>
+
+        {enabled && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 10 }}>Check-in day</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {DAY_LABELS.map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setDay(i)
+                    save(enabled, i)
+                  }}
+                  disabled={saving}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-btn)',
+                    border: day === i ? 'none' : '1px solid var(--border)',
+                    background: day === i ? 'var(--accent)' : 'var(--surface-2)',
+                    color: day === i ? '#fff' : 'var(--text-2)',
+                    fontSize: 12, fontWeight: day === i ? 600 : 400,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    transition: 'all 120ms ease',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Past check-ins</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>View your check-in history and happiness trend</p>
+        </div>
+        <a
+          href="/checkins"
+          style={{
+            fontSize: 13, fontWeight: 500, color: 'var(--accent)',
+            textDecoration: 'none', flexShrink: 0,
+          }}
+        >
+          View →
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { key: Section; label: string }[] = [
@@ -1490,6 +1650,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'setters', label: 'Setters' },
   { key: 'integrations', label: 'Integrations' },
   { key: 'notifications', label: 'Notifications' },
+  { key: 'checkins', label: 'Check-ins' },
   { key: 'account', label: 'Account' },
   { key: 'appearance', label: 'Appearance' },
 ]
@@ -1505,6 +1666,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
       case 'setters':      return <SettersSection userId={userId} initialSetters={setters} />
       case 'integrations': return <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />
       case 'notifications': return <NotificationsSection userId={userId} />
+      case 'checkins':     return <CheckinsSection userId={userId} />
       case 'account':      return <AccountSection userId={userId} userEmail={userEmail} profile={profile} />
       case 'appearance':   return <AppearanceSection />
     }

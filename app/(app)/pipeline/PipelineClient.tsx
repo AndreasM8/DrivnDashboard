@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter, KpiTargets } from '@/types'
@@ -257,8 +257,9 @@ function LeadCard({
 
   async function handleContacted(e: React.MouseEvent) {
     e.stopPropagation()
+    if (contactedFlash) return
     setContactedFlash(true)
-    setTimeout(() => setContactedFlash(false), 1000)
+    setTimeout(() => setContactedFlash(false), 1200)
     await fetch(`/api/leads/${lead.id}/contacted`, { method: 'PATCH' })
     onContacted(lead.id)
   }
@@ -395,6 +396,7 @@ function LeadCard({
           {showContactedBtn && (
             <button
               onClick={handleContacted}
+              disabled={contactedFlash}
               title="Mark as contacted"
               style={{
                 width: '20px',
@@ -423,57 +425,225 @@ function LeadCard({
 
 // ─── Mobile lead card ─────────────────────────────────────────────────────────
 
-function MobileLeadCard({ lead, labels, assignedLabelIds, onClick }: {
+function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp }: {
   lead: Lead
   labels: LeadLabel[]
   assignedLabelIds: string[]
   onClick: () => void
+  onFollowUp?: () => void
+  showFollowUp?: boolean
 }) {
+  const [contacted, setContacted] = useState(false)
   const days = daysSince(lead.last_contact_at)
   const assignedLabels = labels.filter(l => assignedLabelIds.includes(l.id))
   const tier = (lead.tier ?? 2) as 1 | 2 | 3
 
+  async function handleFollowUp(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (contacted) return
+    setContacted(true)
+    setTimeout(() => setContacted(false), 1500)
+    await fetch(`/api/leads/${lead.id}/contacted`, { method: 'PATCH' })
+    onFollowUp?.()
+  }
+
   return (
     <div
-      onClick={onClick}
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-        padding: '12px 16px',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 16px',
         borderBottom: '1px solid var(--border)',
-        cursor: 'pointer',
-        minHeight: 72,
         background: 'var(--bg-base)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 500, color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          @{lead.ig_username}
-        </span>
-        {days != null && (
-          <span style={{ fontSize: 11, color: days > 7 ? 'var(--danger)' : 'var(--text-2)', whiteSpace: 'nowrap' }}>
-            {days}d
+      <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={onClick}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+          <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            @{lead.ig_username}
           </span>
-        )}
-      </div>
-      {lead.setter_notes && (
-        <span style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {lead.setter_notes}
-        </span>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        {tier && (
+          {days != null && (
+            <span style={{ fontSize: 11, fontWeight: 500, color: days >= 5 ? '#DC2626' : days >= 3 ? '#D97706' : '#16A34A', flexShrink: 0 }}>
+              {days === 0 ? 'today' : `${days}d`}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: tier === 1 ? '#FEF3C7' : tier === 2 ? '#DBEAFE' : '#F3F4F6', color: tier === 1 ? '#92400E' : tier === 2 ? '#1E40AF' : '#374151' }}>
             T{tier}
           </span>
-        )}
-        {assignedLabels.slice(0, 3).map(label => (
-          <span key={label.id} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: label.bg_color + '44', color: label.text_color, fontWeight: 500 }}>
-            {label.name}
-          </span>
-        ))}
+          {assignedLabels.slice(0, 2).map(label => (
+            <span key={label.id} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: label.bg_color + '44', color: label.text_color, fontWeight: 500 }}>
+              {label.name}
+            </span>
+          ))}
+          {lead.setter_notes && (
+            <span style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lead.setter_notes}
+            </span>
+          )}
+        </div>
       </div>
+      {showFollowUp && (
+        <button
+          onClick={handleFollowUp}
+          disabled={contacted}
+          style={{
+            flexShrink: 0,
+            padding: '7px 11px',
+            borderRadius: 8,
+            border: `1px solid ${contacted ? '#16A34A' : 'var(--border-strong)'}`,
+            background: contacted ? 'rgba(22,163,74,0.1)' : 'var(--surface-2)',
+            color: contacted ? '#16A34A' : 'var(--text-2)',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 120ms ease',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {contacted ? '✓ Done' : 'Follow up'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Mobile funnel (vertical) ─────────────────────────────────────────────────
+
+function MobileFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTargets | null }) {
+  const total = leads.length
+  if (total === 0) return null
+
+  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'bad_fit', 'not_interested', 'closed']
+  const callBookedStages: LeadStage[] = ['call_booked', 'second_call', 'closed']
+
+  const counts = [
+    total,
+    leads.filter(l => repliedStages.includes(l.stage)).length,
+    leads.filter(l => callBookedStages.includes(l.stage)).length,
+    leads.filter(l => l.stage === 'closed').length,
+  ]
+
+  const stepLabels  = ['Followers', 'Replied', 'Call booked', 'Closed']
+  const rateLabels  = ['Reply rate', 'Booking rate', 'Close rate']
+  const rateTargets = [
+    kpiTargets?.reply_rate_target   ?? null,
+    kpiTargets?.booking_rate_target ?? null,
+    kpiTargets?.close_rate_target   ?? null,
+  ]
+
+  return (
+    <div style={{ padding: '12px 16px 4px' }}>
+      {stepLabels.map((label, i) => {
+        const rate   = i < 3 && counts[i] > 0 ? Math.round((counts[i + 1] / counts[i]) * 100) : null
+        const target = rateTargets[i] ?? null
+        const rColor = rate === null ? 'var(--text-3)'
+          : target !== null
+            ? rate >= target ? '#16A34A' : rate >= target * 0.8 ? '#D97706' : '#DC2626'
+            : 'var(--accent)'
+
+        return (
+          <div key={label}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '10px 16px',
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
+                {label}
+              </p>
+              <p style={{ fontSize: 30, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                {counts[i]}
+              </p>
+            </div>
+            {i < 3 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '5px 0' }}>
+                <span style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)' }}>
+                  {rateLabels[i]}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: rColor }}>
+                  {rate !== null ? `${rate}%` : '—'}
+                </span>
+                <svg viewBox="0 0 10 16" fill="none" width="8" height="13">
+                  <path d="M5 0v13M1 9l4 4 4-4" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Mobile stage section ─────────────────────────────────────────────────────
+
+function MobileStageSection({
+  label, accent, leads, labels, assignments, onLeadClick, onFollowUp, showFollowUpForStage,
+}: {
+  label: string
+  accent: string
+  leads: Lead[]
+  labels: LeadLabel[]
+  assignments: LeadLabelAssignment[]
+  onLeadClick: (lead: Lead) => void
+  onFollowUp: (leadId: string) => void
+  showFollowUpForStage: boolean
+}) {
+  const [open, setOpen] = useState(true)
+  if (leads.length === 0) return null
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '9px 16px',
+          background: accent + '18',
+          borderTop: '1px solid var(--border)',
+          borderRight: '0',
+          borderBottom: '0',
+          borderLeft: `3px solid ${accent}`,
+          cursor: 'pointer',
+          textAlign: 'left' as const,
+        }}
+      >
+        <span style={{ fontSize: 12, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {label}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, background: accent + '28', color: accent, borderRadius: 20, padding: '1px 8px' }}>
+            {leads.length}
+          </span>
+          <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" style={{ color: 'var(--text-3)', transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 150ms ease' }}>
+            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
+        </div>
+      </button>
+      {open && leads.map(lead => {
+        const assignedLabelIds = assignments.filter(a => a.lead_id === lead.id).map(a => a.label_id)
+        return (
+          <MobileLeadCard
+            key={lead.id}
+            lead={lead}
+            labels={labels}
+            assignedLabelIds={assignedLabelIds}
+            onClick={() => onLeadClick(lead)}
+            onFollowUp={() => onFollowUp(lead.id)}
+            showFollowUp={showFollowUpForStage}
+          />
+        )
+      })}
     </div>
   )
 }
@@ -703,6 +873,7 @@ function StageColumn({
 
 export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets }: Props) {
   const isMobile = useIsMobile()
+  const kanbanScrollRef = useRef<HTMLDivElement>(null)
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [labels, setLabels] = useState<LeadLabel[]>(initialLabels)
   const [assignments, setAssignments] = useState<LeadLabelAssignment[]>(initialAssignments)
@@ -710,7 +881,6 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [tierFilter, setTierFilter] = useState<TierFilter>('all')
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [mobileStage, setMobileStage] = useState<LeadStage | null>(null)
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<LeadStage>>(loadHiddenColumns)
   const [showColumnToggles, setShowColumnToggles] = useState(false)
@@ -737,9 +907,30 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [drawerLead, setDrawerLead] = useState<Lead | null>(null)
   const [callBookedLead, setCallBookedLead] = useState<Lead | null>(null)
   const [callOutcomeLead, setCallOutcomeLead] = useState<Lead | null>(null)
+  const [callOutcomeTargetStage, setCallOutcomeTargetStage] = useState<LeadStage>('nurture')
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
 
   const supabase = createClient()
+
+  // ─── Kanban scroll position memory ─────────────────────────────────────────
+  // Restore saved scroll position after mount
+  useEffect(() => {
+    const el = kanbanScrollRef.current
+    if (!el) return
+    try {
+      const saved = sessionStorage.getItem('drivn_pipeline_scroll')
+      if (saved) el.scrollLeft = parseInt(saved, 10)
+    } catch { /* ignore */ }
+  }, [])
+
+  // Save scroll position on scroll (debounced via requestAnimationFrame)
+  const onKanbanScroll = useCallback(() => {
+    const el = kanbanScrollRef.current
+    if (!el) return
+    try {
+      sessionStorage.setItem('drivn_pipeline_scroll', String(el.scrollLeft))
+    } catch { /* ignore */ }
+  }, [])
 
   // ─── Tier counts (unfiltered, across entire pipeline) ──────────────────────
 
@@ -787,16 +978,6 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     })
   }, [leads, tierFilter, selectedLabels, search, assignments])
 
-  // ─── Mobile filtered leads ─────────────────────────────────────────────────
-
-  const filteredMobileLeads = useMemo(() => {
-    const allLeads = STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).flatMap(col =>
-      leads.filter(l => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false))
-    )
-    if (mobileStage) return allLeads.filter(l => l.stage === mobileStage || (STAGE_COLUMNS.find(c => c.stage === mobileStage)?.extraStages?.includes(l.stage) ?? false))
-    return allLeads
-  }, [leads, mobileStage, hiddenColumns])
-
   // ─── Actions ───────────────────────────────────────────────────────────────
 
   async function updateTier(leadId: string, tier: 1 | 2 | 3) {
@@ -805,13 +986,15 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   }
 
   async function moveStage(lead: Lead, stage: LeadStage) {
-    // Special handling for call_booked and closed
+    // Special handling for call_booked
     if (stage === 'call_booked') {
       setCallBookedLead({ ...lead, stage })
       return
     }
-    if (stage === 'closed') {
-      setCallOutcomeLead({ ...lead, stage })
+    // Trigger outcome logging whenever moving OUT of a call stage
+    if (lead.stage === 'call_booked' || lead.stage === 'second_call') {
+      setCallOutcomeTargetStage(stage)
+      setCallOutcomeLead(lead)
       return
     }
 
@@ -836,10 +1019,6 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     if (lead.stage === targetStage) return
     if (targetStage === 'call_booked') {
       setCallBookedLead(lead)
-      return
-    }
-    if (targetStage === 'closed') {
-      setCallOutcomeLead(lead)
       return
     }
     moveStage(lead, targetStage)
@@ -1034,47 +1213,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         <PipelineFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
       </div>
 
-      {/* Mobile stage filter strip */}
-      <div className="md:hidden" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4, marginBottom: 12, flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: 8, padding: '0 16px', minWidth: 'max-content' }}>
-          {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map((col, i, visibleCols) => {
-            const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
-            const count = leads.filter(inStage).length
-            const prevCol = i > 0 ? visibleCols[i - 1] : null
-            const prevCount = prevCol ? leads.filter(l => l.stage === prevCol.stage || (prevCol.extraStages?.includes(l.stage) ?? false)).length : null
-            const conversion = prevCount && prevCount > 0 ? Math.round((count / prevCount) * 100) : null
-            const isActive = mobileStage === col.stage
-            return (
-              <button
-                key={col.stage}
-                onClick={() => setMobileStage(isActive ? null : col.stage)}
-                style={{
-                  background: isActive ? 'var(--accent)' : 'var(--surface-2)',
-                  color: isActive ? '#fff' : 'var(--text-1)',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 2,
-                  minWidth: 88,
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: 14 }}>{count}</span>
-                <span style={{ opacity: 0.8 }}>{col.label}</span>
-                {conversion !== null && <span style={{ fontSize: 10, opacity: 0.65 }}>{conversion}%</span>}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Kanban columns — desktop only */}
-      <div className="hidden md:block" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
+      <div ref={kanbanScrollRef} onScroll={onKanbanScroll} className="hidden md:block" style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ display: 'flex', gap: '12px', padding: '16px 24px', height: '100%', minWidth: 'max-content' }}>
           {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => {
             const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
@@ -1099,23 +1239,27 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         </div>
       </div>
 
-      {/* Mobile lead list */}
+      {/* Mobile: vertical funnel + grouped stage sections */}
       <div className="md:hidden" style={{ overflowY: 'auto', flex: 1, paddingBottom: 88 }}>
-        {filteredMobileLeads.map(lead => {
-          const assignedLabelIds = assignments
-            .filter(a => a.lead_id === lead.id)
-            .map(a => a.label_id)
+        <MobileFunnel leads={filteredLeads} kpiTargets={kpiTargets} />
+        <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 0' }} />
+        {STAGE_COLUMNS.filter(col => !hiddenColumns.has(col.stage)).map(col => {
+          const inStage = (l: Lead) => l.stage === col.stage || (col.extraStages?.includes(l.stage) ?? false)
           return (
-            <MobileLeadCard
-              key={lead.id}
-              lead={lead}
+            <MobileStageSection
+              key={col.stage}
+              label={col.label}
+              accent={col.accent}
+              leads={filteredLeads.filter(inStage)}
               labels={labels}
-              assignedLabelIds={assignedLabelIds}
-              onClick={() => setDrawerLead(lead)}
+              assignments={assignments}
+              onLeadClick={setDrawerLead}
+              onFollowUp={handleContacted}
+              showFollowUpForStage={CONTACTED_STAGES.includes(col.stage)}
             />
           )
         })}
-        {filteredMobileLeads.length === 0 && (
+        {filteredLeads.length === 0 && (
           <div style={{ textAlign: 'center', padding: '48px 24px', fontSize: 13, color: 'var(--text-3)' }}>
             No leads found
           </div>
@@ -1166,6 +1310,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         <CallOutcomeModal
           lead={callOutcomeLead}
           userId={userId}
+          targetStage={callOutcomeTargetStage}
           onClose={() => setCallOutcomeLead(null)}
           onSaved={(updated, newClient) => {
             setLeads(ls => ls.map(l => l.id === updated.id ? updated : l))

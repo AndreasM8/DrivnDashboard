@@ -32,7 +32,7 @@ const LABEL_PRESETS: { bg: string; text: string; swatch: string }[] = [
   { bg: '#E5E7EB', text: '#374151', swatch: '#6B7280' },
 ]
 
-const MOVEABLE_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'closed', 'nurture', 'bad_fit', 'not_interested']
+const MOVEABLE_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'closed', 'nurture', 'bad_fit', 'not_interested']
 
 // ─── Stage badge config ───────────────────────────────────────────────────────
 

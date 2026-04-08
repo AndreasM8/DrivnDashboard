@@ -2,8 +2,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import { getEffectiveUserId } from '@/lib/admin'
 import { TASK_TYPE_STYLES } from '@/types'
-import type { Task, Lead, Client } from '@/types'
+import type { Task, Lead, Client, WeeklyCheckin, CheckinPrefill } from '@/types'
 import Link from 'next/link'
+import CheckinTrigger from '@/components/dashboard/CheckinTrigger'
 
 // ─── Live stats helper ────────────────────────────────────────────────────────
 
@@ -194,6 +195,22 @@ function SectionCard({ title, href, children }: { title: string; href: string; c
   )
 }
 
+// ─── Week bounds ──────────────────────────────────────────────────────────────
+
+function getWeekBounds(date: Date = new Date()): { weekStart: string; weekEnd: string } {
+  const d = new Date(date)
+  const day = d.getUTCDay()
+  const diff = day === 0 ? -6 : 1 - day
+  const monday = new Date(d)
+  monday.setUTCDate(d.getUTCDate() + diff)
+  const sunday = new Date(monday)
+  sunday.setUTCDate(monday.getUTCDate() + 6)
+  return {
+    weekStart: monday.toISOString().slice(0, 10),
+    weekEnd: sunday.toISOString().slice(0, 10),
+  }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -204,6 +221,7 @@ export default async function DashboardPage() {
   const uid = await getEffectiveUserId()
   const now = new Date()
   const monthStart = `${now.toISOString().slice(0, 7)}-01`
+  const { weekStart, weekEnd } = getWeekBounds(now)
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const monthEnd = nextMonth.toISOString().slice(0, 10)
   const monthName = now.toLocaleString('en-US', { month: 'long' })
@@ -220,6 +238,13 @@ export default async function DashboardPage() {
     { data: paidInstallmentsThisMonth },
     { data: callsHeldThisMonth },
     { data: pendingInstallmentsThisMonth },
+    { data: thisWeekCheckin },
+    { data: newLeadsThisWeek },
+    { data: repliedThisWeek },
+    { data: bookedThisWeek },
+    { data: closedClientsThisWeek },
+    { data: paidThisWeek },
+    { data: newClientsThisWeek },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase
@@ -262,6 +287,20 @@ export default async function DashboardPage() {
     supabase.from('payment_installments').select('amount, clients!inner(user_id)')
       .eq('clients.user_id', user.id).eq('paid', false)
       .gte('due_date', monthStart).lt('due_date', monthEnd),
+    // Check-in data
+    supabase.from('weekly_checkins').select('*').eq('user_id', uid).eq('week_start', weekStart).single(),
+    supabase.from('leads').select('id').eq('user_id', uid).gte('created_at', weekStart),
+    supabase.from('leads').select('id').eq('user_id', uid)
+      .in('stage', ['replied', 'freebie_sent', 'call_booked', 'second_call', 'closed'])
+      .gte('updated_at', weekStart),
+    supabase.from('leads').select('id').eq('user_id', uid)
+      .in('stage', ['call_booked', 'second_call', 'closed'])
+      .gte('updated_at', weekStart),
+    supabase.from('clients').select('id').eq('user_id', uid).gte('started_at', weekStart),
+    supabase.from('payment_installments').select('amount, clients!inner(user_id)')
+      .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', weekStart),
+    supabase.from('clients').select('payment_type, total_amount, monthly_amount, plan_months')
+      .eq('user_id', uid).gte('started_at', weekStart),
   ])
 
   const liveStats = computeLiveStats(
@@ -283,6 +322,40 @@ export default async function DashboardPage() {
   const clients = clientsForTable
   const currency = profile?.base_currency ?? 'NOK'
 
+  // ─── Check-in logic ─────────────────────────────────────────────────────────
+  const checkinEnabled = (profile as Record<string, unknown>)?.checkin_enabled !== false
+  const checkinDay = ((profile as Record<string, unknown>)?.checkin_day as number | null) ?? 0
+  const todayDayOfWeek = now.getUTCDay() // 0=Sun
+  const existingCheckin = thisWeekCheckin as WeeklyCheckin | null
+  const alreadySubmitted = !!existingCheckin?.submitted_at
+  const isSnoozed = !!(existingCheckin?.snoozed_until && new Date(existingCheckin.snoozed_until) > now)
+  const checkinDue = checkinEnabled && !alreadySubmitted && !isSnoozed && (todayDayOfWeek === checkinDay)
+  const checkinOverdue = checkinEnabled && !alreadySubmitted && todayDayOfWeek > 2
+  const canSnooze = !existingCheckin?.snoozed_until || new Date(existingCheckin.snoozed_until) <= now
+
+  // Prefill computation for check-in
+  const weekCashPaid = (paidThisWeek ?? []).reduce((s, i) => {
+    const row = i as { amount: number }
+    return s + row.amount
+  }, 0)
+  const weekNewClients = (newClientsThisWeek ?? []) as Array<{
+    payment_type: string; total_amount: number; monthly_amount: number | null; plan_months: number | null
+  }>
+  const weekCashFromNew = weekNewClients.filter(c => c.payment_type !== 'plan').reduce((s, c) => s + c.total_amount, 0)
+  const weekRevenue = weekNewClients.reduce((s, c) => {
+    if (c.payment_type === 'plan' && c.monthly_amount && c.plan_months) return s + c.monthly_amount * c.plan_months
+    return s + c.total_amount
+  }, 0)
+
+  const checkinPrefill: CheckinPrefill = {
+    followersGained: (newLeadsThisWeek ?? []).length,
+    repliesReceived: (repliedThisWeek ?? []).length,
+    callsBooked: (bookedThisWeek ?? []).length,
+    clientsClosed: (closedClientsThisWeek ?? []).length,
+    cashCollected: weekCashPaid + weekCashFromNew,
+    revenueContracted: weekRevenue,
+  }
+
   const cashPct = cashTarget > 0 ? (cashCollected / cashTarget) * 100 : null
   const cashStatusColor = cashPct === null ? 'var(--text-3)'
     : cashPct >= 100 ? '#16A34A'
@@ -303,8 +376,40 @@ export default async function DashboardPage() {
     { label: 'Nurture', key: 'nurture' },
   ]
 
+  // ─── Login streak ──────────────────────────────────────────────────────────
+  const todayDate = now.toISOString().slice(0, 10)
+  const lastActive = (profile as Record<string, unknown>)?.last_active_date as string | null | undefined
+  const currentStreak = ((profile as Record<string, unknown>)?.login_streak as number | null) ?? 0
+
+  let loginStreak = currentStreak
+  if (lastActive !== todayDate) {
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().slice(0, 10)
+    loginStreak = lastActive === yesterdayStr ? currentStreak + 1 : 1
+    // Fire-and-forget — don't block render
+    supabase.from('users')
+      .update({ login_streak: loginStreak, last_active_date: todayDate })
+      .eq('id', user.id)
+      .then(() => {})
+  }
+
   return (
     <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
+      {/* Check-in trigger */}
+      {(checkinDue || checkinOverdue) && (
+        <CheckinTrigger
+          initialDue={checkinDue || checkinOverdue}
+          isOverdue={checkinOverdue && !checkinDue}
+          checkin={existingCheckin}
+          prefill={checkinPrefill}
+          currency={currency}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          canSnooze={canSnooze}
+        />
+      )}
+
       {/* Header */}
       <div
         style={{
@@ -323,19 +428,35 @@ export default async function DashboardPage() {
             {greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
           </h1>
         </div>
-        <span
-          style={{
-            fontSize: '13px',
-            color: 'var(--text-2)',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-badge)',
-            padding: '4px 10px',
-            flexShrink: 0,
-          }}
-        >
-          {todayLabel()}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {loginStreak >= 2 && (
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#D97706',
+                background: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 'var(--radius-badge)',
+                padding: '4px 10px',
+              }}
+            >
+              🔥 {loginStreak}-day streak
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: '13px',
+              color: 'var(--text-2)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-badge)',
+              padding: '4px 10px',
+            }}
+          >
+            {todayLabel()}
+          </span>
+        </div>
       </div>
 
       {/* Stat cards */}

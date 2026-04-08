@@ -148,6 +148,12 @@ body {
   animation: badgeFlip 0.1s ease;
 }
 
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
 /* Sidebar accent slide */
 @keyframes accentSlide {
   from { transform: scaleY(0.6); opacity: 0; }
@@ -161,6 +167,11 @@ body {
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-raised);
+}
+
+/* Story schedule — show delete button on row hover */
+.story-item-row:hover .story-delete-btn {
+  opacity: 1 !important;
 }
 
 /* ─── Scrollbar ────────────────────────────────────────────────────────────── */

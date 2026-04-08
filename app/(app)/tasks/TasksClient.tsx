@@ -120,7 +120,7 @@ function SectionCard({
       borderTop: `3px solid ${s.border}`,
       borderRadius: '12px',
       boxShadow: open ? '0 2px 8px rgba(0,0,0,0.06)' : 'var(--shadow-card)',
-      overflow: 'hidden',
+      overflow: 'clip',
       transition: 'background 200ms ease, box-shadow 200ms ease',
     }}>
       {/* Header — always clickable */}
@@ -345,7 +345,7 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
 // ─── Non-Negotiables section ───────────────────────────────────────────────────
 
 function NonNegSection({
-  items, completions, followupTarget, followupsDoneToday, resetHour, todayDow,
+  items, completions, followupTarget, followupsDoneToday, resetHour, todayDow, streak,
   onToggle, onAdd, onDelete, onUpdateTarget, onUpdateResetHour, onUpdateDays, dragHandle,
 }: {
   items: NonNegotiable[]
@@ -354,6 +354,7 @@ function NonNegSection({
   followupsDoneToday: number
   resetHour: number
   todayDow: number
+  streak: number
   onToggle: (id: string, completed: boolean) => Promise<void>
   onAdd: (title: string) => Promise<void>
   onDelete: (id: string) => Promise<void>
@@ -372,9 +373,20 @@ function NonNegSection({
 
   return (
     <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`} defaultOpen dragHandle={dragHandle}>
-      {/* Progress bar */}
-      <div style={{ height: '4px', borderRadius: '2px', background: `${color}22`, marginBottom: '16px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
+      {/* Progress bar + streak */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '16px' }}>
+        <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: `${color}22`, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
+        </div>
+        {streak > 0 && (
+          <span style={{
+            fontSize: '11px', fontWeight: 700, color: color,
+            background: `${color}18`, border: `1px solid ${color}30`,
+            borderRadius: '20px', padding: '2px 8px', flexShrink: 0, whiteSpace: 'nowrap',
+          }}>
+            🔥 {streak} day{streak !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* Active items */}
@@ -1110,157 +1122,205 @@ function StoryScheduleSection({
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading…</p>
       ) : (
-        <div style={{ overflowX: 'auto', marginLeft: '-2px', marginRight: '-2px', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
+        // Negative margin breaks out of SectionCard's padding so the scroll goes edge-to-edge
+        <div style={{ margin: '0 -18px -18px', paddingBottom: '2px' }}>
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, minmax(80px, 1fr))',
-            gap: '8px',
-            minWidth: '600px',
-            paddingBottom: '4px',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: '12px',
           }}>
-            {COLUMN_DOWS.map(dow => {
-              const colItems = itemsForDow(dow)
-              const isToday = dow === todayDow
-              const isAddingHere = addingForDow === dow
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(7, minmax(140px, 1fr))`,
+              gap: '6px',
+              minWidth: '980px',
+              padding: '4px 18px 0',
+            }}>
+              {COLUMN_DOWS.map(dow => {
+                const colItems = itemsForDow(dow)
+                const isToday = dow === todayDow
+                const isAddingHere = addingForDow === dow
 
-              return (
-                <div key={dow} style={{
-                  background: isToday ? `${ACCENT}08` : 'var(--surface-2)',
-                  border: `1px solid ${isToday ? ACCENT + '33' : 'var(--border)'}`,
-                  borderTop: isToday ? `2px solid ${ACCENT}` : '1px solid var(--border)',
-                  borderRadius: '8px',
-                  padding: '8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                  minHeight: '80px',
-                  scrollSnapAlign: 'start',
-                }}>
-                  {/* Day header */}
-                  <p style={{
-                    fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
-                    letterSpacing: '0.07em', color: isToday ? ACCENT : 'var(--text-3)',
-                    marginBottom: '4px',
+                return (
+                  <div key={dow} style={{
+                    background: isToday ? `${ACCENT}08` : 'var(--surface-2)',
+                    border: `1px solid ${isToday ? ACCENT + '44' : 'var(--border)'}`,
+                    borderTop: `2px solid ${isToday ? ACCENT : 'var(--border)'}`,
+                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    minHeight: '90px',
                   }}>
-                    {DOW_FULL_SS[dow]}
-                  </p>
+                    {/* Day header */}
+                    <p style={{
+                      fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: isToday ? ACCENT : 'var(--text-2)',
+                      marginBottom: '6px',
+                    }}>
+                      {DOW_FULL_SS[dow]}
+                    </p>
 
-                  {/* Story items */}
-                  {colItems.map(item => {
-                    const posted = isPosted(item.id, dow)
-                    return (
-                      <div key={item.id} style={{
-                        display: 'flex', alignItems: 'flex-start', gap: '5px',
-                        background: 'var(--surface-1)', borderRadius: '6px',
-                        padding: '5px 6px', fontSize: '11px',
-                        opacity: posted ? 0.55 : 1, transition: 'opacity 200ms',
-                      }}>
-                        {/* Posted checkbox */}
-                        <button
-                          onClick={() => void togglePosted(item.id, dow, posted)}
+                    {/* Story items */}
+                    {colItems.map(item => {
+                      const posted = isPosted(item.id, dow)
+                      const repeatLabel = item.repeat_days !== null
+                        ? `Repeats: ${item.repeat_days.map(d => DOW_FULL_SS[d]).join(', ')}`
+                        : 'One-time'
+                      return (
+                        <div
+                          key={item.id}
+                          className="story-item-row"
+                          title={item.title + ` · ${repeatLabel}`}
                           style={{
-                            minWidth: 44, minHeight: 44, flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            padding: '0 10px',
-                            margin: '-10px -10px -10px 0',
-                            background: 'none', border: 'none', cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            background: posted ? `${ACCENT}14` : 'var(--surface-1)',
+                            border: `1px solid ${posted ? ACCENT + '30' : 'var(--border)'}`,
+                            borderRadius: '6px',
+                            padding: '5px 6px 5px 4px',
+                            transition: 'background 200ms, border-color 200ms',
+                            cursor: 'default',
                           }}
                         >
-                          <span style={{
-                            width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
-                            border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
-                            background: posted ? ACCENT : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 150ms',
-                          }}>
-                            {posted && <svg viewBox="0 0 8 6" fill="none" width="8" height="8"><path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          </span>
-                        </button>
-                        {/* Title */}
-                        <span style={{ flex: 1, lineHeight: 1.4, color: 'var(--text-1)', textDecoration: posted ? 'line-through' : 'none' }}>
-                          {item.title}
-                        </span>
-                        {/* Repeat indicator */}
-                        {item.repeat_days !== null && (
-                          <span title={`Repeats: ${item.repeat_days.map(d => DOW_FULL_SS[d]).join(', ')}`} style={{ fontSize: '9px', color: ACCENT, flexShrink: 0 }}>↻</span>
-                        )}
-                        {/* Delete */}
-                        <button
-                          onClick={() => void deleteItem(item.id)}
-                          style={{
-                            color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: '12px', lineHeight: 1, opacity: 0.4, flexShrink: 0,
-                            minWidth: 44, minHeight: 44,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            padding: '0 10px',
-                            margin: '-10px -10px -10px 0',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                          onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
-                        >×</button>
-                      </div>
-                    )
-                  })}
-
-                  {/* Add form or add button */}
-                  {isAddingHere ? (
-                    <div style={{ marginTop: '2px' }}>
-                      <input
-                        autoFocus
-                        value={newTitle}
-                        onChange={e => setNewTitle(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') void addItem(dow); if (e.key === 'Escape') { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) } }}
-                        placeholder="Story type…"
-                        style={{
-                          width: '100%', fontSize: '11px', border: `1px solid ${ACCENT}44`,
-                          borderRadius: '5px', padding: '4px 6px', background: 'var(--surface-1)',
-                          outline: 'none', color: 'var(--text-1)', boxSizing: 'border-box',
-                        }}
-                      />
-                      {/* Repeat day picker */}
-                      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '5px' }}>
-                        {[1,2,3,4,5,6,0].map(d => (
+                          {/* Checkbox */}
                           <button
-                            key={d}
-                            onClick={() => toggleNewRepeatDay(d)}
-                            title={newRepeatDays.includes(d) ? `Remove ${DOW_FULL_SS[d]}` : `Add ${DOW_FULL_SS[d]}`}
+                            onClick={() => void togglePosted(item.id, dow, posted)}
                             style={{
-                              width: '20px', height: '20px', borderRadius: '50%', fontSize: '9px', fontWeight: 700,
-                              border: `1.5px solid ${newRepeatDays.includes(d) ? ACCENT : 'var(--border-strong)'}`,
-                              background: newRepeatDays.includes(d) ? ACCENT : 'transparent',
-                              color: newRepeatDays.includes(d) ? '#fff' : 'var(--text-3)',
-                              cursor: 'pointer', transition: 'all 120ms', padding: 0,
+                              flexShrink: 0, width: 26, height: 26,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
                             }}
                           >
-                            {DOW_FULL_SS[d][0]}
+                            <span style={{
+                              width: 15, height: 15, borderRadius: '3px',
+                              border: posted ? 'none' : `1.5px solid ${ACCENT}66`,
+                              background: posted ? ACCENT : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0, transition: 'all 150ms',
+                            }}>
+                              {posted && (
+                                <svg viewBox="0 0 8 6" fill="none" width="9" height="9">
+                                  <path d="M1 3l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </span>
                           </button>
-                        ))}
+
+                          {/* Title */}
+                          <span style={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            lineHeight: 1.3,
+                            color: posted ? 'var(--text-3)' : 'var(--text-1)',
+                            transition: 'color 200ms',
+                            textDecoration: posted ? 'line-through' : 'none',
+                          }}>
+                            {item.title}
+                          </span>
+
+                          {/* Repeat indicator */}
+                          {item.repeat_days !== null && (
+                            <span style={{ fontSize: 10, color: ACCENT, opacity: 0.7, flexShrink: 0, lineHeight: 1 }}>↻</span>
+                          )}
+
+                          {/* Delete — show on hover via CSS class */}
+                          <button
+                            onClick={() => void deleteItem(item.id)}
+                            className="story-delete-btn"
+                            style={{
+                              flexShrink: 0, width: 18, height: 18,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: 'var(--text-3)', background: 'none', border: 'none',
+                              cursor: 'pointer', fontSize: 14, opacity: 0,
+                              padding: 0, transition: 'opacity 120ms', lineHeight: 1,
+                            }}
+                          >×</button>
+                        </div>
+                      )
+                    })}
+
+                    {/* Add form or add button */}
+                    {isAddingHere ? (
+                      <div style={{ marginTop: '4px' }}>
+                        <input
+                          autoFocus
+                          value={newTitle}
+                          onChange={e => setNewTitle(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') void addItem(dow)
+                            if (e.key === 'Escape') { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }
+                          }}
+                          placeholder="Story type…"
+                          style={{
+                            width: '100%', fontSize: '12px',
+                            border: `1px solid ${ACCENT}55`,
+                            borderRadius: '5px', padding: '5px 7px',
+                            background: 'var(--surface-1)',
+                            outline: 'none', color: 'var(--text-1)',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        {/* Repeat day picker */}
+                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '6px' }}>
+                          {[1,2,3,4,5,6,0].map(d => (
+                            <button
+                              key={d}
+                              onClick={() => toggleNewRepeatDay(d)}
+                              title={`${DOW_FULL_SS[d]}`}
+                              style={{
+                                width: '22px', height: '22px', borderRadius: '50%', fontSize: '9px', fontWeight: 700,
+                                border: `1.5px solid ${newRepeatDays.includes(d) ? ACCENT : 'var(--border-strong)'}`,
+                                background: newRepeatDays.includes(d) ? ACCENT : 'transparent',
+                                color: newRepeatDays.includes(d) ? '#fff' : 'var(--text-3)',
+                                cursor: 'pointer', transition: 'all 120ms', padding: 0,
+                              }}
+                            >
+                              {DOW_FULL_SS[d][0]}
+                            </button>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-3)', margin: '4px 0 0' }}>
+                          {newRepeatDays.length === 0 ? 'One-time this week' : `Repeats ${newRepeatDays.map(d => DOW_FULL_SS[d]).join(', ')}`}
+                        </p>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+                          <button
+                            onClick={() => void addItem(dow)}
+                            style={{ flex: 1, fontSize: '11px', fontWeight: 600, padding: '4px', borderRadius: '5px', background: ACCENT, color: '#fff', border: 'none', cursor: 'pointer' }}
+                          >Add</button>
+                          <button
+                            onClick={() => { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }}
+                            style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '5px', background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', cursor: 'pointer' }}
+                          >Cancel</button>
+                        </div>
                       </div>
-                      <p style={{ fontSize: '9px', color: 'var(--text-3)', margin: '3px 0 0' }}>
-                        {newRepeatDays.length === 0 ? 'One-time (clears tomorrow)' : `Repeats ${newRepeatDays.map(d => DOW_FULL_SS[d]).join(', ')}`}
-                      </p>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '5px' }}>
-                        <button onClick={() => void addItem(dow)} style={{ flex: 1, fontSize: '10px', fontWeight: 600, padding: '3px', borderRadius: '4px', background: ACCENT, color: '#fff', border: 'none', cursor: 'pointer' }}>Add</button>
-                        <button onClick={() => { setAddingForDow(null); setNewTitle(''); setNewRepeatDays([]) }} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', cursor: 'pointer' }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setAddingForDow(dow)}
-                      style={{
-                        marginTop: 'auto', paddingTop: '4px', fontSize: '10px', color: ACCENT,
-                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                        opacity: 0.6, transition: 'opacity 120ms',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.6')}
-                    >
-                      + Add
-                    </button>
-                  )}
-                </div>
-              )
-            })}
+                    ) : (
+                      <button
+                        onClick={() => setAddingForDow(dow)}
+                        style={{
+                          marginTop: 'auto', paddingTop: '6px', fontSize: '11px', color: ACCENT,
+                          background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                          opacity: 0.55, transition: 'opacity 120ms',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.55')}
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1274,6 +1334,7 @@ export default function TasksClient({
   userId, userName, dailyFollowupTarget, resetHour: initialResetHour, todayKey,
   cycleStartIso, todayDow,
   initialNonNeg, initialCompletions, initialPowerTasks, initialTasks, followupsCompletedToday,
+  nonNegStreak,
 }: {
   userId: string
   userName: string
@@ -1287,6 +1348,7 @@ export default function TasksClient({
   initialPowerTasks: PowerTask[]
   initialTasks: Task[]
   followupsCompletedToday: number
+  nonNegStreak: number
 }) {
   const [nonNeg, setNonNeg]             = useState(initialNonNeg)
   const [completions, setCompletions]   = useState(initialCompletions)
@@ -1625,6 +1687,7 @@ export default function TasksClient({
                 followupsDoneToday={followupsDone}
                 resetHour={resetHour}
                 todayDow={todayDow}
+                streak={nonNegStreak}
                 onToggle={toggleNonNeg}
                 onAdd={addNonNeg}
                 onDelete={deleteNonNeg}

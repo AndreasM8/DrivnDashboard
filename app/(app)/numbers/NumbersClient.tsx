@@ -170,7 +170,7 @@ function KpiCard({
       <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>
         {label}
       </p>
-      <p style={{ fontSize: `${numSize}px`, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1.1, marginBottom: (subline || subline2 || diffText) ? '4px' : 0 }}>
+      <p style={{ fontSize: isCurrency ? `clamp(14px, 4.8vw, ${numSize}px)` : `${numSize}px`, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1.1, marginBottom: (subline || subline2 || diffText) ? '4px' : 0, overflowWrap: 'break-word' }}>
         {displayValue}
       </p>
       {subline && (
@@ -556,7 +556,7 @@ function AllTimeTotals({
           }}
         >
           <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{s.label}</p>
-          <p style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ fontSize: 'clamp(13px, 3.8vw, 22px)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums', overflowWrap: 'break-word' }}>
             {s.display}
           </p>
           <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{s.sub}</p>
@@ -630,7 +630,7 @@ function AllTimeAdKpis({
   ]
 
   return (
-    <div className="grid grid-cols-3" style={{ gap: '10px' }}>
+    <div className="grid grid-cols-2 md:grid-cols-3" style={{ gap: '10px' }}>
       {kpis.map(k => (
         <div
           key={k.label}
@@ -643,7 +643,7 @@ function AllTimeAdKpis({
           }}
         >
           <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>{k.label}</p>
-          <p style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: k.color ?? 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ fontSize: 'clamp(13px, 3.8vw, 20px)', fontWeight: 700, letterSpacing: '-0.02em', color: k.color ?? 'var(--text-1)', lineHeight: 1, marginBottom: '4px', fontVariantNumeric: 'tabular-nums', overflowWrap: 'break-word' }}>
             {k.display}
           </p>
           <p style={{ fontSize: '11px', color: 'var(--text-2)' }}>{k.sub}</p>

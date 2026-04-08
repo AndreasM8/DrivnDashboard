@@ -23,7 +23,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { user_id, type, data } = body
+  // user_id can come from URL query param (?uid=...) or from the request body (legacy)
+  const uidFromUrl = new URL(request.url).searchParams.get('uid')
+  const { user_id: user_id_body, type, data } = body
+  const user_id = uidFromUrl ?? user_id_body
 
   if (!user_id || !type || !data) {
     return NextResponse.json({ error: 'Missing fields: user_id, type, data' }, { status: 400 })

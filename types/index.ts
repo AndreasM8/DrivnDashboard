@@ -9,8 +9,8 @@ export interface NotificationPrefs {
   followup_days_tier2: number  // warm lead (tier 2) — days without contact
   followup_days_tier3: number  // cold lead (tier 3) — days without contact
   overdue_days: number         // days without contact before marked overdue
-  call_outcome_enabled: boolean
-  call_outcome_hours: number   // hours after call to create log-outcome task
+  noshow_followup_enabled: boolean
+  noshow_followup_days: number // days after no-show before creating follow-up task
   payment_enabled: boolean
   payment_days_before: number  // days before due date to create payment task
   upsell_enabled: boolean
@@ -26,8 +26,8 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   followup_days_tier2: 3,
   followup_days_tier3: 7,
   overdue_days: 7,
-  call_outcome_enabled: true,
-  call_outcome_hours: 2,
+  noshow_followup_enabled: true,
+  noshow_followup_days: 2,
   payment_enabled: true,
   payment_days_before: 3,
   upsell_enabled: true,
@@ -51,11 +51,54 @@ export interface User {
   notification_prefs: Partial<NotificationPrefs>
   role: 'coach' | 'admin'
   created_at: string
+  last_active_date: string | null
+  login_streak: number
+  checkin_day: number
+  checkin_enabled: boolean
 }
 
 export interface AdminViewAs {
   coachId: string
   coachName: string
+}
+
+export interface WeeklyCheckin {
+  id: string
+  user_id: string
+  week_start: string
+  week_end: string
+  submitted_at: string | null
+  snoozed_until: string | null
+  biggest_win: string | null
+  main_focus: string | null
+  support_needed: string | null
+  program_suggestions: string | null
+  week_summary: string | null
+  happiness_rating: number | null
+  followers_gained: number | null
+  replies_received: number | null
+  calls_booked: number | null
+  clients_closed: number | null
+  cash_collected: number | null
+  revenue_contracted: number | null
+  ad_spend: number | null
+  ad_spend_confirmed: boolean
+  system_followers_gained: number | null
+  system_replies_received: number | null
+  system_calls_booked: number | null
+  system_clients_closed: number | null
+  system_cash_collected: number | null
+  system_revenue_contracted: number | null
+  created_at: string
+}
+
+export interface CheckinPrefill {
+  followersGained: number
+  repliesReceived: number
+  callsBooked: number
+  clientsClosed: number
+  cashCollected: number
+  revenueContracted: number
 }
 
 // ─── Currencies ───────────────────────────────────────────────────────────────
@@ -231,6 +274,7 @@ export type TaskType =
   | 'upsell'
   | 'nurture'
   | 'call_outcome'
+  | 'noshow_followup'
   | 'ad_spend'
   | 'contract_end'
   | 'manual'
@@ -321,7 +365,8 @@ export const TASK_TYPE_STYLES: Record<TaskType, TaskTypeStyle> = {
   invoice:      { bg: '#FAEEDA', text: '#633806', label: 'Invoice due' },
   upsell:       { bg: '#EEEDFE', text: '#3C3489', label: 'Upsell' },
   nurture:      { bg: '#EAF3DE', text: '#27500A', label: 'Nurture' },
-  call_outcome: { bg: '#E1F5EE', text: '#085041', label: 'Log outcome' },
+  call_outcome:    { bg: '#E1F5EE', text: '#085041', label: 'Log outcome' },
+  noshow_followup: { bg: '#FFF0E6', text: '#7C3D12', label: 'No-show follow-up' },
   ad_spend:     { bg: '#FFF3CD', text: '#856404', label: 'Ad spend' },
   contract_end: { bg: '#FEE2E2', text: '#991B1B', label: 'Contract ending' },
   manual:       { bg: '#F3F4F6', text: '#374151', label: 'Task' },

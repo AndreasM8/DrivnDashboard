@@ -16,13 +16,17 @@ export async function GET() {
     stripeConnected = data?.stripe_connected ?? false
   }
 
+  const zapierBase = `${appUrl}/api/webhooks/zapier`
+  const zapierUrl = user ? `${zapierBase}?uid=${user.id}` : zapierBase
+  const secret = process.env.ZAPIER_WEBHOOK_SECRET ?? ''
+  const secretConfigured = !!(secret && secret !== 'your_zapier_webhook_secret')
+
   return NextResponse.json({
     zapier: {
-      configured: !!(
-        process.env.ZAPIER_WEBHOOK_SECRET &&
-        process.env.ZAPIER_WEBHOOK_SECRET !== 'your_zapier_webhook_secret'
-      ),
-      webhook_url: `${appUrl}/api/webhooks/zapier`,
+      configured: secretConfigured,
+      webhook_url: zapierUrl,
+      // Return last 8 chars of secret so UI can show it (owner-only endpoint)
+      webhook_secret: secretConfigured ? secret : null,
     },
     stripe: {
       configured: stripeConnected,

@@ -61,6 +61,54 @@ function getNonNegTodayKey(timezone: string, resetHour: number): string {
   return dateStr
 }
 
+// Compute how many consecutive days all applicable non-negs were completed
+function computeNonNegStreak(
+  items: NonNegotiable[],
+  completions: { date: string; non_negotiable_id: string; completed: boolean }[],
+  todayKey: string,
+): number {
+  if (items.length === 0) return 0
+
+  // Group completions by date → set of completed item IDs
+  const byDate = new Map<string, Set<string>>()
+  for (const c of completions) {
+    if (!c.completed) continue
+    if (!byDate.has(c.date)) byDate.set(c.date, new Set())
+    byDate.get(c.date)!.add(c.non_negotiable_id)
+  }
+
+  let streak = 0
+  // Use UTC noon to avoid timezone-day mismatches when iterating
+  const date = new Date(todayKey + 'T12:00:00Z')
+
+  for (let i = 0; i < 60; i++) {
+    const dateStr = date.toISOString().slice(0, 10)
+    const dow = date.getUTCDay() // 0=Sun … 6=Sat
+
+    // Items that apply on this day of week
+    const applicable = items.filter(item => !item.days_of_week || item.days_of_week.includes(dow))
+
+    if (applicable.length === 0) {
+      // Nothing scheduled — skip without breaking streak
+      date.setUTCDate(date.getUTCDate() - 1)
+      continue
+    }
+
+    const done = byDate.get(dateStr) ?? new Set()
+    const allDone = applicable.every(item => done.has(item.id))
+
+    if (allDone) {
+      streak++
+    } else {
+      break
+    }
+
+    date.setUTCDate(date.getUTCDate() - 1)
+  }
+
+  return streak
+}
+
 export default async function TasksPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -90,15 +138,23 @@ export default async function TasksPage() {
     return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(day)
   })()
 
+  const streakFrom = (() => {
+    const d = new Date(todayKey + 'T12:00:00Z')
+    d.setUTCDate(d.getUTCDate() - 60)
+    return d.toISOString().slice(0, 10)
+  })()
+
   const [
     { data: nonNegotiables },
     { data: completions },
+    { data: streakCompletions },
     { data: powerTasks },
     { data: tasks },
     { count: followupsCompletedToday },
   ] = await Promise.all([
     supabase.from('non_negotiables').select('*').eq('user_id', uid).eq('active', true).order('position'),
     supabase.from('non_negotiable_completions').select('*').eq('user_id', uid).eq('date', todayKey),
+    supabase.from('non_negotiable_completions').select('date, non_negotiable_id, completed').eq('user_id', uid).gte('date', streakFrom),
     supabase.from('power_tasks').select('*').eq('user_id', uid)
       .or(`completed.eq.false,completed_at.gte.${cycleStartIso}`)
       .order('position'),
@@ -107,6 +163,9 @@ export default async function TasksPage() {
       .eq('user_id', uid).eq('type', 'follow_up').eq('completed', true)
       .gte('completed_at', today + 'T00:00:00.000Z'),
   ])
+
+  const allNonNeg = (nonNegotiables as NonNegotiable[]) ?? []
+  const nonNegStreak = computeNonNegStreak(allNonNeg, streakCompletions ?? [], todayKey)
 
   return (
     <TasksClient
@@ -117,11 +176,12 @@ export default async function TasksPage() {
       todayKey={todayKey}
       cycleStartIso={cycleStartIso}
       todayDow={todayDow}
-      initialNonNeg={(nonNegotiables as NonNegotiable[]) ?? []}
+      initialNonNeg={allNonNeg}
       initialCompletions={(completions as NonNegotiableCompletion[]) ?? []}
       initialPowerTasks={(powerTasks as PowerTask[]) ?? []}
       initialTasks={(tasks as Task[]) ?? []}
       followupsCompletedToday={followupsCompletedToday ?? 0}
+      nonNegStreak={nonNegStreak}
     />
   )
 }

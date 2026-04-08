@@ -176,6 +176,8 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
 
         <NavLink href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
         <NavLink href="/clients" label="Clients" icon={<ClientsIcon />} />
+        <NavLink href="/upsells" label="Upsells" icon={<UpsellsIcon />} />
+        <NavLink href="/checkins" label="Check-ins" icon={<CheckinsIcon />} />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
@@ -281,6 +283,14 @@ function ClientsIcon() {
   )
 }
 
+function UpsellsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+      <path fillRule="evenodd" d="M10 1l2.39 4.845L18 6.882l-4 3.899.944 5.504L10 13.77l-4.944 2.515L6 10.78 2 6.882l5.61-1.037L10 1z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 function NumbersIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
@@ -301,6 +311,14 @@ function AdminIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
       <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function CheckinsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+      <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm.75 9.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0-3a.75.75 0 000 1.5h4a.75.75 0 000-1.5h-4zM8.5 6a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5H9a.5.5 0 01-.5-.5V6z" clipRule="evenodd" />
     </svg>
   )
 }

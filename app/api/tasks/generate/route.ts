@@ -175,7 +175,39 @@ export async function POST() {
     }
   }
 
-  // ── 4. Contract ending alerts ─────────────────────────────────────────────────
+  // ── 4. No-show follow-up tasks ───────────────────────────────────────────────
+  if (prefs.noshow_followup_enabled) {
+    const noshowCutoff = new Date(now.getTime() - prefs.noshow_followup_days * 86400000).toISOString()
+
+    const { data: noshowLeads } = await supabase
+      .from('leads')
+      .select('id, ig_username, call_outcome, stage')
+      .eq('user_id', user.id)
+      .in('call_outcome', ['no_show', 'canceled', 'rescheduled'])
+      .in('stage', ['call_booked', 'second_call'])
+      .lt('updated_at', noshowCutoff)
+
+    for (const l of noshowLeads ?? []) {
+      if (await hasOpenTask('noshow_followup', l.id)) continue
+      const outcomeLabel = l.call_outcome === 'no_show' ? 'no-showed' : l.call_outcome === 'canceled' ? 'canceled' : 'rescheduled'
+      const { error } = await supabase.from('tasks').insert({
+        user_id:        user.id,
+        type:           'noshow_followup',
+        priority:       'today',
+        title:          `Re-book call — @${l.ig_username}`,
+        description:    `They ${outcomeLabel} their last call. Reach out to reschedule.`,
+        lead_id:        l.id,
+        client_id:      null,
+        due_at:         now.toISOString(),
+        completed:      false,
+        completed_at:   null,
+        auto_generated: true,
+      })
+      if (!error) created++
+    }
+  }
+
+  // ── 5. Contract ending alerts ─────────────────────────────────────────────────
   {
     const alertWindow = new Date(now.getTime() + 21 * 86400000)
 

@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
-import type { Lead, CallOutcome, CallObjection, PaymentType } from '@/types'
+import type { Lead, CallOutcome, CallObjection, PaymentType, LeadStage } from '@/types'
 
 interface Props {
   lead: Lead
   userId: string
+  targetStage: LeadStage
   onClose: () => void
   onSaved: (updated: Lead, newClient?: boolean) => void
 }
@@ -16,7 +17,7 @@ type Step = 'showed_up' | 'closed' | 'objection' | 'deal_details' | 'no_show_don
 
 const PLAN_MONTHS = [1, 2, 3, 4, 6, 9, 12]
 
-export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Props) {
+export default function CallOutcomeModal({ lead, userId, targetStage, onClose, onSaved }: Props) {
   const [step, setStep] = useState<Step>('showed_up')
   const [outcome, setOutcome] = useState<CallOutcome | null>(null)
   const [objection, setObjection] = useState<CallObjection | null>(null)
@@ -53,7 +54,8 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
     await supabase.from('leads').update({
       call_outcome: callOutcome,
       call_closed: closed,
-      stage: closed ? 'closed' : 'call_booked',
+      // no-show/canceled/rescheduled → stay in current call stage; closed → closed
+      stage: closed ? 'closed' : lead.stage,
       updated_at: new Date().toISOString(),
     }).eq('id', lead.id)
 
@@ -71,7 +73,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
       call_closed: false,
       call_objection: objection,
       call_notes: objectionNotes,
-      stage: 'nurture',
+      stage: targetStage,
       updated_at: new Date().toISOString(),
     }).eq('id', lead.id)
 
@@ -81,7 +83,7 @@ export default function CallOutcomeModal({ lead, userId, onClose, onSaved }: Pro
       actor: 'You',
     })
 
-    onSaved({ ...lead, call_outcome: 'showed', call_closed: false, stage: 'nurture' })
+    onSaved({ ...lead, call_outcome: 'showed', call_closed: false, stage: targetStage })
     triggerSheetsSync()
     setLoading(false)
   }

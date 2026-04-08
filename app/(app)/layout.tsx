@@ -5,6 +5,7 @@ import Sidebar from '@/components/ui/Sidebar'
 import BottomNav from '@/components/ui/BottomNav'
 import MobileHeader from '@/components/ui/MobileHeader'
 import ViewAsBanner from '@/components/ui/ViewAsBanner'
+import NavigationProgress from '@/components/ui/NavigationProgress'
 import type { AdminViewAs } from '@/types'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <NavigationProgress />
       {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} />
