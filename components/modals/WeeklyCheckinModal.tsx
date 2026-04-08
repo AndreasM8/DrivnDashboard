@@ -10,6 +10,7 @@ interface Props {
   weekStart: string
   weekEnd: string
   canSnooze: boolean
+  mandatory?: boolean
   onSubmitted: () => void
   onSnoozed: () => void
 }
@@ -43,6 +44,7 @@ export default function WeeklyCheckinModal({
   weekStart,
   weekEnd,
   canSnooze,
+  mandatory,
   onSubmitted,
   onSnoozed,
 }: Props) {
@@ -193,6 +195,11 @@ export default function WeeklyCheckinModal({
                 {formatWeekLabel(weekStart, weekEnd)}
               </p>
               <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>Takes about 2 minutes</p>
+              {mandatory && (
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#D97706', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  🔒 Required — complete to access the app
+                </p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
               {[1, 2].map(s => (

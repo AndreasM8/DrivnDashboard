@@ -252,9 +252,37 @@ export default function ProductsPanel({ initialProducts, baseCurrency }: Props) 
       {/* Product list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {products.length === 0 && !formOpen ? (
-          <div style={{ textAlign: 'center', padding: '60px 16px' }}>
-            <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-2)', marginBottom: '4px' }}>No products yet</p>
-            <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>Create your first offer</p>
+          <div style={{ textAlign: 'center', padding: '48px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '12px',
+              background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20" style={{ color: '#7C3AED' }}>
+                <path fillRule="evenodd" d="M10 1l2.39 4.845L18 6.882l-4 3.899.944 5.504L10 13.77l-4.944 2.515L6 10.78 2 6.882l5.61-1.037L10 1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', marginBottom: '4px' }}>No products yet</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+                Add your coaching offers so you can attach them to clients
+              </p>
+            </div>
+            <button
+              onClick={openNew}
+              style={{
+                fontSize: '12px', fontWeight: 600,
+                padding: '7px 16px',
+                borderRadius: 'var(--radius-btn)',
+                background: '#7C3AED', color: '#fff',
+                border: 'none', cursor: 'pointer',
+                transition: 'opacity 120ms ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              + Create first product
+            </button>
           </div>
         ) : (
           products.map(product => (

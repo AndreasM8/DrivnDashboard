@@ -77,6 +77,7 @@ function comparisonText(
   currency: string,
   isPercent: boolean,
   color: ScoreColor,
+  dayOfMonth: number = new Date().getDate(),
 ): string | null {
   if (compareMode === 'targets') {
     if (!target) return null
@@ -85,7 +86,13 @@ function comparisonText(
     const pctToGo  = Math.round((1 - ratio) * 100)
     if (ratio >= 1)        return `↑ ${Math.abs(pctAbove)}% above target`
     if (color === 'green') return `On track — ${pctToGo}% to go`
-    if (color === 'amber') return `${pctToGo}% below target — close`
+    if (color === 'amber') {
+      if (dayOfMonth < 15) return `Early in the month — ${Math.round(ratio * 100)}% of target so far`
+      return `${pctToGo}% below target — close`
+    }
+    // red / well below
+    if (dayOfMonth < 15) return `Early in the month — ${Math.round(ratio * 100)}% of target so far`
+    if (dayOfMonth < 20) return `${pctToGo}% below target — keep pushing`
     return `Well below target — focus here`
   } else {
     if (lastValue == null) return null
@@ -819,7 +826,7 @@ export default function NumbersClient({
       }}>
 
         {/* Left: view toggle + (month nav when in month mode) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="w-full md:w-auto" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
 
           {/* Month / All time pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
@@ -914,11 +921,12 @@ export default function NumbersClient({
 
         {/* Compare mode switcher — only in month view */}
         {viewMode === 'month' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
+        <div className="w-full md:w-auto" style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: '3px' }}>
           <button
             onClick={() => setCompareMode('targets')}
             style={{
-              padding:    '4px 12px',
+              flex:       1,
+              padding:    '6px 12px',
               borderRadius: '5px',
               fontSize:   '11px',
               fontWeight: compareMode === 'targets' ? '500' : '400',
@@ -928,6 +936,7 @@ export default function NumbersClient({
               cursor:     'pointer',
               boxShadow:  compareMode === 'targets' ? 'var(--shadow-card)' : 'none',
               transition: 'all 120ms ease',
+              textAlign:  'center',
             }}
           >
             vs my targets
@@ -938,7 +947,8 @@ export default function NumbersClient({
               onClick={() => setShowUnlockModal(true)}
               title="Available after your first full month"
               style={{
-                padding:    '4px 12px',
+                flex:       1,
+                padding:    '6px 12px',
                 borderRadius: '5px',
                 fontSize:   '11px',
                 color:      'var(--text-3)',
@@ -960,7 +970,8 @@ export default function NumbersClient({
             <button
               onClick={() => setCompareMode('last_month')}
               style={{
-                padding:    '4px 12px',
+                flex:       1,
+                padding:    '6px 12px',
                 borderRadius: '5px',
                 fontSize:   '11px',
                 fontWeight: compareMode === 'last_month' ? '500' : '400',
@@ -970,6 +981,7 @@ export default function NumbersClient({
                 cursor:     'pointer',
                 boxShadow:  compareMode === 'last_month' ? 'var(--shadow-card)' : 'none',
                 transition: 'all 120ms ease',
+                textAlign:  'center',
               }}
             >
               vs last month
@@ -1032,7 +1044,7 @@ export default function NumbersClient({
           <SectionLabel>Money this month</SectionLabel>
 
           {/* Top row: 2 large cards */}
-          <div className="grid grid-cols-2" style={{ gap: '10px', marginBottom: '10px' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '10px', marginBottom: '10px' }}>
 
             {/* Card 1: Cash collected */}
             <KpiCard
@@ -1075,7 +1087,7 @@ export default function NumbersClient({
           </div>
 
           {/* Bottom row: 2 medium cards */}
-          <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '10px' }}>
 
             {/* Card 3: Pending this month (accurate per month from installments) */}
             <KpiCard

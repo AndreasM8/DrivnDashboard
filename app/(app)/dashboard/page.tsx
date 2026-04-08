@@ -128,6 +128,62 @@ function ProgressBar({ value, max, color = 'var(--accent)' }: { value: number; m
   )
 }
 
+// ─── Mini Revenue Chart ───────────────────────────────────────────────────────
+
+function MiniRevenueChart({ history, currency }: { history: { month: string; cash_collected: number | null }[]; currency: string }) {
+  if (!history || history.length === 0) return null
+
+  // Sort ascending (oldest → newest)
+  const sorted = [...history].sort((a, b) => a.month.localeCompare(b.month))
+  const values = sorted.map(h => h.cash_collected ?? 0)
+  const maxVal = Math.max(...values, 1)
+
+  const chartH = 72
+  const barW   = 28
+  const gap    = 8
+  const totalW = sorted.length * (barW + gap) - gap
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <svg
+        width="100%"
+        viewBox={`0 0 ${totalW} ${chartH}`}
+        preserveAspectRatio="none"
+        style={{ height: '72px', display: 'block' }}
+      >
+        {sorted.map((h, i) => {
+          const barH = Math.max((values[i] / maxVal) * chartH, 2)
+          const x = i * (barW + gap)
+          const y = chartH - barH
+          const isLast = i === sorted.length - 1
+          return (
+            <rect
+              key={h.month}
+              x={x} y={y} width={barW} height={barH}
+              rx="3"
+              fill={isLast ? '#2563EB' : 'rgba(255,255,255,0.08)'}
+            />
+          )
+        })}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        {sorted.map((h, i) => {
+          const [y, m] = h.month.split('-')
+          const label = new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'short' })
+          const isLast = i === sorted.length - 1
+          return (
+            <div key={h.month} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <span style={{ fontSize: '11px', color: isLast ? 'var(--text-1)' : 'var(--text-3)', fontWeight: isLast ? 600 : 400 }}>
+                {label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Pipeline chip ────────────────────────────────────────────────────────────
 
 function PipelineChip({ label, count, leads }: { label: string; count: number; leads: string[] }) {
@@ -245,6 +301,7 @@ export default async function DashboardPage() {
     { data: closedClientsThisWeek },
     { data: paidThisWeek },
     { data: newClientsThisWeek },
+    { data: revenueHistory },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase
@@ -301,6 +358,10 @@ export default async function DashboardPage() {
       .eq('clients.user_id', user.id).eq('paid', true).gte('paid_at', weekStart),
     supabase.from('clients').select('payment_type, total_amount, monthly_amount, plan_months')
       .eq('user_id', uid).gte('started_at', weekStart),
+    supabase.from('monthly_snapshots').select('month, cash_collected')
+      .eq('user_id', uid)
+      .order('month', { ascending: false })
+      .limit(6),
   ])
 
   const liveStats = computeLiveStats(
@@ -395,7 +456,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
+    <div style={{ padding: '24px 24px 88px', maxWidth: '960px', margin: '0 auto' }}>
       {/* Check-in trigger */}
       {(checkinDue || checkinOverdue) && (
         <CheckinTrigger
@@ -477,6 +538,25 @@ export default async function DashboardPage() {
         <StatCard label="Calls this month" value={String(callsHeld)} />
         <StatCard label="New followers" value={String(newFollowers)} sub="this month" />
       </div>
+
+      {/* Mini revenue chart */}
+      {revenueHistory && revenueHistory.length > 1 && (
+        <div style={{
+          background: 'var(--surface-1)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-card)',
+          padding: '16px 20px',
+          marginBottom: '16px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+            <p className="label-caps">Revenue — last {revenueHistory.length} months</p>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)' }}>
+              {formatCurrency(cashCollected, currency)} this month
+            </p>
+          </div>
+          <MiniRevenueChart history={revenueHistory as { month: string; cash_collected: number | null }[]} currency={currency} />
+        </div>
+      )}
 
       {/* Tasks + Revenue */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '16px' }}

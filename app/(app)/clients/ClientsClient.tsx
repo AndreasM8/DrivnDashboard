@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { createClient } from '@/lib/supabase'
 import type { Client, PaymentInstallment, Product } from '@/types'
 import ClientDrawer from '@/components/clients/ClientDrawer'
@@ -60,15 +61,19 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   const [drawerClient, setDrawerClient] = useState<Client | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<'clients' | 'products'>('clients')
+  const isMobile = useIsMobile()
 
   const allInstallments = installments
 
   // Stats
   const activeCount      = clients.length
-  const clientsWithMonths = clients.filter(c => c.plan_months && c.plan_months > 0)
-  const avgLtvMonths     = clientsWithMonths.length > 0
-    ? Math.round(clientsWithMonths.reduce((sum, c) => sum + (c.plan_months ?? 0), 0) / clientsWithMonths.length)
-    : null
+  const monthlyRecurring = clients.reduce((sum, c) => {
+    if (c.payment_type === 'plan' && c.plan_months && c.plan_months > 0 && c.total_amount) {
+      return sum + c.total_amount / c.plan_months
+    }
+    return sum
+  }, 0)
+  const totalLtv         = clients.reduce((sum, c) => sum + (c.total_amount ?? 0), 0)
   const invoicesDueSoon  = allInstallments.filter(i => {
     const d = daysUntil(i.due_date)
     return !i.paid && d >= 0 && d <= 7
@@ -119,10 +124,10 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   ]
 
   const STAT_CARDS = [
-    { label: 'Active clients',     value: String(activeCount),                   accent: 'var(--accent)' },
-    { label: 'Avg. plan length',   value: avgLtvMonths !== null ? `${avgLtvMonths} mo` : '—', accent: 'var(--success)' },
-    { label: 'Invoices due soon',  value: String(invoicesDueSoon),               accent: invoicesDueSoon > 0 ? 'var(--warning)' : 'var(--border-strong)' },
-    { label: 'Upsell ready',       value: String(upsellReady),                   accent: upsellReady > 0 ? 'var(--purple)' : 'var(--border-strong)' },
+    { label: 'Active clients',    value: String(activeCount),                                                   accent: 'var(--accent)' },
+    { label: 'Monthly recurring', value: monthlyRecurring > 0 ? formatCurrency(monthlyRecurring, baseCurrency) : '—', accent: 'var(--success)' },
+    { label: 'Total LTV',         value: totalLtv > 0 ? formatCurrency(totalLtv, baseCurrency) : '—',          accent: 'var(--purple)' },
+    { label: 'Invoices due soon', value: String(invoicesDueSoon),                                              accent: invoicesDueSoon > 0 ? 'var(--warning)' : 'var(--border-strong)' },
   ]
 
   return (
@@ -234,8 +239,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
 
         {/* Left: client list — full width on mobile, 50% on desktop */}
         <div
-          className="w-full md:flex-[0_0_50%]"
-          style={{ overflowY: 'auto', padding: '16px 24px 88px', height: '100%' }}
+          style={{ flex: isMobile ? '1' : '0 0 50%', overflowY: 'auto', padding: '16px 24px 88px', height: '100%' }}
         >
           {/* ── Mobile segmented tab control ──────────────────────────────── */}
           <div className="md:hidden" style={{ display: 'flex', gap: 4, marginBottom: 12, background: 'var(--surface-1)' }}>
@@ -502,17 +506,18 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         </div>
 
         {/* Right: products panel — desktop only */}
-        <div
-          className="hidden md:block"
-          style={{
-            flex: '0 0 50%',
-            borderLeft: '1px solid var(--border)',
-            overflowY: 'auto',
-            paddingBottom: 88,
-          }}
-        >
-          <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />
-        </div>
+        {!isMobile && (
+          <div
+            style={{
+              flex: '0 0 50%',
+              borderLeft: '1px solid var(--border)',
+              overflowY: 'auto',
+              paddingBottom: 88,
+            }}
+          >
+            <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />
+          </div>
+        )}
 
       </div>
 

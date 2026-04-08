@@ -270,20 +270,25 @@ function NonNegItemRow({ item, checked, color, onToggle, onDelete, onUpdateDays 
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minHeight: '44px' }}>
         <Checkbox checked={checked} onChange={() => onToggle(item.id, !checked)} color={color} />
-        <span style={{
-          flex: 1, minWidth: 0, fontSize: '14px',
-          color: checked ? 'var(--text-3)' : 'var(--text-1)',
-          textDecoration: checked ? 'line-through' : 'none',
-          transition: 'all 200ms ease',
-        }}>
-          {item.title}
-        </span>
-        {/* Day schedule indicator — shows if not every day */}
-        {hasSchedule && (
-          <span style={{ fontSize: '10px', color: `${color}99`, fontWeight: 500 }}>
-            {fmtDays(item.days_of_week)}
-          </span>
-        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontSize: '14px',
+            color: checked ? 'var(--text-3)' : 'var(--text-1)',
+            textDecoration: checked ? 'line-through' : 'none',
+            transition: 'all 200ms ease',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {item.title}
+          </p>
+          {/* Day schedule indicator — second line */}
+          {hasSchedule && (
+            <p style={{ fontSize: '10px', color: `${color}99`, fontWeight: 500, marginTop: '1px' }}>
+              {fmtDays(item.days_of_week)}
+            </p>
+          )}
+        </div>
         {/* Calendar toggle */}
         <button
           onClick={() => setShowDays(v => !v)}
