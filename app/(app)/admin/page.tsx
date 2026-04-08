@@ -46,7 +46,7 @@ export default async function AdminPage() {
   const { data: coaches } = await supabase
     .from('users')
     .select('id, name, business_name, base_currency, role')
-    .eq('role', 'coach')
+    .in('role', ['coach', 'admin'])
     .order('created_at')
 
   if (!coaches) return <div style={{ padding: 40, color: 'var(--text-2)' }}>No coaches found.</div>
