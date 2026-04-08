@@ -14,8 +14,7 @@ export async function POST(req: NextRequest) {
 
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://drivn-dashboard-2gzs.vercel.app').replace(/[./\s]+$/, '')
 
-    // Generate a real (non-PKCE) magic link via admin API
-    // No redirectTo — we build our own verify URL from the token hash
+    // Generate magic link token via admin API
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
@@ -33,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     const verifyUrl = `${appUrl}/auth/verify?token_hash=${tokenHash}&type=magiclink`
 
-    // Send via Resend
+    // Send via Resend using verified domain drivnscaling.com
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -41,7 +40,7 @@ export async function POST(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Drivn <onboarding@resend.dev>',
+        from: 'Drivn <noreply@drivnscaling.com>',
         to: email,
         subject: 'Sign in to Drivn',
         html: `
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!resendRes.ok) {
       const body = await resendRes.text()
       console.error('Resend error:', body)
-      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
+      return NextResponse.json({ error: `Resend error: ${body}` }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
