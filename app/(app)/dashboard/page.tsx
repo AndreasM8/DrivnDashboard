@@ -374,8 +374,9 @@ export default async function DashboardPage() {
   const cashCollected = snapshot?.cash_collected ?? liveStats.cash_collected
   const revenueContracted = snapshot?.revenue_contracted ?? liveStats.revenue_contracted
   const expectedThisMonth = (pendingInstallmentsThisMonth ?? []).reduce((s, i) => s + (i as { amount: number }).amount, 0)
-  const newFollowers = snapshot?.new_followers ?? liveStats.new_followers
   const callsHeld = snapshot?.calls_held ?? liveStats.calls_held
+  const clientsSignedThisMonth = snapshot?.clients_signed
+    ?? (allActiveClients ?? []).filter(c => (c as Client).started_at >= monthStart).length
 
   const cashTarget = targets?.cash_target ?? 0
   const revenueTarget = targets?.revenue_target ?? 0
@@ -536,7 +537,7 @@ export default async function DashboardPage() {
           statusColor="#16A34A"
         />
         <StatCard label="Calls this month" value={String(callsHeld)} />
-        <StatCard label="New followers" value={String(newFollowers)} sub="this month" />
+        <StatCard label="Clients signed" value={String(clientsSignedThisMonth)} sub="this month" statusColor="#16A34A" />
       </div>
 
       {/* Mini revenue chart */}

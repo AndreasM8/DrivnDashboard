@@ -47,8 +47,8 @@ export async function POST(req: Request) {
     upsertData.submitted_at = new Date().toISOString()
   } else if (action === 'snooze') {
     const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(9, 0, 0, 0)
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+    tomorrow.setUTCHours(9, 0, 0, 0)
     upsertData.snoozed_until = tomorrow.toISOString()
   }
 

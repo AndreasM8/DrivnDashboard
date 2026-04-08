@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from './supabase-server'
+import { createAdminSupabaseClient } from './supabase-admin'
 
 const BASE_URL = `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/latest`
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
@@ -34,8 +35,9 @@ export async function getRates(base: string): Promise<Record<string, number>> {
   const data = await res.json()
   const rates: Record<string, number> = data.conversion_rates
 
-  // Upsert cache
-  await supabase.from('exchange_rate_cache').upsert({
+  // Upsert cache — use service role to bypass RLS write restriction
+  const adminClient = createAdminSupabaseClient()
+  await adminClient.from('exchange_rate_cache').upsert({
     base,
     rates,
     fetched_at: new Date().toISOString(),
