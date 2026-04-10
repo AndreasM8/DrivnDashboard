@@ -19,12 +19,18 @@ async function refreshGoogleToken(userId: string): Promise<boolean> {
 
     if (!credentials.access_token) return false
 
-    await supabase.from('google_integrations').update({
+    const updatePayload: Record<string, string> = {
       access_token: credentials.access_token,
       token_expiry: credentials.expiry_date
         ? new Date(credentials.expiry_date).toISOString()
         : new Date(Date.now() + 3600 * 1000).toISOString(),
-    }).eq('user_id', userId)
+    }
+    // Google occasionally rotates the refresh token — persist it if returned
+    if (credentials.refresh_token) {
+      updatePayload.refresh_token = credentials.refresh_token
+    }
+
+    await supabase.from('google_integrations').update(updatePayload).eq('user_id', userId)
 
     return true
   } catch {
