@@ -63,6 +63,7 @@ export interface User {
   login_streak: number
   checkin_day: number
   checkin_enabled: boolean
+  language: Language
 }
 
 export interface AdminViewAs {
@@ -324,24 +325,100 @@ export interface FollowUpSchedule {
   created_at: string
 }
 
-// ─── Team ─────────────────────────────────────────────────────────────────────
+// ─── Team Members ─────────────────────────────────────────────────────────────
 
-export type TeamRole = 'setter' | 'closer' | 'both' | 'admin'
-export type TeamStatus = 'invited' | 'active' | 'deactivated'
+export type TeamRole = 'setter' | 'closer'
+export type TeamMemberStatus = 'invited' | 'active' | 'inactive'
+
+// Legacy aliases kept so old code that references TeamStatus/deactivated still compiles
+export type TeamStatus = TeamMemberStatus | 'deactivated' | 'both' | 'admin'
+
+export interface TeamPermissions {
+  pipeline: boolean
+  clients: boolean
+  finances: boolean
+  labels: boolean
+  content: boolean
+}
 
 export interface TeamMember {
   id: string
-  workspace_id: string
+  coach_id: string
   user_id: string | null
-  email: string
-  name: string
   role: TeamRole
-  status: TeamStatus
+  name: string
+  email: string
+  status: TeamMemberStatus
+  permissions: TeamPermissions
   invite_token: string
-  invite_sent_at: string
-  accepted_at: string | null
+  invite_expires_at: string
   created_at: string
 }
+
+export type CheckinQuestionType = 'number' | 'text' | 'textarea' | 'boolean'
+
+export interface CheckinQuestion {
+  id: string
+  label: string
+  type: CheckinQuestionType
+  placeholder?: string
+  required: boolean
+}
+
+export interface TeamCheckinTemplate {
+  id: string
+  team_member_id: string
+  coach_id: string
+  type: 'eod' | 'weekly'
+  questions: CheckinQuestion[]
+  weekly_enabled: boolean
+  weekly_day: number
+}
+
+export interface TeamEodReport {
+  id: string
+  team_member_id: string
+  coach_id: string
+  date: string
+  answers: Array<{ question_id: string; value: string | number | boolean }>
+  submitted_at: string
+}
+
+export interface TeamTask {
+  id: string
+  coach_id: string
+  assigned_to: string | null
+  title: string
+  description: string | null
+  priority: 'today' | 'this_week' | 'later'
+  done: boolean
+  done_at: string | null
+  due_at: string | null
+  created_at: string
+}
+
+export interface TeamPersonalTask {
+  id: string
+  team_member_id: string
+  title: string
+  priority: 'today' | 'this_week' | 'later'
+  done: boolean
+  done_at: string | null
+  due_at: string | null
+  created_at: string
+}
+
+export interface TeamNonNeg {
+  id: string
+  team_member_id: string
+  coach_id: string
+  title: string
+  order_index: number
+}
+
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+
+export type Language = 'en' | 'no'
 
 
 // ─── Monthly Snapshots ────────────────────────────────────────────────────────

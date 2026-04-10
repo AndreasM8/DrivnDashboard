@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
-import type { TeamMember, TeamRole, TeamStatus } from '@/types'
+import type { TeamMember, TeamRole, TeamMemberStatus, TeamPermissions, CheckinQuestion, CheckinQuestionType } from '@/types'
 
 interface Props {
   userId: string
@@ -12,236 +11,457 @@ interface Props {
 const ROLE_LABELS: Record<TeamRole, string> = {
   setter: 'Setter',
   closer: 'Closer',
-  both: 'Setter + Closer',
-  admin: 'Admin',
 }
 
-const STATUS_STYLES: Record<TeamStatus, string> = {
-  invited:     'bg-amber-100 text-amber-700',
-  active:      'bg-green-100 text-green-700',
-  deactivated: 'bg-gray-100 text-gray-500',
+const STATUS_COLORS: Record<TeamMemberStatus, { bg: string; text: string }> = {
+  invited:  { bg: 'rgba(245,158,11,0.12)',  text: '#F59E0B' },
+  active:   { bg: 'rgba(16,185,129,0.12)',  text: '#10B981' },
+  inactive: { bg: 'rgba(100,116,139,0.12)', text: '#64748B' },
 }
 
-function InviteModal({ userId, onClose, onInvited }: { userId: string; onClose: () => void; onInvited: (m: TeamMember) => void }) {
-  const [email, setEmail] = useState('')
+const PERM_KEYS: (keyof TeamPermissions)[] = ['pipeline', 'clients', 'finances', 'labels', 'content']
+const PERM_LABELS: Record<keyof TeamPermissions, string> = {
+  pipeline: 'Pipeline', clients: 'Clients', finances: 'Finances', labels: 'Labels', content: 'Content',
+}
+
+const Q_TYPE_LABELS: Record<CheckinQuestionType, string> = {
+  number: 'Number', text: 'Short answer', textarea: 'Long answer', boolean: 'Yes / No',
+}
+
+// ─── Add Member Modal ─────────────────────────────────────────────────────────
+
+interface InviteResult {
+  member: TeamMember
+  invite_url: string
+}
+
+function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m: TeamMember) => void }) {
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [role, setRole] = useState<TeamRole>('setter')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
-  async function handleInvite(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (loading) return
     setLoading(true)
     setError('')
-    const supabase = createClient()
-
-    const { data, error: err } = await supabase.from('team_members').insert({
-      workspace_id: userId,
-      email,
-      name,
-      role,
-      status: 'invited',
-    }).select().single()
-
-    if (err) {
-      setError(err.message)
-    } else if (data) {
-      onInvited(data as TeamMember)
+    try {
+      const res = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, role }),
+      })
+      const data = await res.json() as InviteResult & { error?: string }
+      if (!res.ok) { setError(data.error ?? 'Something went wrong'); return }
+      setInviteUrl(data.invite_url)
+      onAdded(data.member)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
+  }
+
+  function copyLink() {
+    if (!inviteUrl) return
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Invite someone</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)' }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 440, border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Add team member</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: 4 }}>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
 
-        <form onSubmit={handleInvite} className="space-y-4">
+        {inviteUrl ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Alex"
-              required
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="team@example.com"
-              required
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Role</label>
-            <select
-              value={role}
-              onChange={e => setRole(e.target.value as TeamRole)}
-              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🔗</div>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 4px' }}>Invite link created!</p>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>Share this link with {name}</p>
+            </div>
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, wordBreak: 'break-all', fontSize: 12, color: 'var(--text-2)' }}>
+              {inviteUrl}
+            </div>
+            <button
+              onClick={copyLink}
+              style={{
+                width: '100%', padding: '11px 20px',
+                background: copied ? '#10B981' : '#2563EB',
+                color: '#fff', border: 'none', borderRadius: 10,
+                fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 8,
+              }}
             >
-              <option value="setter">Setter</option>
-              <option value="closer">Closer</option>
-              <option value="both">Setter + Closer</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-lg px-3 py-2">{error}</p>}
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl text-sm font-medium">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">
-              {loading ? 'Sending…' : 'Send invite'}
+              {copied ? 'Copied!' : 'Copy invite link'}
             </button>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>
+              Link expires in 7 days
+            </p>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Field label="Name">
+                <input
+                  value={name} onChange={e => setName(e.target.value)} required
+                  placeholder="Alex Smith"
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Email">
+                <input
+                  type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                  placeholder="alex@example.com"
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Role">
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['setter', 'closer'] as TeamRole[]).map(r => (
+                    <button
+                      key={r} type="button"
+                      onClick={() => setRole(r)}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer', border: '2px solid',
+                        borderColor: role === r ? 'var(--accent)' : 'var(--border)',
+                        background: role === r ? 'rgba(37,99,235,0.08)' : 'transparent',
+                        color: role === r ? 'var(--accent)' : 'var(--text-2)',
+                        transition: 'all 120ms',
+                      }}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+            {error && (
+              <div style={{ marginTop: 12, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#EF4444' }}>
+                {error}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, color: 'var(--text-2)', background: 'transparent', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button type="submit" disabled={loading} style={{ flex: 1, padding: '10px 0', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Creating…' : 'Create invite'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )
 }
 
-export default function TeamClient({ userId, initialMembers }: Props) {
-  const [members, setMembers] = useState<TeamMember[]>(initialMembers)
-  const [inviteOpen, setInviteOpen] = useState(false)
-  const supabase = createClient()
+// ─── Member Card with expanded view ──────────────────────────────────────────
 
-  async function deactivate(id: string) {
-    await supabase.from('team_members').update({ status: 'deactivated' }).eq('id', id)
-    setMembers(ms => ms.map(m => m.id === id ? { ...m, status: 'deactivated' } : m))
+function MemberCard({ member }: { member: TeamMember }) {
+  const [expanded, setExpanded] = useState(false)
+  const [questions, setQuestions] = useState<CheckinQuestion[]>([])
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [nonNegs, setNonNegs] = useState<Array<{ id: string; title: string; order_index: number }>>([])
+  const [newNonNeg, setNewNonNeg] = useState('')
+  const [loadedDetail, setLoadedDetail] = useState(false)
+
+  const statusStyle = STATUS_COLORS[member.status] ?? STATUS_COLORS.inactive
+
+  async function loadDetail() {
+    if (loadedDetail) return
+    setLoadingTemplate(true)
+    try {
+      const [tplRes, nnRes] = await Promise.all([
+        fetch(`/api/team/members/${member.id}/template?type=eod`),
+        fetch(`/api/team/members/${member.id}/non-negotiables`),
+      ])
+      const tplData = await tplRes.json() as { template: { questions: CheckinQuestion[] } | null }
+      const nnData = await nnRes.json() as { non_negs: Array<{ id: string; title: string; order_index: number }> }
+      setQuestions(tplData.template?.questions ?? [])
+      setNonNegs(nnData.non_negs ?? [])
+      setLoadedDetail(true)
+    } finally {
+      setLoadingTemplate(false)
+    }
   }
 
-  async function resendInvite(id: string) {
-    await supabase.from('team_members').update({ invite_sent_at: new Date().toISOString() }).eq('id', id)
+  function toggleExpand() {
+    if (!expanded) loadDetail()
+    setExpanded(e => !e)
   }
 
-  const PERMISSION_ROWS = [
-    { action: 'Add leads to pipeline',     setter: true,  closer: false, both: true,  admin: true  },
-    { action: 'Move leads to call booked', setter: true,  closer: false, both: true,  admin: true  },
-    { action: 'Log call outcomes',         setter: false, closer: true,  both: true,  admin: true  },
-    { action: 'View pipeline',             setter: true,  closer: true,  both: true,  admin: true  },
-    { action: 'View clients',              setter: false, closer: true,  both: true,  admin: true  },
-    { action: 'View numbers',              setter: false, closer: false, both: false, admin: true  },
-    { action: 'Submit EOD report',         setter: true,  closer: true,  both: true,  admin: true  },
-    { action: 'Invite team members',       setter: false, closer: false, both: false, admin: false },
-  ]
+  async function saveTemplate() {
+    setSavingTemplate(true)
+    await fetch(`/api/team/members/${member.id}/template`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'eod', questions }),
+    })
+    setSavingTemplate(false)
+  }
+
+  function addQuestion() {
+    const id = `q${Date.now()}`
+    setQuestions(prev => [...prev, { id, label: '', type: 'number', required: false }])
+  }
+
+  function removeQuestion(id: string) {
+    setQuestions(prev => prev.filter(q => q.id !== id))
+  }
+
+  function updateQuestion(id: string, field: keyof CheckinQuestion, value: string | boolean | CheckinQuestionType) {
+    setQuestions(prev => prev.map(q => q.id === id ? { ...q, [field]: value } : q))
+  }
+
+  async function addNonNeg() {
+    if (!newNonNeg.trim()) return
+    const res = await fetch(`/api/team/members/${member.id}/non-negotiables`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newNonNeg.trim(), order_index: nonNegs.length }),
+    })
+    const data = await res.json() as { non_neg: { id: string; title: string; order_index: number } }
+    setNonNegs(prev => [...prev, data.non_neg])
+    setNewNonNeg('')
+  }
+
+  async function removeNonNeg(id: string) {
+    await fetch(`/api/team/members/${member.id}/non-negotiables?non_neg_id=${id}`, { method: 'DELETE' })
+    setNonNegs(prev => prev.filter(n => n.id !== id))
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Team</h1>
-        <button
-          onClick={() => setInviteOpen(true)}
-          className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+    <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
+      {/* Header row */}
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer' }}
+        onClick={toggleExpand}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+          background: member.role === 'setter' ? 'rgba(124,58,237,0.12)' : 'rgba(37,99,235,0.12)',
+          color: member.role === 'setter' ? '#7C3AED' : '#2563EB',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700,
+        }}>
+          {member.name.charAt(0).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{member.name}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+              background: member.role === 'setter' ? 'rgba(124,58,237,0.12)' : 'rgba(37,99,235,0.12)',
+              color: member.role === 'setter' ? '#7C3AED' : '#2563EB',
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+            }}>
+              {ROLE_LABELS[member.role]}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: statusStyle.bg, color: statusStyle.text }}>
+              {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+            </span>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0 }}>{member.email}</p>
+        </div>
+        <svg
+          viewBox="0 0 20 20" fill="currentColor" width="16" height="16"
+          style={{ flexShrink: 0, color: 'var(--text-3)', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}
         >
-          Invite someone
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {loadingTemplate ? (
+            <p style={{ fontSize: 13, color: 'var(--text-2)', textAlign: 'center' }}>Loading…</p>
+          ) : (
+            <>
+              {/* Permissions */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Permissions
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {PERM_KEYS.map(k => (
+                    <div
+                      key={k}
+                      style={{
+                        padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                        background: member.permissions[k] ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
+                        color: member.permissions[k] ? '#2563EB' : 'var(--text-3)',
+                        border: `1px solid ${member.permissions[k] ? 'rgba(37,99,235,0.2)' : 'var(--border)'}`,
+                      }}
+                    >
+                      {PERM_LABELS[k]}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Non-negotiables */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Non-negotiables
+                </p>
+                {nonNegs.map(nn => (
+                  <div key={nn.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ flex: 1, fontSize: 13, color: 'var(--text-1)' }}>{nn.title}</span>
+                    <button
+                      onClick={() => removeNonNeg(nn.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <input
+                    value={newNonNeg} onChange={e => setNewNonNeg(e.target.value)}
+                    placeholder="Add item…" onKeyDown={e => e.key === 'Enter' && addNonNeg()}
+                    style={{ flex: 1, ...inputStyle, padding: '7px 10px', fontSize: 13 }}
+                  />
+                  <button onClick={addNonNeg} style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 13, cursor: 'pointer', color: 'var(--text-1)' }}>
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* EOD questions */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  EOD questions
+                </p>
+                {questions.map((q, i) => (
+                  <div key={q.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', minWidth: 16 }}>{i + 1}.</span>
+                    <input
+                      value={q.label}
+                      onChange={e => updateQuestion(q.id, 'label', e.target.value)}
+                      placeholder="Question text"
+                      style={{ flex: 1, ...inputStyle, padding: '7px 10px', fontSize: 13 }}
+                    />
+                    <select
+                      value={q.type}
+                      onChange={e => updateQuestion(q.id, 'type', e.target.value as CheckinQuestionType)}
+                      style={{ padding: '7px 8px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text-1)', cursor: 'pointer' }}
+                    >
+                      {(Object.keys(Q_TYPE_LABELS) as CheckinQuestionType[]).map(t => (
+                        <option key={t} value={t}>{Q_TYPE_LABELS[t]}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => removeQuestion(q.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={addQuestion} style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 13, cursor: 'pointer', color: 'var(--text-1)' }}>
+                    + Add question
+                  </button>
+                  <button
+                    onClick={saveTemplate}
+                    disabled={savingTemplate}
+                    style={{ padding: '7px 14px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: savingTemplate ? 'not-allowed' : 'pointer', opacity: savingTemplate ? 0.7 : 1 }}
+                  >
+                    {savingTemplate ? 'Saving…' : 'Save questions'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Shared primitives ────────────────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  padding: '9px 12px',
+  background: 'var(--surface-2)',
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  fontSize: 14,
+  color: 'var(--text-1)',
+  outline: 'none',
+  width: '100%',
+  boxSizing: 'border-box',
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export default function TeamClient({ initialMembers }: Props) {
+  const [members, setMembers] = useState<TeamMember[]>(initialMembers)
+  const [addOpen, setAddOpen] = useState(false)
+
+  return (
+    <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>Team</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>
+            {members.length} member{members.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          style={{ padding: '9px 18px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+        >
+          Add member
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 max-w-3xl space-y-8 bg-gray-50 dark:bg-slate-900">
-        {/* Member list */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700">
-          {members.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-3xl mb-3">👥</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-1">No team members yet</p>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Invite setters or closers to collaborate.</p>
-              <button onClick={() => setInviteOpen(true)} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg">Invite someone</button>
-            </div>
-          ) : (
-            <div>
-              {members.map((member, i) => (
-                <div key={member.id} className={`flex items-center gap-4 p-4 ${i < members.length - 1 ? 'border-b border-gray-50 dark:border-slate-700' : ''}`}>
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold flex-shrink-0">
-                    {member.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-gray-900 dark:text-slate-100">{member.name}</p>
-                      <span className="text-xs font-medium text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                        {ROLE_LABELS[member.role]}
-                      </span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[member.status]}`}>
-                        {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{member.email}</p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    {member.status === 'invited' && (
-                      <button
-                        onClick={() => resendInvite(member.id)}
-                        className="text-xs px-3 py-1.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
-                      >
-                        Resend
-                      </button>
-                    )}
-                    {member.status === 'active' && (
-                      <button
-                        onClick={() => deactivate(member.id)}
-                        className="text-xs px-3 py-1.5 border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-lg hover:border-red-200 hover:text-red-600 transition-colors"
-                      >
-                        Deactivate
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      {members.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
+          <p style={{ fontSize: 36, marginBottom: 12 }}>👥</p>
+          <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>No team members yet</p>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>Add your first setter or closer to collaborate.</p>
+          <button onClick={() => setAddOpen(true)} style={{ padding: '10px 24px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            Add team member
+          </button>
         </div>
-
-        {/* Permissions table */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-5">
-          <h2 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Permissions</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-400 dark:text-slate-500 border-b border-gray-50 dark:border-slate-700">
-                  <th className="pb-2 font-medium text-left">Action</th>
-                  <th className="pb-2 font-medium text-center">Setter</th>
-                  <th className="pb-2 font-medium text-center">Closer</th>
-                  <th className="pb-2 font-medium text-center">Both</th>
-                  <th className="pb-2 font-medium text-center">Admin</th>
-                  <th className="pb-2 font-medium text-center">Owner</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PERMISSION_ROWS.map(row => (
-                  <tr key={row.action} className="border-b border-gray-50 dark:border-slate-700 last:border-0">
-                    <td className="py-2.5 text-gray-700 dark:text-slate-300">{row.action}</td>
-                    {[row.setter, row.closer, row.both, row.admin, true].map((v, i) => (
-                      <td key={i} className="py-2.5 text-center">
-                        {v
-                          ? <span className="text-green-500 font-bold">✓</span>
-                          : <span className="text-gray-200 dark:text-slate-700">—</span>
-                        }
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {members.map(m => <MemberCard key={m.id} member={m} />)}
         </div>
-      </div>
+      )}
 
-      {inviteOpen && (
-        <InviteModal
-          userId={userId}
-          onClose={() => setInviteOpen(false)}
-          onInvited={m => { setMembers(ms => [...ms, m]); setInviteOpen(false) }}
+      {addOpen && (
+        <AddMemberModal
+          onClose={() => setAddOpen(false)}
+          onAdded={m => { setMembers(prev => [...prev, m]); setAddOpen(false) }}
         />
       )}
     </div>

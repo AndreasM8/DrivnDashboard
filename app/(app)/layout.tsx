@@ -7,7 +7,8 @@ import MobileHeader from '@/components/ui/MobileHeader'
 import ViewAsBanner from '@/components/ui/ViewAsBanner'
 import NavigationProgress from '@/components/ui/NavigationProgress'
 import CheckinGate from '@/components/ui/CheckinGate'
-import type { AdminViewAs, WeeklyCheckin } from '@/types'
+import LanguageProvider from '@/components/providers/LanguageProvider'
+import type { AdminViewAs, WeeklyCheckin, Language } from '@/types'
 
 function getWeekBounds(date: Date = new Date()): { weekStart: string; weekEnd: string } {
   const d = new Date(date)
@@ -60,7 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .maybeSingle(),
     supabase
       .from('users')
-      .select('role, checkin_enabled, checkin_day, base_currency')
+      .select('role, checkin_enabled, checkin_day, base_currency, language')
       .eq('id', user.id)
       .single(),
     supabase
@@ -82,6 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const checkinEnabled  = (profile as Record<string, unknown> | null)?.checkin_enabled !== false
   const checkinDay      = ((profile as Record<string, unknown> | null)?.checkin_day as number | null) ?? 0
   const currency        = ((profile as Record<string, unknown> | null)?.base_currency as string | null) ?? 'NOK'
+  const language        = (((profile as Record<string, unknown> | null)?.language as Language | null) ?? 'en') as Language
   const existingCheckin = (thisWeekCheckin as WeeklyCheckin | null)
   const alreadySubmitted = !!existingCheckin?.submitted_at
 
@@ -102,28 +104,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isLastCheckinOfMonth = new Date(weekEnd).getMonth() !== new Date(new Date(weekEnd).getTime() + 7 * 24 * 60 * 60 * 1000).getMonth()
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <NavigationProgress />
-      {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}
-      {needsCheckin && (
-        <CheckinGate
-          weekStart={weekStart}
-          weekEnd={weekEnd}
-          currency={currency}
-          existingCheckin={existingCheckin}
-          isLastCheckinOfMonth={isLastCheckinOfMonth}
-        />
-      )}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <MobileHeader isOwner={isOwner} />
-          <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
-            {children}
-          </main>
+    <LanguageProvider language={language}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <NavigationProgress />
+        {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}
+        {needsCheckin && (
+          <CheckinGate
+            weekStart={weekStart}
+            weekEnd={weekEnd}
+            currency={currency}
+            existingCheckin={existingCheckin}
+            isLastCheckinOfMonth={isLastCheckinOfMonth}
+          />
+        )}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <MobileHeader isOwner={isOwner} />
+            <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
+              {children}
+            </main>
+          </div>
+          <BottomNav taskBadge={badge} isOwner={isOwner} />
         </div>
-        <BottomNav taskBadge={badge} isOwner={isOwner} />
       </div>
-    </div>
+    </LanguageProvider>
   )
 }

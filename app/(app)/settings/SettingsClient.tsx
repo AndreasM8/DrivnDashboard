@@ -1365,6 +1365,57 @@ function NotificationsSection({ userId }: { userId: string }) {
 
 // ─── Section: Account ─────────────────────────────────────────────────────────
 
+function LanguageSection({ userId, currentLanguage }: { userId: string; currentLanguage: string }) {
+  const [lang, setLang] = useState(currentLanguage)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function saveLang(newLang: string) {
+    setLang(newLang)
+    setSaving(true)
+    await fetch('/api/settings/language', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: newLang }),
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    // Reload to re-fetch language from server
+    window.location.reload()
+  }
+
+  return (
+    <div style={CARD}>
+      <p className="section-title" style={{ marginBottom: 4 }}>Language</p>
+      <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
+        {saving ? 'Saving…' : saved ? 'Saved! Reloading…' : 'Choose your preferred language'}
+      </p>
+      <div style={{ display: 'flex', gap: 10 }}>
+        {[
+          { code: 'en', label: '🇬🇧 English' },
+          { code: 'no', label: '🇳🇴 Norsk' },
+        ].map(opt => (
+          <button
+            key={opt.code}
+            onClick={() => { if (opt.code !== lang) saveLang(opt.code) }}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 14, fontWeight: 600,
+              cursor: 'pointer', border: '2px solid',
+              borderColor: lang === opt.code ? 'var(--accent)' : 'var(--border)',
+              background: lang === opt.code ? 'rgba(37,99,235,0.08)' : 'transparent',
+              color: lang === opt.code ? 'var(--accent)' : 'var(--text-2)',
+              transition: 'all 120ms',
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AccountSection({ userId, userEmail, profile }: { userId: string; userEmail: string; profile: User }) {
   const [profileData, setProfileData] = useState({
     name: profile.name,
@@ -1405,6 +1456,9 @@ function AccountSection({ userId, userEmail, profile }: { userId: string; userEm
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Language */}
+      <LanguageSection userId={userId} currentLanguage={profile.language ?? 'en'} />
+
       {/* Profile */}
       <div style={CARD}>
         <p className="section-title" style={{ marginBottom: 16 }}>Profile</p>
