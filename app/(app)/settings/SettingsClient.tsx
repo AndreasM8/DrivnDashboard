@@ -387,7 +387,7 @@ function IntegrationIcon({ type }: { type: 'webhook' | 'stripe' | 'calendly' | '
 }
 
 function WebhookCard({
-  name, desc, configured, webhookUrl, webhookSecret, instructions, docsUrl,
+  name, desc, configured, webhookUrl, webhookSecret, instructions, jsonBody, docsUrl,
 }: {
   emoji?: string
   name: string
@@ -396,6 +396,7 @@ function WebhookCard({
   webhookUrl: string
   webhookSecret?: string | null
   instructions: string[]
+  jsonBody?: string
   docsUrl?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -443,7 +444,9 @@ function WebhookCard({
           {/* Webhook secret */}
           {webhookSecret && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Secret header value <span style={{ fontWeight: 400 }}>(x-zapier-secret)</span></div>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>
+                Secret header value <span style={{ fontWeight: 400 }}>(x-zapier-secret)</span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <code style={{
                   flex: 1, fontSize: 12,
@@ -469,18 +472,41 @@ function WebhookCard({
           </button>
 
           {open && (
-            <ol style={{ marginTop: 8, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, listStyle: 'decimal' }}>
-              {instructions.map((step, i) => (
-                <li key={i} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{step}</li>
-              ))}
-              {docsUrl && (
-                <li style={{ fontSize: 12 }}>
-                  <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
-                    Open platform →
-                  </a>
-                </li>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <ol style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, listStyle: 'decimal', margin: 0 }}>
+                {instructions.map((step, i) => (
+                  <li key={i} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{step}</li>
+                ))}
+                {docsUrl && (
+                  <li style={{ fontSize: 12 }}>
+                    <a href={docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                      Open platform →
+                    </a>
+                  </li>
+                )}
+              </ol>
+
+              {/* Copyable JSON body */}
+              {jsonBody && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Request body — copy and paste this:</div>
+                  <div style={{ position: 'relative' }}>
+                    <pre style={{
+                      fontSize: 11, lineHeight: 1.6,
+                      background: 'var(--surface-2)', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-btn)', padding: '8px 10px',
+                      color: 'var(--text-2)', fontFamily: 'var(--font-mono)',
+                      overflowX: 'auto', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                    }}>
+                      {jsonBody}
+                    </pre>
+                    <div style={{ position: 'absolute', top: 6, right: 6 }}>
+                      <CopyButton value={jsonBody} />
+                    </div>
+                  </div>
+                </div>
               )}
-            </ol>
+            </div>
           )}
         </div>
       </div>
@@ -1046,34 +1072,53 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
 
       <WebhookCard
         name="ManyChat"
-        desc="Automatically adds new followers to your pipeline when they DM you via ManyChat. Uses ManyChat's built-in HTTP action."
+        desc="Automatically adds new followers to your pipeline when they DM you. Uses ManyChat's built-in External Request action — no Zapier needed."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         webhookSecret={status?.zapier.webhook_secret}
         instructions={[
-          'In ManyChat, open the flow you want to trigger on new DMs → click + to add a step → choose External Request (or "Actions → Send Request")',
-          'Set Method to POST, paste the Webhook URL above, set Content Type to JSON',
-          'Add a Header: Key = x-zapier-secret, Value = (copy from Secret header value above)',
-          'In the Request Body, paste: { "type": "new_lead", "data": { "ig_username": "{{last name}}", "full_name": "{{full name}}", "source_flow": "manychat" } }',
-          'Save and publish the flow — new followers who DM will appear in your pipeline under Followers.',
+          'In ManyChat, open the flow you want to trigger (e.g. your DM welcome flow).',
+          'Click the + button to add a step → choose Action → External Request.',
+          'Set Method to POST and paste the Webhook URL above into the URL field.',
+          'Set Content Type to application/json.',
+          'Under Headers, add a new header: Key = x-zapier-secret, Value = paste the Secret header value from above.',
+          'In the Request Body field, paste the JSON below — then replace {{instagram username}} with the ManyChat variable for your subscriber\'s Instagram handle.',
+          'Click Test Request to verify, then Save and publish the flow.',
         ]}
+        jsonBody={`{
+  "type": "new_lead",
+  "data": {
+    "ig_username": "{{instagram username}}",
+    "full_name": "{{full name}}",
+    "source_flow": "manychat"
+  }
+}`}
         docsUrl="https://manychat.com"
       />
 
       <WebhookCard
         name="Zapier"
-        desc="Connect any app to your pipeline via Zapier. Use this to push leads from Instagram Lead Ads, forms, or any other source."
+        desc="Connect any app to your pipeline via Zapier — Instagram Lead Ads, Typeform, Google Forms, and more."
         configured={status?.zapier.configured ?? false}
         webhookUrl={zapierUrl}
         webhookSecret={status?.zapier.webhook_secret}
         instructions={[
-          'In Zapier, create a new Zap. Set the Trigger to your lead source (e.g. Instagram Lead Ads, Typeform, Google Forms, etc.)',
-          'For the Action, choose Webhooks by Zapier → POST',
-          'Paste the Webhook URL above into the URL field. Set Payload Type to JSON.',
-          'Under Headers, add: Key = x-zapier-secret, Value = (copy from Secret header value above)',
-          'In the Data section set: type = new_lead. Then add a nested "data" object with: ig_username → Instagram handle field, full_name → full name field, source_flow → "zapier"',
-          'Turn on the Zap and test it — a new lead should appear in your pipeline under Followers.',
+          'In Zapier, create a new Zap and set your Trigger to the lead source (e.g. Instagram Lead Ads, Typeform, etc.).',
+          'For the Action, search for and choose Webhooks by Zapier → POST.',
+          'Paste the Webhook URL above into the URL field.',
+          'Set Body type to Raw and Content type to application/json.',
+          'Under Headers, add: Key = x-zapier-secret, Value = paste the Secret header value from above.',
+          'In the Body field, paste the JSON below — then replace the placeholder values with the data fields from your trigger step.',
+          'Click Test and continue to verify a lead appears in your pipeline, then turn the Zap on.',
         ]}
+        jsonBody={`{
+  "type": "new_lead",
+  "data": {
+    "ig_username": "INSTAGRAM_HANDLE_FIELD",
+    "full_name": "FULL_NAME_FIELD",
+    "source_flow": "zapier"
+  }
+}`}
         docsUrl="https://zapier.com"
       />
 
