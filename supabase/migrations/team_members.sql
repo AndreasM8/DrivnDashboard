@@ -170,3 +170,6 @@ create policy "coach_read_completions" on team_nonneg_completions for select usi
 create policy "member_all_completions" on team_nonneg_completions for all using (
   team_member_id in (select id from team_members where user_id = auth.uid())
 );
+
+-- Add configurable EOD hour (coach sets per member, default 20 = 8pm)
+alter table team_checkin_templates add column if not exists eod_hour int not null default 20 check (eod_hour between 0 and 23);

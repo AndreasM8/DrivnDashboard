@@ -172,6 +172,7 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m
 function MemberCard({ member }: { member: TeamMember }) {
   const [expanded, setExpanded] = useState(false)
   const [questions, setQuestions] = useState<CheckinQuestion[]>([])
+  const [eodHour, setEodHour] = useState(20)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [nonNegs, setNonNegs] = useState<Array<{ id: string; title: string; order_index: number }>>([])
@@ -188,9 +189,10 @@ function MemberCard({ member }: { member: TeamMember }) {
         fetch(`/api/team/members/${member.id}/template?type=eod`),
         fetch(`/api/team/members/${member.id}/non-negotiables`),
       ])
-      const tplData = await tplRes.json() as { template: { questions: CheckinQuestion[] } | null }
+      const tplData = await tplRes.json() as { template: { questions: CheckinQuestion[]; eod_hour?: number } | null }
       const nnData = await nnRes.json() as { non_negs: Array<{ id: string; title: string; order_index: number }> }
       setQuestions(tplData.template?.questions ?? [])
+      setEodHour(tplData.template?.eod_hour ?? 20)
       setNonNegs(nnData.non_negs ?? [])
       setLoadedDetail(true)
     } finally {
@@ -208,7 +210,7 @@ function MemberCard({ member }: { member: TeamMember }) {
     await fetch(`/api/team/members/${member.id}/template`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'eod', questions }),
+      body: JSON.stringify({ type: 'eod', questions, eod_hour: eodHour }),
     })
     setSavingTemplate(false)
   }
@@ -341,6 +343,25 @@ function MemberCard({ member }: { member: TeamMember }) {
                     Add
                   </button>
                 </div>
+              </div>
+
+              {/* EOD gate time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 2px' }}>EOD gate time</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>The EOD report prompt appears after this hour each day</p>
+                </div>
+                <select
+                  value={eodHour}
+                  onChange={e => setEodHour(Number(e.target.value))}
+                  style={{ padding: '7px 10px', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-1)', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* EOD questions */}

@@ -373,6 +373,7 @@ export interface TeamCheckinTemplate {
   questions: CheckinQuestion[]
   weekly_enabled: boolean
   weekly_day: number
+  eod_hour: number  // 0–23, hour at which EOD gate activates (coach-configurable)
 }
 
 export interface TeamEodReport {

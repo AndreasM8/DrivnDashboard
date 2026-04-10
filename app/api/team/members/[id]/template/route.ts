@@ -33,6 +33,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     questions: unknown[]
     weekly_enabled?: boolean
     weekly_day?: number
+    eod_hour?: number
   }
 
   const { data, error } = await supabase
@@ -44,6 +45,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       questions: body.questions,
       weekly_enabled: body.weekly_enabled ?? false,
       weekly_day: body.weekly_day ?? 0,
+      eod_hour: typeof body.eod_hour === 'number' ? Math.max(0, Math.min(23, body.eod_hour)) : 20,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'team_member_id,type' })
     .select()
