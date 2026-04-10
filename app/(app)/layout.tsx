@@ -99,6 +99,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     !alreadySubmitted &&
     now >= checkinDayDate
 
+  const isLastCheckinOfMonth = new Date(weekEnd).getMonth() !== new Date(new Date(weekEnd).getTime() + 7 * 24 * 60 * 60 * 1000).getMonth()
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <NavigationProgress />
@@ -109,6 +111,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           weekEnd={weekEnd}
           currency={currency}
           existingCheckin={existingCheckin}
+          isLastCheckinOfMonth={isLastCheckinOfMonth}
         />
       )}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

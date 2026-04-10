@@ -13,17 +13,35 @@ interface Props {
   cashCollected: number
 }
 
-type ExpenseCategory = 'team' | 'software' | 'ads' | 'withdrawal' | 'other'
+type ExpenseCategory = 'team' | 'software' | 'ads' | 'withdrawal' | 'other' | 'salary' | 'subscriptions' | 'investments'
+type TeamRole = 'setter' | 'closer' | 'editor' | 'growth_partner'
+type PaymentStructure = 'monthly' | 'retainer' | 'both'
 
 const CATEGORY_META: Record<ExpenseCategory, { label: string }> = {
-  team:       { label: 'Team' },
-  software:   { label: 'Software' },
-  ads:        { label: 'Ads' },
-  withdrawal: { label: 'Withdrawals' },
-  other:      { label: 'Other' },
+  team:          { label: 'Team' },
+  salary:        { label: 'Salary' },
+  software:      { label: 'Software' },
+  subscriptions: { label: 'Subscriptions' },
+  ads:           { label: 'Ads' },
+  investments:   { label: 'Investments' },
+  withdrawal:    { label: 'Withdrawals' },
+  other:         { label: 'Other' },
 }
 
-const CATEGORY_ORDER: ExpenseCategory[] = ['team', 'software', 'ads', 'withdrawal', 'other']
+const CATEGORY_ORDER: ExpenseCategory[] = ['team', 'salary', 'software', 'subscriptions', 'ads', 'investments', 'withdrawal', 'other']
+
+const TEAM_ROLES: { value: TeamRole; label: string }[] = [
+  { value: 'setter', label: 'Setter' },
+  { value: 'closer', label: 'Closer' },
+  { value: 'editor', label: 'Editor' },
+  { value: 'growth_partner', label: 'Growth Partner' },
+]
+
+const PAYMENT_STRUCTURES: { value: PaymentStructure; label: string }[] = [
+  { value: 'monthly', label: 'Monthly amount' },
+  { value: 'retainer', label: 'Retainer' },
+  { value: 'both', label: 'Both' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,15 +69,20 @@ export default function ExpensesSection({
   const [formAmount, setFormAmount] = useState('')
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [formTeamRole, setFormTeamRole] = useState<TeamRole>('setter')
+  const [formPaymentStructure, setFormPaymentStructure] = useState<PaymentStructure>('monthly')
 
   // ── Derived totals ───────────────────────────────────────────────────────
 
   const totalByCategory: Record<ExpenseCategory, number> = {
-    team:       0,
-    software:   0,
-    ads:        adSpendTotal,
-    withdrawal: 0,
-    other:      0,
+    team:          0,
+    salary:        0,
+    software:      0,
+    subscriptions: 0,
+    ads:           adSpendTotal,
+    investments:   0,
+    withdrawal:    0,
+    other:         0,
   }
 
   for (const exp of expenses) {
@@ -68,8 +91,11 @@ export default function ExpensesSection({
 
   const totalExpenses =
     totalByCategory.team +
+    totalByCategory.salary +
     totalByCategory.software +
+    totalByCategory.subscriptions +
     totalByCategory.ads +
+    totalByCategory.investments +
     totalByCategory.withdrawal +
     totalByCategory.other
 
@@ -90,6 +116,8 @@ export default function ExpensesSection({
           label: formLabel.trim(),
           amount: amt,
           currency,
+          team_role: formCategory === 'team' ? formTeamRole : null,
+          payment_structure: formCategory === 'team' ? formPaymentStructure : null,
         }),
       })
 
@@ -99,6 +127,8 @@ export default function ExpensesSection({
         setFormLabel('')
         setFormAmount('')
         setFormCategory('team')
+        setFormTeamRole('setter')
+        setFormPaymentStructure('monthly')
         setShowAddForm(false)
       }
     } finally {
@@ -171,6 +201,43 @@ export default function ExpensesSection({
               />
             </div>
           </div>
+
+          {formCategory === 'team' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Team member</label>
+                <select
+                  value={formTeamRole}
+                  onChange={e => {
+                    setFormTeamRole(e.target.value as TeamRole)
+                    // Auto-suggest label
+                    const roleLabel = TEAM_ROLES.find(r => r.value === e.target.value)?.label ?? ''
+                    if (!formLabel || TEAM_ROLES.some(r => formLabel.startsWith(r.label))) {
+                      setFormLabel(roleLabel)
+                    }
+                  }}
+                  className="input-base"
+                >
+                  {TEAM_ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Payment type</label>
+                <select
+                  value={formPaymentStructure}
+                  onChange={e => setFormPaymentStructure(e.target.value as PaymentStructure)}
+                  className="input-base"
+                >
+                  {PAYMENT_STRUCTURES.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Label</label>
             <input
@@ -196,6 +263,8 @@ export default function ExpensesSection({
                 setFormLabel('')
                 setFormAmount('')
                 setFormCategory('team')
+                setFormTeamRole('setter')
+                setFormPaymentStructure('monthly')
               }}
               className="btn-ghost"
               style={{ padding: '8px 16px' }}

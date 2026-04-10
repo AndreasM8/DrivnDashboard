@@ -23,11 +23,13 @@ export default function CheckinGate({
   weekEnd,
   currency,
   existingCheckin,
+  isLastCheckinOfMonth,
 }: {
   weekStart: string
   weekEnd: string
   currency: string
   existingCheckin: WeeklyCheckin | null
+  isLastCheckinOfMonth?: boolean
 }) {
   const [done, setDone] = useState(false)
 
@@ -42,6 +44,7 @@ export default function CheckinGate({
       weekEnd={weekEnd}
       canSnooze={false}
       mandatory={true}
+      isLastCheckinOfMonth={isLastCheckinOfMonth}
       onSubmitted={() => setDone(true)}
       onSnoozed={() => { /* blocked when mandatory */ }}
     />

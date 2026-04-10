@@ -1171,12 +1171,12 @@ function NotificationsSection({ userId }: { userId: string }) {
     if (prefs) save(prefs)
   }
 
-  function NotifToggle({ k }: { k: 'followup_enabled' | 'noshow_followup_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' }) {
+  function NotifToggle({ k }: { k: 'followup_enabled' | 'noshow_followup_enabled' | 'payment_enabled' | 'upsell_enabled' | 'daily_digest_enabled' | 'testimonial_enabled' | 'referral_enabled' }) {
     const on = prefs?.[k] ?? true
     return <Toggle on={!!on} onClick={() => toggle(k)} />
   }
 
-  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'noshow_followup_days' | 'payment_days_before' | 'upsell_months'; min: number; max: number; unit: string }) {
+  function NumberInput({ k, min, max, unit }: { k: 'followup_days' | 'followup_days_tier1' | 'followup_days_tier2' | 'followup_days_tier3' | 'overdue_days' | 'noshow_followup_days' | 'payment_days_before' | 'upsell_months' | 'testimonial_interval_months' | 'referral_interval_months'; min: number; max: number; unit: string }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input
@@ -1311,6 +1311,40 @@ function NotificationsSection({ userId }: { userId: string }) {
                 <option value="before_end">before contract end</option>
               </select>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Testimonials */}
+      <div style={notifCard}>
+        <div style={rowBetween}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Testimonial reminders</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Reminds you to ask active clients for a testimonial on a regular schedule</p>
+          </div>
+          <NotifToggle k="testimonial_enabled" />
+        </div>
+        {prefs.testimonial_enabled && (
+          <div style={{ ...divider, ...rowBetween }}>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Ask every</span>
+            <NumberInput k="testimonial_interval_months" min={1} max={12} unit="month(s)" />
+          </div>
+        )}
+      </div>
+
+      {/* Referrals */}
+      <div style={notifCard}>
+        <div style={rowBetween}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Referral reminders</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Reminds you to ask active clients for referrals on a regular schedule</p>
+          </div>
+          <NotifToggle k="referral_enabled" />
+        </div>
+        {prefs.referral_enabled && (
+          <div style={{ ...divider, ...rowBetween }}>
+            <span style={{ fontSize: 13, color: 'var(--text-1)' }}>Ask every</span>
+            <NumberInput k="referral_interval_months" min={1} max={12} unit="month(s)" />
           </div>
         )}
       </div>

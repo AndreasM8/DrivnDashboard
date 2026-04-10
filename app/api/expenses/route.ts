@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     label: string
     amount: number
     currency: string
+    team_role?: string | null
+    payment_structure?: string | null
   }
 
   const { data, error } = await supabase
@@ -50,6 +52,8 @@ export async function POST(request: NextRequest) {
       label: body.label,
       amount: body.amount,
       currency: body.currency,
+      team_role: body.team_role ?? null,
+      payment_structure: body.payment_structure ?? null,
     })
     .select()
     .single()

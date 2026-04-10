@@ -17,6 +17,10 @@ export interface NotificationPrefs {
   upsell_timing: UpsellTiming  // 'after_start' or 'before_end'
   upsell_months: number        // months offset for upsell reminder
   daily_digest_enabled: boolean
+  testimonial_enabled: boolean
+  testimonial_interval_months: number
+  referral_enabled: boolean
+  referral_interval_months: number
 }
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -34,6 +38,10 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   upsell_timing: 'before_end',
   upsell_months: 1,
   daily_digest_enabled: true,
+  testimonial_enabled: true,
+  testimonial_interval_months: 3,
+  referral_enabled: true,
+  referral_interval_months: 3,
 }
 
 export function resolveNotifPrefs(raw: Partial<NotificationPrefs> | null | undefined): NotificationPrefs {
@@ -250,6 +258,10 @@ export interface Client {
   churn_reason: string
   active: boolean
   created_at: string
+  testimonial_requested_at: string | null
+  referral_requested_at: string | null
+  testimonial_opt_out: boolean
+  referral_opt_out: boolean
 }
 
 export interface PaymentInstallment {
@@ -414,10 +426,12 @@ export interface Expense {
   id: string
   user_id: string
   month: string
-  category: 'team' | 'software' | 'ads' | 'withdrawal' | 'other'
+  category: 'team' | 'software' | 'ads' | 'withdrawal' | 'other' | 'salary' | 'subscriptions' | 'investments'
   label: string
   amount: number
   currency: string
+  team_role: 'setter' | 'closer' | 'editor' | 'growth_partner' | null
+  payment_structure: 'monthly' | 'retainer' | 'both' | null
   created_at: string
 }
 

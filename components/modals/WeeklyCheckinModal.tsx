@@ -11,6 +11,7 @@ interface Props {
   weekEnd: string
   canSnooze: boolean
   mandatory?: boolean
+  isLastCheckinOfMonth?: boolean
   onSubmitted: () => void
   onSnoozed: () => void
 }
@@ -45,10 +46,13 @@ export default function WeeklyCheckinModal({
   weekEnd,
   canSnooze,
   mandatory,
+  isLastCheckinOfMonth,
   onSubmitted,
   onSnoozed,
 }: Props) {
-  const [step, setStep] = useState<1 | 2>(1)
+  const totalSteps = isLastCheckinOfMonth ? 3 : 2
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [monthlyConfirmed, setMonthlyConfirmed] = useState(false)
   const [biggestWin, setBiggestWin] = useState(checkin?.biggest_win ?? '')
   const [mainFocus, setMainFocus] = useState(checkin?.main_focus ?? '')
   const [supportNeeded, setSupportNeeded] = useState(checkin?.support_needed ?? '')
@@ -123,7 +127,8 @@ export default function WeeklyCheckinModal({
     onSnoozed()
   }
 
-  const canSubmit = adSpendConfirmed || adSpendSkipped
+  const canSubmitStep2 = adSpendConfirmed || adSpendSkipped
+  const canSubmit = canSubmitStep2 && (!isLastCheckinOfMonth || step !== 3 || monthlyConfirmed)
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--surface-1)',
@@ -202,7 +207,7 @@ export default function WeeklyCheckinModal({
               )}
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
-              {[1, 2].map(s => (
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map(s => (
                 <div key={s} style={{
                   width: s === step ? 18 : 8,
                   height: 8,
@@ -490,23 +495,43 @@ export default function WeeklyCheckinModal({
               )}
             </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit || submitting}
-              style={{
-                width: '100%', height: 52,
-                borderRadius: 'var(--radius-btn)',
-                background: canSubmit && !submitting ? 'var(--accent)' : 'var(--surface-3)',
-                color: canSubmit && !submitting ? '#fff' : 'var(--text-3)',
-                border: 'none',
-                fontSize: 15, fontWeight: 600,
-                cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
-                transition: 'background 150ms ease',
-                marginTop: 4,
-              }}
-            >
-              {submitting ? 'Submitting…' : 'Submit check-in ✓'}
-            </button>
+            {isLastCheckinOfMonth ? (
+              <button
+                onClick={() => setStep(3)}
+                disabled={!canSubmitStep2}
+                style={{
+                  width: '100%', height: 52,
+                  borderRadius: 'var(--radius-btn)',
+                  background: canSubmitStep2 ? 'var(--accent)' : 'var(--surface-3)',
+                  color: canSubmitStep2 ? '#fff' : 'var(--text-3)',
+                  border: 'none',
+                  fontSize: 15, fontWeight: 600,
+                  cursor: canSubmitStep2 ? 'pointer' : 'not-allowed',
+                  transition: 'background 150ms ease',
+                  marginTop: 4,
+                }}
+              >
+                Next — Monthly review →
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmitStep2 || submitting}
+                style={{
+                  width: '100%', height: 52,
+                  borderRadius: 'var(--radius-btn)',
+                  background: canSubmitStep2 && !submitting ? 'var(--accent)' : 'var(--surface-3)',
+                  color: canSubmitStep2 && !submitting ? '#fff' : 'var(--text-3)',
+                  border: 'none',
+                  fontSize: 15, fontWeight: 600,
+                  cursor: canSubmitStep2 && !submitting ? 'pointer' : 'not-allowed',
+                  transition: 'background 150ms ease',
+                  marginTop: 4,
+                }}
+              >
+                {submitting ? 'Submitting…' : 'Submit check-in ✓'}
+              </button>
+            )}
 
             <button
               onClick={() => setStep(1)}
@@ -521,6 +546,83 @@ export default function WeeklyCheckinModal({
             </button>
           </div>
         )}
+
+        {/* Step 3: Monthly review */}
+        {step === 3 && isLastCheckinOfMonth && (() => {
+          const monthName = new Date(weekEnd + 'T00:00:00Z').toLocaleDateString('en', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+          return (
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>
+                  Monthly review
+                </p>
+                <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+                  This is your last check-in for the month. Before you finish, take a moment to confirm your numbers are up to date.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  'Ad spend logged for the month',
+                  'Expenses up to date',
+                  'Cash collected is accurate',
+                ].map(item => (
+                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 'var(--radius-card)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <span style={{ color: '#16A34A', fontSize: 16, flexShrink: 0 }}>✓</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                If anything needs updating, head to Numbers after submitting.
+              </p>
+
+              {/* Confirmation checkbox */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 'var(--radius-card)', border: monthlyConfirmed ? '1px solid rgba(22,163,74,0.4)' : '1px solid var(--border)', background: monthlyConfirmed ? 'rgba(22,163,74,0.06)' : 'var(--surface-2)', transition: 'all 150ms ease' }}>
+                <input
+                  type="checkbox"
+                  checked={monthlyConfirmed}
+                  onChange={e => setMonthlyConfirmed(e.target.checked)}
+                  style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, cursor: 'pointer', accentColor: '#16A34A' }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--text-1)', fontWeight: monthlyConfirmed ? 500 : 400 }}>
+                  I confirm my numbers, expenses and ad spend are up to date for {monthName}
+                </span>
+              </label>
+
+              <button
+                onClick={handleSubmit}
+                disabled={!monthlyConfirmed || submitting}
+                style={{
+                  width: '100%', height: 52,
+                  borderRadius: 'var(--radius-btn)',
+                  background: monthlyConfirmed && !submitting ? 'var(--accent)' : 'var(--surface-3)',
+                  color: monthlyConfirmed && !submitting ? '#fff' : 'var(--text-3)',
+                  border: 'none',
+                  fontSize: 15, fontWeight: 600,
+                  cursor: monthlyConfirmed && !submitting ? 'pointer' : 'not-allowed',
+                  transition: 'background 150ms ease',
+                  marginTop: 4,
+                }}
+              >
+                {submitting ? 'Submitting…' : 'Submit check-in ✓'}
+              </button>
+
+              <button
+                onClick={() => setStep(2)}
+                style={{
+                  background: 'none', border: 'none',
+                  fontSize: 13, color: 'var(--text-3)',
+                  cursor: 'pointer', padding: '4px 0',
+                  textAlign: 'center', width: '100%',
+                }}
+              >
+                ← Back to numbers
+              </button>
+            </div>
+          )
+        })()}
 
         {/* Snooze link */}
         {canSnooze && !showSuccess && (
