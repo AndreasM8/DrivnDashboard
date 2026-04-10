@@ -5,6 +5,7 @@ import { TASK_TYPE_STYLES } from '@/types'
 import type { Task, Lead, Client, WeeklyCheckin, CheckinPrefill } from '@/types'
 import Link from 'next/link'
 import CheckinTrigger from '@/components/dashboard/CheckinTrigger'
+import { getTranslations } from '@/lib/i18n'
 
 // ─── Live stats helper ────────────────────────────────────────────────────────
 
@@ -383,6 +384,7 @@ export default async function DashboardPage() {
   const activeClientCount = allActiveClients?.length ?? 0
   const clients = clientsForTable
   const currency = profile?.base_currency ?? 'NOK'
+  const t = getTranslations((profile?.language as 'en' | 'no' | undefined) ?? 'en')
 
   // ─── Check-in logic ─────────────────────────────────────────────────────────
   const checkinEnabled = (profile as Record<string, unknown>)?.checkin_enabled !== false
@@ -526,18 +528,18 @@ export default async function DashboardPage() {
         className="md:grid-cols-4"
       >
         <StatCard
-          label="Money in this month"
+          label={t.numbers.cashCollected}
           value={formatCurrency(cashCollected, currency)}
           sub={cashTarget ? `Target: ${formatCurrency(cashTarget, currency)}` : undefined}
           statusColor={cashStatusColor}
         />
         <StatCard
-          label="Active clients"
+          label={t.dashboard.activeClients}
           value={String(activeClientCount)}
           statusColor="#16A34A"
         />
         <StatCard label="Calls this month" value={String(callsHeld)} />
-        <StatCard label="Clients signed" value={String(clientsSignedThisMonth)} sub="this month" statusColor="#16A34A" />
+        <StatCard label={t.dashboard.clientsSigned} value={String(clientsSignedThisMonth)} sub={t.dashboard.thisMonth} statusColor="#16A34A" />
       </div>
 
       {/* Mini revenue chart */}

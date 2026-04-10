@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Expense } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export default function ExpensesSection({
   currentMonth,
   cashCollected,
 }: Props) {
+  const t = useT()
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
   const [showAddForm, setShowAddForm] = useState(false)
   const [formCategory, setFormCategory] = useState<ExpenseCategory>('team')
@@ -159,7 +161,7 @@ export default function ExpensesSection({
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)', padding: 20 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ fontWeight: 600, color: 'var(--text-1)', margin: 0, fontSize: 15 }}>Expenses &amp; profit</h2>
+        <h2 style={{ fontWeight: 600, color: 'var(--text-1)', margin: 0, fontSize: 15 }}>{t.numbers.expenses} &amp; {t.numbers.profit}</h2>
         <button
           onClick={() => setShowAddForm(v => !v)}
           style={{ fontSize: 12, fontWeight: 500, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-btn)', transition: 'background 120ms' }}

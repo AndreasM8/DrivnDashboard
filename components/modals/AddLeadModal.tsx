@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadStage, Setter } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
   userId: string
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function AddLeadModal({ userId, defaultStage, setters, existingLeads, onClose, onAdded }: Props) {
+  const t = useT()
   const [igUsername, setIgUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [setterId, setSetterId] = useState('')
@@ -72,7 +74,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
         width: '100%', maxWidth: 440, padding: 24,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 className="section-title">Add follower to pipeline</h2>
+          <h2 className="section-title">{t.pipeline.addLead}</h2>
           <button
             onClick={onClose}
             style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0, transition: 'color 120ms ease' }}
@@ -139,10 +141,10 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
 
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
             <button type="button" onClick={onClose} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
-              Cancel
+              {t.common.cancel}
             </button>
             <button type="submit" disabled={loading || !igUsername} className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
-              {loading ? 'Adding…' : 'Add to pipeline'}
+              {loading ? 'Adding…' : t.pipeline.addLead}
             </button>
           </div>
         </form>

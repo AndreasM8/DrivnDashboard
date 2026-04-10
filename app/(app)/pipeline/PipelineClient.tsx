@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { triggerSheetsSync } from '@/lib/sync-sheets-client'
 import type { Lead, LeadLabel, LeadStage, LeadLabelAssignment, Setter, KpiTargets } from '@/types'
 import { STAGE_LABELS } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 import AddLeadModal from '@/components/modals/AddLeadModal'
 import LeadDrawer from '@/components/pipeline/LeadDrawer'
 import CallBookedModal from '@/components/modals/CallBookedModal'
@@ -892,6 +893,7 @@ function StageColumn({
 
 export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets }: Props) {
   const isMobile = useIsMobile()
+  const t = useT()
   const kanbanScrollRef = useRef<HTMLDivElement>(null)
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [labels, setLabels] = useState<LeadLabel[]>(initialLabels)
@@ -1087,14 +1089,14 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           flexShrink: 0,
         }}
       >
-        <h1 className="page-title">Pipeline</h1>
+        <h1 className="page-title">{t.pipeline.title}</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="btn-ghost" onClick={() => setLabelManagerOpen(true)}>Labels</button>
           <button
             className="btn-primary"
             onClick={() => { setAddLeadStage('follower'); setAddLeadOpen(true) }}
           >
-            + Add follower
+            + {t.pipeline.addLead}
           </button>
         </div>
       </div>
@@ -1264,7 +1266,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
         <div style={{ height: '1px', background: 'var(--border)' }} />
         {filteredLeads.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 24px', fontSize: 13, color: 'var(--text-3)' }}>
-            No leads found
+            {t.pipeline.noLeads}
           </div>
         ) : (
           (() => {

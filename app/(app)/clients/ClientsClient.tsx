@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { createClient } from '@/lib/supabase'
 import type { Client, PaymentInstallment, Product } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 import ClientDrawer from '@/components/clients/ClientDrawer'
 import AddClientModal from '@/components/modals/AddClientModal'
 import ProductsPanel from '@/components/clients/ProductsPanel'
@@ -55,6 +56,7 @@ function PaymentDots({ installments }: { installments: PaymentInstallment[] }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ClientsClient({ initialClients, installments, userId, baseCurrency, products }: Props) {
+  const t = useT()
   const [clients, setClients] = useState<Client[]>(initialClients)
   const [filter, setFilter]   = useState<FilterKey>('all')
   const [search, setSearch]   = useState('')
@@ -124,9 +126,9 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   ]
 
   const STAT_CARDS = [
-    { label: 'Active clients',    value: String(activeCount),                                                   accent: 'var(--accent)' },
-    { label: 'Monthly recurring', value: monthlyRecurring > 0 ? formatCurrency(monthlyRecurring, baseCurrency) : '—', accent: 'var(--success)' },
-    { label: 'Total LTV',         value: totalLtv > 0 ? formatCurrency(totalLtv, baseCurrency) : '—',          accent: 'var(--purple)' },
+    { label: t.clients.active,          value: String(activeCount),                                                   accent: 'var(--accent)' },
+    { label: t.clients.monthlyRecurring, value: monthlyRecurring > 0 ? formatCurrency(monthlyRecurring, baseCurrency) : '—', accent: 'var(--success)' },
+    { label: t.clients.totalLtv,        value: totalLtv > 0 ? formatCurrency(totalLtv, baseCurrency) : '—',          accent: 'var(--purple)' },
     { label: 'Invoices due soon', value: String(invoicesDueSoon),                                              accent: invoicesDueSoon > 0 ? 'var(--warning)' : 'var(--border-strong)' },
   ]
 
@@ -145,13 +147,13 @@ export default function ClientsClient({ initialClients, installments, userId, ba
           flexShrink: 0,
         }}
       >
-        <h1 className="page-title">Clients</h1>
+        <h1 className="page-title">{t.clients.title}</h1>
         <button
           onClick={() => setAddOpen(true)}
           className="btn-primary hidden md:inline-flex"
           style={{ fontSize: '13px', padding: '10px 14px' }}
         >
-          + Add client
+          + {t.clients.addClient}
         </button>
       </div>
 
@@ -276,11 +278,11 @@ export default function ClientsClient({ initialClients, installments, userId, ba
               <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
                 {clients.length === 0 ? (
                   <>
-                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>No clients yet</p>
+                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>{t.clients.noClients}</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>
                       Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.
                     </p>
-                    <button onClick={() => setAddOpen(true)} className="btn-primary">Add client</button>
+                    <button onClick={() => setAddOpen(true)} className="btn-primary">{t.clients.addClient}</button>
                   </>
                 ) : (
                   <>

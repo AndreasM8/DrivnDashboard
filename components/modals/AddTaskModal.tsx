@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
   userId: string
@@ -21,6 +22,7 @@ function computeReminderAt(dueAt: string, amount: number, unit: ReminderUnit): s
 }
 
 export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
+  const t = useT()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [type, setType] = useState<TaskType>('manual')
@@ -73,7 +75,7 @@ export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
         width: '100%', maxWidth: 440, padding: 24,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 className="section-title">Add task</h2>
+          <h2 className="section-title">{t.tasks.addTask}</h2>
           <button
             onClick={onClose}
             style={{ color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, lineHeight: 0, transition: 'color 120ms ease' }}
@@ -205,10 +207,10 @@ export default function AddTaskModal({ userId, onClose, onAdded }: Props) {
 
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
             <button type="button" onClick={onClose} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
-              Cancel
+              {t.common.cancel}
             </button>
             <button type="submit" disabled={loading || !title} className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '10px' }}>
-              {loading ? 'Adding…' : 'Add task'}
+              {loading ? 'Adding…' : t.tasks.addTask}
             </button>
           </div>
         </form>

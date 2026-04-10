@@ -7,6 +7,7 @@ import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/
 import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import { useDarkMode } from '@/components/providers/DarkModeProvider'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
+import { useT } from '@/contexts/LanguageContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1369,6 +1370,7 @@ function LanguageSection({ userId, currentLanguage }: { userId: string; currentL
   const [lang, setLang] = useState(currentLanguage)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const t = useT()
 
   async function saveLang(newLang: string) {
     setLang(newLang)
@@ -1387,14 +1389,14 @@ function LanguageSection({ userId, currentLanguage }: { userId: string; currentL
 
   return (
     <div style={CARD}>
-      <p className="section-title" style={{ marginBottom: 4 }}>Language</p>
+      <p className="section-title" style={{ marginBottom: 4 }}>{t.settings.language}</p>
       <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
-        {saving ? 'Saving…' : saved ? 'Saved! Reloading…' : 'Choose your preferred language'}
+        {saving ? t.common.saving : saved ? 'Saved! Reloading…' : 'Choose your preferred language'}
       </p>
       <div style={{ display: 'flex', gap: 10 }}>
         {[
-          { code: 'en', label: '🇬🇧 English' },
-          { code: 'no', label: '🇳🇴 Norsk' },
+          { code: 'en', label: `🇬🇧 ${t.settings.english}` },
+          { code: 'no', label: `🇳🇴 ${t.settings.norwegian}` },
         ].map(opt => (
           <button
             key={opt.code}
@@ -1789,6 +1791,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
 ]
 
 export default function SettingsClient({ userId, userEmail, isAdmin = false, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
+  const t = useT()
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
   const [navHover, setNavHover] = useState<Section | null>(null)
   const [expandedSection, setExpandedSection] = useState<Section | null>('targets')
@@ -1815,7 +1818,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
         padding: '24px 12px',
         flexShrink: 0,
       }}>
-        <h1 className="page-title" style={{ paddingLeft: 12, marginBottom: 16 }}>Settings</h1>
+        <h1 className="page-title" style={{ paddingLeft: 12, marginBottom: 16 }}>{t.settings.title}</h1>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {NAV_ITEMS.map(item => {
             const isActive = section === item.key

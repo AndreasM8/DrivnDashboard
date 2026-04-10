@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
 import RevenueChart from '@/components/numbers/RevenueChart'
 import ExpensesSection from './ExpensesSection'
+import { useT } from '@/contexts/LanguageContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -670,6 +671,7 @@ export default function NumbersClient({
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
   adSpendCurrency, adToBaseRate,
 }: Props) {
+  const t = useT()
   const [viewMode, setViewMode]       = useState<'month' | 'alltime'>('month')
   const [compareMode, setCompareMode] = useState<CompareMode>('targets')
   const [lastMonthLocked, setLastMonthLocked] = useState<boolean>(() => {
@@ -1048,7 +1050,7 @@ export default function NumbersClient({
 
             {/* Card 1: Cash collected */}
             <KpiCard
-              label="Cash collected"
+              label={t.numbers.cashCollected}
               value={snap?.cash_collected ?? 0}
               displayValue={fmtCurrency(snap?.cash_collected ?? 0, baseCurrency)}
               target={getTarget('cash_target')}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { CURRENCIES, TIMEZONES } from '@/types'
 import { getLiveRate } from '@/lib/exchange-rates-client'
+import type { Language } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,49 @@ const DEFAULTS: OnboardingData = {
   cash_target: '75000', clients_target: '5', meetings_target: '25',
   followers_target: '200', close_rate_target: '25', show_up_target: '60',
   uses_manychat: false, uses_zapier: false, uses_stripe: false,
+}
+
+// ─── Step 0: Language ─────────────────────────────────────────────────────────
+
+function Step0Language({ onNext }: { onNext: (lang: Language) => void }) {
+  const [saving, setSaving] = useState(false)
+
+  async function choose(lang: Language) {
+    setSaving(true)
+    await fetch('/api/settings/language', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => {})
+    setSaving(false)
+    onNext(lang)
+  }
+
+  return (
+    <div className="text-center">
+      <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <span className="text-white text-2xl font-bold">D</span>
+      </div>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-3">Choose your language</h1>
+      <p className="text-gray-500 dark:text-slate-400 mb-10">You can change this at any time in settings.</p>
+      <div className="flex flex-col gap-4">
+        <button
+          onClick={() => choose('en')}
+          disabled={saving}
+          className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 text-lg font-semibold text-gray-800 dark:text-slate-100 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50"
+        >
+          <span className="text-2xl">🇬🇧</span> English
+        </button>
+        <button
+          onClick={() => choose('no')}
+          disabled={saving}
+          className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border-2 border-gray-200 dark:border-slate-600 text-lg font-semibold text-gray-800 dark:text-slate-100 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50"
+        >
+          <span className="text-2xl">🇳🇴</span> Norsk
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
@@ -375,11 +419,11 @@ function StepNav({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-// Steps: 1=Welcome, 2=Profile, 3=Currency, 4=Cash target, 5=Done
+// Steps: 0=Language, 1=Welcome, 2=Profile, 3=Currency, 4=Cash target, 5=Done
 const TOTAL_STEPS = 5
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0)
   const [data, setData] = useState<OnboardingData>(DEFAULTS)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -457,15 +501,18 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">Step {step} of {TOTAL_STEPS}</span>
-            <span className="text-xs text-gray-400 dark:text-slate-500">{Math.round((step / TOTAL_STEPS) * 100)}%</span>
+        {step > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">Step {step} of {TOTAL_STEPS}</span>
+              <span className="text-xs text-gray-400 dark:text-slate-500">{Math.round((step / TOTAL_STEPS) * 100)}%</span>
+            </div>
+            <ProgressBar step={step} total={TOTAL_STEPS} />
           </div>
-          <ProgressBar step={step} total={TOTAL_STEPS} />
-        </div>
+        )}
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-8">
+          {step === 0 && <Step0Language onNext={() => next()} />}
           {step === 1 && <Step1 onNext={next} />}
           {step === 2 && <Step2 data={data} onChange={update} onNext={next} onBack={back} />}
           {step === 3 && <Step3 data={data} onChange={update} onNext={next} onBack={back} />}

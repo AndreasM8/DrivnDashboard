@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { UpsellRow, EngagementRow } from './page'
+import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
   rows: UpsellRow[]
@@ -227,7 +228,9 @@ function EngagementSection({ bucket, rows, type, onLogAsk, onToggleOptOut, actin
   actingId: string | null
 }) {
   const [open, setOpen] = useState(true)
+  const t = useT()
   const meta = ENGAGEMENT_META[bucket]
+  const bucketLabel = bucket === 'ask_soon' ? t.upsells.askSoon : bucket === 'recently_asked' ? t.upsells.recentlyAsked : t.upsells.optedOut
   if (rows.length === 0) return null
 
   return (
@@ -250,7 +253,7 @@ function EngagementSection({ bucket, rows, type, onLogAsk, onToggleOptOut, actin
         }}
       >
         <span style={{ fontSize: 12, fontWeight: 700, color: meta.accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {meta.label}
+          {bucketLabel}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 600, background: meta.accent + '28', color: meta.accent, borderRadius: 20, padding: '1px 8px' }}>
@@ -289,8 +292,8 @@ function EngagementSection({ bucket, rows, type, onLogAsk, onToggleOptOut, actin
             </div>
             <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
               {row.lastRequestedAt
-                ? `Last asked: ${fmtDate(row.lastRequestedAt)}`
-                : 'Never asked'}
+                ? `${t.upsells.lastAsked}: ${fmtDate(row.lastRequestedAt)}`
+                : t.upsells.neverAsked}
             </span>
           </div>
 
@@ -313,7 +316,7 @@ function EngagementSection({ bucket, rows, type, onLogAsk, onToggleOptOut, actin
                 transition:  'all 120ms ease',
               }}
             >
-              {actingId === row.clientId + '_ask' ? 'Saving…' : 'Log ask'}
+              {actingId === row.clientId + '_ask' ? t.common.saving : t.upsells.logAsk}
             </button>
           )}
 
@@ -365,6 +368,7 @@ export default function UpsellsClient({
   referralInterval,
 }: Props) {
   const router = useRouter()
+  const t = useT()
   const [activeTab, setActiveTab] = useState<'upsells' | 'testimonials' | 'referrals'>('upsells')
   const [generating, setGenerating]   = useState(false)
   const [generated, setGenerated]     = useState(false)
@@ -485,9 +489,9 @@ export default function UpsellsClient({
   const totalThisMonth = (grouped.this_month ?? []).length
 
   const tabs: { key: 'upsells' | 'testimonials' | 'referrals'; label: string }[] = [
-    { key: 'upsells',      label: 'Upsells' },
-    { key: 'testimonials', label: 'Testimonials' },
-    { key: 'referrals',    label: 'Referrals' },
+    { key: 'upsells',      label: t.upsells.upsells },
+    { key: 'testimonials', label: t.upsells.testimonials },
+    { key: 'referrals',    label: t.upsells.referrals },
   ]
 
   return (

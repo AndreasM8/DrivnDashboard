@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useT } from '@/contexts/LanguageContext'
 
 interface TabItem {
   href: string
@@ -68,6 +69,7 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavProps) {
+  const t = useT()
   return (
     <nav
       style={{
@@ -83,11 +85,11 @@ export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavP
       }}
       className="md:hidden"
     >
-      <Tab href="/dashboard" label="Home" icon={<HomeIcon />} />
-      <Tab href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
-      <Tab href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
-      <Tab href="/clients" label="Clients" icon={<ClientsIcon />} />
-      <Tab href="/numbers" label="Numbers" icon={<NumbersIcon />} />
+      <Tab href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
+      <Tab href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />
+      <Tab href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
+      <Tab href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
+      <Tab href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
     </nav>
   )
 }

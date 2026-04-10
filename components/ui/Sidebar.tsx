@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useT } from '@/contexts/LanguageContext'
 
 interface NavItem {
   href: string
@@ -107,6 +108,7 @@ interface SidebarProps {
 
 export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false }: SidebarProps) {
   const router = useRouter()
+  const t = useT()
 
   async function handleLogout() {
     const supabase = createClient()
@@ -169,28 +171,28 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           overflowY: 'auto',
         }}
       >
-        <NavLink href="/dashboard" label="Home" icon={<HomeIcon />} />
-        <NavLink href="/tasks" label="Tasks" icon={<TasksIcon />} badge={taskBadge} />
+        <NavLink href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
+        <NavLink href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
-        <NavLink href="/clients" label="Clients" icon={<ClientsIcon />} />
-        <NavLink href="/upsells" label="Upsells" icon={<UpsellsIcon />} />
-        <NavLink href="/checkins" label="Check-ins" icon={<CheckinsIcon />} />
+        <NavLink href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
+        <NavLink href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
+        <NavLink href="/upsells" label={t.nav.upsells} icon={<UpsellsIcon />} />
+        <NavLink href="/checkins" label={t.nav.checkins} icon={<CheckinsIcon />} />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/numbers" label="Numbers" icon={<NumbersIcon />} />
+        <NavLink href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
 
         {isOwner && (
-          <NavLink href="/team" label="Team" icon={<TeamIcon />} />
+          <NavLink href="/team" label={t.nav.team} icon={<TeamIcon />} />
         )}
 
         {isAdmin && (
           <>
             <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
-            <NavLink href="/admin" label="Admin" icon={<AdminIcon />} />
+            <NavLink href="/admin" label={t.nav.admin} icon={<AdminIcon />} />
           </>
         )}
 
@@ -209,7 +211,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
         }}
       >
         {isOwner && (
-          <NavLink href="/settings" label="Settings" icon={<SettingsIcon />} />
+          <NavLink href="/settings" label={t.nav.settings} icon={<SettingsIcon />} />
         )}
         <button
           onClick={handleLogout}
