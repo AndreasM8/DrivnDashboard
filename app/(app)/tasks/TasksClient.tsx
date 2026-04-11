@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Task, TaskType, TaskPriority } from '@/types'
 import type { NonNegotiable, NonNegotiableCompletion, PowerTask } from './page'
+import { useT } from '@/contexts/LanguageContext'
 
 // ─── Story item types ─────────────────────────────────────────────────────────
 
@@ -368,6 +369,7 @@ function NonNegSection({
   onUpdateDays: (id: string, days: number[] | null) => Promise<void>
   dragHandle?: React.ReactNode
 }) {
+  const t = useT()
   const color = SECTION_STYLES.nonneg.border
   const completedSet = new Set(completions.filter(c => c.completed).map(c => c.non_negotiable_id))
   const activeItems    = items.filter(item => !item.days_of_week || item.days_of_week.includes(todayDow))
@@ -377,7 +379,7 @@ function NonNegSection({
   const pct = total > 0 ? (done / total) * 100 : 0
 
   return (
-    <SectionCard section="nonneg" title="Non-Negotiables" badge={`${done} / ${total} today`} defaultOpen dragHandle={dragHandle}>
+    <SectionCard section="nonneg" title={t.tasks.nonNegotiables} badge={`${done} / ${total} today`} defaultOpen dragHandle={dragHandle}>
       {/* Progress bar + streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '16px' }}>
         <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: `${color}22`, overflow: 'hidden' }}>
@@ -432,7 +434,7 @@ function NonNegSection({
         </div>
       )}
 
-      <AddInline placeholder="Add a non-negotiable…" color={color} onAdd={onAdd} />
+      <AddInline placeholder={t.tasks.addNonNeg} color={color} onAdd={onAdd} />
 
       {/* Follow-up goal widget */}
       <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${color}22` }}>
@@ -507,16 +509,17 @@ function BusinessSection({
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
   dragHandle?: React.ReactNode
 }) {
+  const t = useT()
   const color = SECTION_STYLES.business.border
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({ product: true, content: true, operations: true })
   const activeCount = tasks.length
 
   return (
-    <SectionCard section="business" title="Business Powerlist" count={activeCount} dragHandle={dragHandle}>
+    <SectionCard section="business" title={t.tasks.powerList} count={activeCount} dragHandle={dragHandle}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {BUSINESS_CATS.map(cat => {
-          const catTasks = tasks.filter(t => t.category === cat.key)
-          const catScheduled = scheduledTasks.filter(t => t.category === cat.key)
+          const catTasks = tasks.filter(tk => tk.category === cat.key)
+          const catScheduled = scheduledTasks.filter(tk => tk.category === cat.key)
           const isOpen = openCats[cat.key] !== false
 
           return (
@@ -563,7 +566,7 @@ function BusinessSection({
                       </div>
                     </div>
                   )}
-                  <AddInline placeholder="+ Add a task…" color={color} onAdd={t => onAdd(t, cat.key)} />
+                  <AddInline placeholder="+ Add a task…" color={color} onAdd={title => onAdd(title, cat.key)} />
                 </div>
               )}
             </div>
@@ -691,10 +694,11 @@ function PersonalSection({ tasks, scheduledTasks, cycleStart, onAdd, onComplete,
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | null, days?: number[]) => Promise<void>
   dragHandle?: React.ReactNode
 }) {
+  const t = useT()
   const color = SECTION_STYLES.personal.border
 
   return (
-    <SectionCard section="personal" title="Personal" count={tasks.length} dragHandle={dragHandle}>
+    <SectionCard section="personal" title={t.tasks.personal} count={tasks.length} dragHandle={dragHandle}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {tasks.length === 0 && scheduledTasks.length === 0 && (
           <p style={{ fontSize: '12px', color: 'var(--text-3)', fontStyle: 'italic' }}>Book dentist appointment…</p>
@@ -730,15 +734,16 @@ function FollowupsSection({
   refreshing: boolean
   dragHandle?: React.ReactNode
 }) {
+  const t = useT()
   const color = SECTION_STYLES.followups.border
-  const overdueCount = tasks.filter(t => t.priority === 'overdue').length
-  const todayCount = tasks.filter(t => t.priority === 'today').length
+  const overdueCount = tasks.filter(tsk => tsk.priority === 'overdue').length
+  const todayCount = tasks.filter(tsk => tsk.priority === 'today').length
   const needsAttention = overdueCount + todayCount
 
   return (
     <SectionCard
       section="followups"
-      title="Follow-ups"
+      title={t.tasks.followUps}
       count={tasks.length}
       badge={needsAttention > 0 ? `${needsAttention} need attention` : undefined}
       dragHandle={dragHandle}
@@ -882,6 +887,7 @@ type NNCompletion = {
 }
 
 function PerformanceSection({ userId: _userId, dragHandle }: { userId: string; dragHandle?: React.ReactNode }) {
+  const t = useT()
   const [period, setPeriod] = useState<7 | 30>(7)
   const [ptCompletions, setPtCompletions] = useState<PowerTaskCompletion[]>([])
   const [nnCompletions, setNnCompletions] = useState<NNCompletion[]>([])
@@ -946,7 +952,7 @@ function PerformanceSection({ userId: _userId, dragHandle }: { userId: string; d
   ]
 
   return (
-    <SectionCard section="performance" title="Performance" defaultOpen={false} dragHandle={dragHandle}>
+    <SectionCard section="performance" title={t.tasks.performance} defaultOpen={false} dragHandle={dragHandle}>
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>Loading…</p>
       ) : !hasAny ? (
@@ -1014,6 +1020,7 @@ function StoryScheduleSection({
   todayDow: number
   dragHandle?: React.ReactNode
 }) {
+  const t = useT()
   const [items, setItems] = useState<StoryItem[]>([])
   const [posts, setPosts] = useState<StoryItemPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -1123,7 +1130,7 @@ function StoryScheduleSection({
   }
 
   return (
-    <SectionCard section="story" title="Weekly Story Schedule" dragHandle={dragHandle}>
+    <SectionCard section="story" title={t.tasks.storySchedule} dragHandle={dragHandle}>
       {loading ? (
         <p style={{ fontSize: '13px', color: 'var(--text-3)' }}>Loading…</p>
       ) : (

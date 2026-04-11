@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import type { WeeklyCheckin } from '@/types'
+import { useT } from '@/contexts/LanguageContext'
 
 interface Props {
   checkins: WeeklyCheckin[]
@@ -118,6 +119,7 @@ function HappinessChart({ checkins }: { checkins: WeeklyCheckin[] }) {
 }
 
 export default function CheckinsClient({ checkins, currency }: Props) {
+  const t = useT()
   const [expanded, setExpanded] = useState<string | null>(null)
 
   const submitted = checkins.filter(c => c.submitted_at)
@@ -135,7 +137,7 @@ export default function CheckinsClient({ checkins, currency }: Props) {
     <div style={{ padding: '24px', maxWidth: 720, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border)' }}>
-        <h1 className="page-title">Check-in History</h1>
+        <h1 className="page-title">{t.checkins.history}</h1>
         {submitted.length > 0 && (
           <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
             {submitted.length} check-in{submitted.length !== 1 ? 's' : ''} submitted
@@ -153,7 +155,7 @@ export default function CheckinsClient({ checkins, currency }: Props) {
         }}>
           <p style={{ fontSize: 32, marginBottom: 12 }}>📋</p>
           <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
-            No check-ins yet
+            {t.checkins.noCheckins}
           </p>
           <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
             Your weekly check-ins will appear here once you submit one.
@@ -171,10 +173,10 @@ export default function CheckinsClient({ checkins, currency }: Props) {
               marginBottom: 16,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <p className="section-title">Happiness trend</p>
+                <p className="section-title">{t.checkins.happinessTrend}</p>
                 {avgHappiness && (
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                    Avg this month:{' '}
+                    {t.checkins.avgThisMonth}{' '}
                     <strong style={{ color: 'var(--text-1)' }}>{avgHappiness} / 10</strong>
                   </span>
                 )}
@@ -266,13 +268,13 @@ export default function CheckinsClient({ checkins, currency }: Props) {
                         marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)',
                       }}>
                         {[
-                          { label: 'New followers', value: checkin.followers_gained },
-                          { label: 'Replies', value: checkin.replies_received },
-                          { label: 'Calls booked', value: checkin.calls_booked },
-                          { label: 'Clients closed', value: checkin.clients_closed },
-                          { label: 'Cash collected', value: checkin.cash_collected, isCurrency: true },
-                          { label: 'Revenue contracted', value: checkin.revenue_contracted, isCurrency: true },
-                          { label: 'Ad spend', value: checkin.ad_spend, isCurrency: true },
+                          { label: t.checkins.followers, value: checkin.followers_gained },
+                          { label: t.checkins.replies, value: checkin.replies_received },
+                          { label: t.checkins.callsBooked, value: checkin.calls_booked },
+                          { label: t.checkins.closed, value: checkin.clients_closed },
+                          { label: t.checkins.cash, value: checkin.cash_collected, isCurrency: true },
+                          { label: t.checkins.revenue, value: checkin.revenue_contracted, isCurrency: true },
+                          { label: t.numbers.adSpend, value: checkin.ad_spend, isCurrency: true },
                         ].filter(r => r.value !== null).map(row => (
                           <div
                             key={row.label}

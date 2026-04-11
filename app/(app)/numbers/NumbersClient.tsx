@@ -348,6 +348,8 @@ function HistoryTable({
   showUpTarget: number
   closeTarget: number
 }) {
+  const t = useT()
+
   function ratePill(value: number, good: number, warn: number) {
     const bg    = value >= good ? 'rgba(22,163,74,0.12)'  : value >= warn ? 'rgba(217,119,6,0.12)'  : 'rgba(220,38,38,0.1)'
     const color = value >= good ? '#16A34A'               : value >= warn ? '#D97706'               : '#DC2626'
@@ -371,7 +373,7 @@ function HistoryTable({
 
   const sorted = [...history].sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12)
 
-  const columns = ['Month', 'Cash in', 'Contracts', 'Clients', 'Calls', 'Show-up %', 'Close %', 'Avg deal', 'Ad spend', 'Cash ROAS', 'Profit']
+  const columns = [t.numbers.month, t.numbers.cashCollectedHeader, t.numbers.revenueContracted, t.numbers.newClients, t.numbers.callsHeld, 'Show-up %', t.numbers.closeRate, 'Avg deal', t.numbers.adSpend, 'Cash ROAS', t.numbers.profit]
 
   return (
     <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>

@@ -168,7 +168,7 @@ export default function ExpensesSection({
           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(37,99,235,0.08)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
         >
-          {showAddForm ? 'Cancel' : '+ Add'}
+          {showAddForm ? t.common.cancel : `+ ${t.numbers.addExpense}`}
         </button>
       </div>
 
@@ -257,7 +257,7 @@ export default function ExpensesSection({
               className="btn-primary"
               style={{ padding: '8px 16px' }}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t.common.saving : t.common.save}
             </button>
             <button
               onClick={() => {
@@ -271,7 +271,7 @@ export default function ExpensesSection({
               className="btn-ghost"
               style={{ padding: '8px 16px' }}
             >
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function ExpensesSection({
               <div key={cat}>
                 {/* Category total row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{meta.label}</span>
+                  <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{t.expenseCategories[cat as keyof typeof t.expenseCategories] ?? meta.label}</span>
                   <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(catTotal, currency)}</span>
                 </div>
 
@@ -336,7 +336,7 @@ export default function ExpensesSection({
 
       {visibleCategories.length === 0 && (
         <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 16 }}>
-          No expenses recorded for this month yet. Tap + Add to get started.
+          {t.numbers.noExpenses}
         </p>
       )}
 
@@ -346,7 +346,7 @@ export default function ExpensesSection({
 
           {/* Revenue row */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
-            <span style={{ color: 'var(--text-2)' }}>Cash collected</span>
+            <span style={{ color: 'var(--text-2)' }}>{t.numbers.cashCollected}</span>
             <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>
               {formatCurrency(cashCollected, currency)}
             </span>
@@ -355,7 +355,7 @@ export default function ExpensesSection({
           {/* Total expenses row */}
           {totalExpenses > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
-              <span style={{ color: 'var(--text-2)' }}>Total expenses</span>
+              <span style={{ color: 'var(--text-2)' }}>{t.numbers.expenses}</span>
               <span style={{ fontWeight: 500, color: 'var(--danger)' }}>
                 − {formatCurrency(totalExpenses, currency)}
               </span>
@@ -371,10 +371,10 @@ export default function ExpensesSection({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 'var(--radius-card)', padding: '10px 12px', marginTop: 4, background: positive ? 'rgba(22,163,74,0.08)' : 'rgba(220,38,38,0.06)' }}>
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: positive ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
-                    Net profit
+                    {t.numbers.netProfit}
                   </p>
                   <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                    {positive ? `${margin}% margin` : 'Operating at a loss'}
+                    {positive ? `${margin}% ${t.numbers.profitMargin.toLowerCase()}` : 'Operating at a loss'}
                   </p>
                 </div>
                 <p style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: positive ? 'var(--success)' : 'var(--danger)', margin: 0 }}>

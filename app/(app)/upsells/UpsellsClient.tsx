@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { UpsellRow, EngagementRow } from './page'
 import { useT } from '@/contexts/LanguageContext'
 
@@ -70,14 +71,26 @@ function StatusPill({ days }: { days: number | null }) {
 
 // ─── Upsell Section ───────────────────────────────────────────────────────────
 
-function UpsellSection({ status, rows, onCreateTask, creatingId }: {
+function UpsellSection({ status, rows, onCreateTask, creatingId, createdIds }: {
   status: UpsellStatus
   rows: UpsellRow[]
   onCreateTask: (clientId: string) => void
   creatingId: string | null
+  createdIds: Set<string>
 }) {
   const [open, setOpen] = useState(true)
+  const t = useT()
   const meta = STATUS_META[status]
+
+  const statusLabel: Record<UpsellStatus, string> = {
+    overdue:    t.upsells.overdue,
+    this_month: t.upsells.thisMonth,
+    next_month: t.upsells.nextMonth,
+    upcoming:   t.upsells.comingUp,
+    done:       t.upsells.taskCreated,
+    no_date:    t.upsells.noTimingSet,
+  }
+
   if (rows.length === 0) return null
 
   return (
@@ -101,7 +114,7 @@ function UpsellSection({ status, rows, onCreateTask, creatingId }: {
         }}
       >
         <span style={{ fontSize: 12, fontWeight: 700, color: meta.accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          {meta.label}
+          {statusLabel[status]}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 600, background: meta.accent + '28', color: meta.accent, borderRadius: 20, padding: '1px 8px' }}>
@@ -169,10 +182,21 @@ function UpsellSection({ status, rows, onCreateTask, creatingId }: {
             {/* Status / action */}
             {row.hasOpenTask ? (
               <span style={{ fontSize: 11, fontWeight: 600, color: '#16A34A', background: 'rgba(22,163,74,0.1)', borderRadius: 6, padding: '5px 10px', whiteSpace: 'nowrap' }}>
-                ✓ Task open
+                {t.upsells.taskCreated}
               </span>
             ) : status === 'done' ? (
-              <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>Done</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{t.upsells.taskCreated}</span>
+            ) : status === 'no_date' ? (
+              <Link href="/clients" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                {t.upsells.setDate} →
+              </Link>
+            ) : createdIds.has(row.clientId) ? (
+              <span style={{ fontSize: 12, color: '#10B981', whiteSpace: 'nowrap' }}>
+                {t.upsells.taskCreated}{' '}—{' '}
+                <Link href="/tasks" style={{ color: '#10B981', textDecoration: 'underline', fontSize: 12 }}>
+                  View
+                </Link>
+              </span>
             ) : canCreate ? (
               <button
                 onClick={() => onCreateTask(row.clientId)}
@@ -191,7 +215,7 @@ function UpsellSection({ status, rows, onCreateTask, creatingId }: {
                   transition:  'all 120ms ease',
                 }}
               >
-                {creatingId === row.clientId ? 'Creating…' : 'Create task'}
+                {creatingId === row.clientId ? t.upsells.savingEllipsis : t.upsells.createTask}
               </button>
             ) : null}
           </div>
@@ -373,6 +397,7 @@ export default function UpsellsClient({
   const [generating, setGenerating]   = useState(false)
   const [generated, setGenerated]     = useState(false)
   const [creatingId, setCreatingId]   = useState<string | null>(null)
+  const [createdIds, setCreatedIds]   = useState<Set<string>>(new Set())
   const [actingId, setActingId]       = useState<string | null>(null)
   // Local optimistic state for engagement rows
   const [localTestimonials, setLocalTestimonials] = useState<EngagementRow[]>(testimonialRows)
@@ -396,6 +421,7 @@ export default function UpsellsClient({
     setCreatingId(clientId)
     await fetch('/api/tasks/generate', { method: 'POST' })
     setCreatingId(null)
+    setCreatedIds(prev => new Set(prev).add(clientId))
     router.refresh()
   }
 
@@ -642,6 +668,7 @@ export default function UpsellsClient({
                   rows={grouped[status] ?? []}
                   onCreateTask={handleCreateTask}
                   creatingId={creatingId}
+                  createdIds={createdIds}
                 />
               ))
             )}
