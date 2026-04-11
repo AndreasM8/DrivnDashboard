@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { TeamMember, TeamRole, TeamMemberStatus, TeamPermissions, CheckinQuestion, CheckinQuestionType } from '@/types'
+import TeamDashboard from './TeamDashboard'
 
 interface Props {
   userId: string
@@ -171,6 +173,8 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+
 function MemberCard({ member }: { member: TeamMember }) {
   const [expanded, setExpanded] = useState(false)
   const [questions, setQuestions] = useState<CheckinQuestion[]>([])
@@ -185,8 +189,14 @@ function MemberCard({ member }: { member: TeamMember }) {
   const [weeklyQuestions, setWeeklyQuestions] = useState<CheckinQuestion[]>([])
   const [weeklyEnabled, setWeeklyEnabled] = useState(false)
   const [weeklyDay, setWeeklyDay] = useState(1)
+  // Invite link state
+  const [inviteToken, setInviteToken] = useState<string>(member.invite_token ?? '')
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [showReInvite, setShowReInvite] = useState(false)
 
   const statusStyle = STATUS_COLORS[member.status] ?? STATUS_COLORS.inactive
+  const inviteUrl = `${APP_URL}/join/${inviteToken}`
 
   async function loadDetail() {
     if (loadedDetail) return
@@ -280,6 +290,28 @@ function MemberCard({ member }: { member: TeamMember }) {
     setNonNegs(prev => prev.filter(n => n.id !== id))
   }
 
+  function copyInviteLink(url: string) {
+    navigator.clipboard.writeText(url).then(() => {
+      setInviteCopied(true)
+      setTimeout(() => setInviteCopied(false), 2000)
+    })
+  }
+
+  async function regenerateInvite() {
+    setRegenerating(true)
+    try {
+      const res = await fetch('/api/team/invite/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: member.id }),
+      })
+      const data = await res.json() as { invite_token?: string; error?: string }
+      if (data.invite_token) setInviteToken(data.invite_token)
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
       {/* Header row */}
@@ -313,6 +345,19 @@ function MemberCard({ member }: { member: TeamMember }) {
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0 }}>{member.email}</p>
         </div>
+        {/* Re-invite button for active members */}
+        {member.status === 'active' && (
+          <button
+            onClick={e => { e.stopPropagation(); setShowReInvite(v => !v) }}
+            style={{
+              padding: '5px 10px', fontSize: 11, fontWeight: 600,
+              border: '1px solid var(--border)', borderRadius: 7,
+              background: 'transparent', color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Re-invite
+          </button>
+        )}
         <svg
           viewBox="0 0 20 20" fill="currentColor" width="16" height="16"
           style={{ flexShrink: 0, color: 'var(--text-3)', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}
@@ -321,6 +366,31 @@ function MemberCard({ member }: { member: TeamMember }) {
         </svg>
       </div>
 
+      {/* Re-invite inline area for active members */}
+      {member.status === 'active' && showReInvite && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', background: 'rgba(37,99,235,0.04)' }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', margin: '0 0 8px' }}>Re-invite link</p>
+          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', marginBottom: 8, wordBreak: 'break-all', fontSize: 11, color: 'var(--text-2)' }}>
+            {inviteUrl}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => copyInviteLink(inviteUrl)}
+              style={{ flex: 1, padding: '7px 0', background: inviteCopied ? '#10B981' : '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {inviteCopied ? 'Copied!' : 'Copy link'}
+            </button>
+            <button
+              onClick={regenerateInvite}
+              disabled={regenerating}
+              style={{ flex: 1, padding: '7px 0', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: regenerating ? 'not-allowed' : 'pointer', background: 'transparent', color: 'var(--text-2)', opacity: regenerating ? 0.7 : 1 }}
+            >
+              {regenerating ? 'Regenerating…' : 'Regenerate link'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Expanded detail */}
       {expanded && (
         <div style={{ borderTop: '1px solid var(--border)', padding: 16, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -328,6 +398,31 @@ function MemberCard({ member }: { member: TeamMember }) {
             <p style={{ fontSize: 13, color: 'var(--text-2)', textAlign: 'center' }}>Loading…</p>
           ) : (
             <>
+              {/* Pending invite banner */}
+              {member.status === 'invited' && (
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: 14 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#F59E0B', margin: '0 0 8px' }}>Pending invite</p>
+                  <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, wordBreak: 'break-all', fontSize: 11, color: 'var(--text-2)' }}>
+                    {inviteUrl}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => copyInviteLink(inviteUrl)}
+                      style={{ flex: 1, padding: '7px 0', background: inviteCopied ? '#10B981' : '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      {inviteCopied ? 'Copied!' : 'Copy link'}
+                    </button>
+                    <button
+                      onClick={regenerateInvite}
+                      disabled={regenerating}
+                      style={{ flex: 1, padding: '7px 0', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: regenerating ? 'not-allowed' : 'pointer', background: 'transparent', color: 'var(--text-2)', opacity: regenerating ? 0.7 : 1 }}
+                    >
+                      {regenerating ? 'Regenerating…' : 'Regenerate link'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Permissions */}
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
@@ -569,39 +664,94 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+type Tab = 'dashboard' | 'members' | 'tasks'
+
+const TAB_LABELS: Record<Tab, string> = {
+  dashboard: 'Dashboard',
+  members: 'Members',
+  tasks: 'Tasks',
+}
+
 export default function TeamClient({ initialMembers }: Props) {
   const [members, setMembers] = useState<TeamMember[]>(initialMembers)
   const [addOpen, setAddOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   return (
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      {/* Page header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>Team</h1>
           <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>
             {members.length} member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          style={{ padding: '9px 18px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-        >
-          Add member
-        </button>
+        {activeTab === 'members' && (
+          <button
+            onClick={() => setAddOpen(true)}
+            style={{ padding: '9px 18px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Add member
+          </button>
+        )}
       </div>
 
-      {members.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
-          <p style={{ fontSize: 36, marginBottom: 12 }}>👥</p>
-          <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>No team members yet</p>
-          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>Add your first setter or closer to collaborate.</p>
-          <button onClick={() => setAddOpen(true)} style={{ padding: '10px 24px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            Add team member
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, background: 'var(--surface-2)', borderRadius: 10, padding: 4, marginBottom: 20 }}>
+        {(Object.keys(TAB_LABELS) as Tab[]).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              flex: 1, padding: '8px 0', borderRadius: 7, fontSize: 13, fontWeight: 600,
+              border: 'none', cursor: 'pointer', transition: 'all 120ms',
+              background: activeTab === tab ? 'var(--surface-1)' : 'transparent',
+              color: activeTab === tab ? 'var(--text-1)' : 'var(--text-3)',
+              boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            {TAB_LABELS[tab]}
           </button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {members.map(m => <MemberCard key={m.id} member={m} />)}
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'dashboard' && (
+        <TeamDashboard members={members} />
+      )}
+
+      {activeTab === 'members' && (
+        members.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 60, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
+            <p style={{ fontSize: 36, marginBottom: 12 }}>👥</p>
+            <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>No team members yet</p>
+            <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>Add your first setter or closer to collaborate.</p>
+            <button onClick={() => setAddOpen(true)} style={{ padding: '10px 24px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Add team member
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {members.map(m => <MemberCard key={m.id} member={m} />)}
+          </div>
+        )
+      )}
+
+      {activeTab === 'tasks' && (
+        <div style={{ textAlign: 'center', padding: 48, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>Team Tasks live on their own page</p>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20 }}>Create and manage tasks for your team members.</p>
+          <Link
+            href="/team/tasks"
+            style={{
+              display: 'inline-block', padding: '10px 24px',
+              background: '#2563EB', color: '#fff', border: 'none', borderRadius: 10,
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none',
+            }}
+          >
+            Go to Team Tasks →
+          </Link>
         </div>
       )}
 
