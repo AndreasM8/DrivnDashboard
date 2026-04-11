@@ -1,15 +1,34 @@
 'use client'
+
 interface Props {
   size?: number
 }
+
+// Temporary placeholder — replace src with /drivn-logo.png once file is added to /public
 export default function LogoMark({ size = 28 }: Props) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, display: 'block' }}>
-      <rect width="32" height="32" rx="8" fill="#6366F1"/>
-      <path
-        d="M10 8h7C21.4 8 25 11.6 25 16S21.4 24 17 24h-7V8zm3.5 3v10H17c2.8 0 4.5-2 4.5-5S19.8 11 17 11h-3.5z"
-        fill="white"
-      />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/drivn-logo.png"
+      alt="Drivn"
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, display: 'block' }}
+      onError={(e) => {
+        // Fallback: white D on transparent if logo not found
+        const target = e.currentTarget
+        target.style.display = 'none'
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.setAttribute('width', String(size))
+        svg.setAttribute('height', String(size))
+        svg.setAttribute('viewBox', '0 0 32 32')
+        svg.setAttribute('fill', 'none')
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('d', 'M8 6h8C21 6 26 10.5 26 16S21 26 16 26H8V6zm4 4v12h4c3 0 6-2.5 6-6s-3-6-6-6h-4z')
+        path.setAttribute('fill', 'white')
+        svg.appendChild(path)
+        target.parentElement?.insertBefore(svg, target.nextSibling)
+      }}
+    />
   )
 }
