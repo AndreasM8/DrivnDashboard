@@ -124,26 +124,12 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           height: '56px',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
           padding: '0 16px',
           borderBottom: '1px solid var(--border)',
           flexShrink: 0,
         }}
       >
-        <LogoMark size={28} />
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            letterSpacing: '-0.01em',
-            background: 'linear-gradient(135deg, #F0F2F8, var(--neon-cyan))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          Drivn
-        </span>
+        <LogoMark height={30} maxWidth={160} />
       </div>
 
       {/* Nav */}
