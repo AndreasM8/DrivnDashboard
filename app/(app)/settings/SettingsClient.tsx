@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase'
 import { getLiveRate } from '@/lib/exchange-rates-client'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
 import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
-import { useDarkMode } from '@/components/providers/DarkModeProvider'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 import { useT } from '@/contexts/LanguageContext'
 
@@ -25,7 +24,7 @@ interface Props {
   calendlyErrorDetail?: string
 }
 
-type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'appearance' | 'checkins'
+type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'checkins'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -1604,28 +1603,6 @@ function AccountSection({ userId, userEmail, profile }: { userId: string; userEm
           </button>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── Section: Appearance ──────────────────────────────────────────────────────
-
-function AppearanceSection() {
-  const { dark, toggle } = useDarkMode()
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* Dark mode toggle */}
-      <div style={CARD}>
-        <p className="section-title" style={{ marginBottom: 16 }}>Appearance</p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)' }}>Dark mode</p>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Switch between light and dark theme</p>
-          </div>
-          <Toggle on={dark} onClick={toggle} />
-        </div>
-      </div>
 
       {/* PWA install instructions */}
       <div style={CARD}>
@@ -1787,7 +1764,6 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'notifications', label: 'Notifications' },
   { key: 'checkins', label: 'Check-ins' },
   { key: 'account', label: 'Account' },
-  { key: 'appearance', label: 'Appearance' },
 ]
 
 export default function SettingsClient({ userId, userEmail, isAdmin = false, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
@@ -1804,7 +1780,6 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
       case 'notifications': return <NotificationsSection userId={userId} />
       case 'checkins':     return <CheckinsSection userId={userId} />
       case 'account':      return <AccountSection userId={userId} userEmail={userEmail} profile={profile} />
-      case 'appearance':   return <AppearanceSection />
     }
   }
 

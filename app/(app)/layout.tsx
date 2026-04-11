@@ -54,9 +54,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .in('priority', ['overdue', 'today']),
     supabase
       .from('team_members')
-      .select('workspace_id')
+      .select('id')
       .eq('user_id', user.id)
-      .neq('workspace_id', user.id)
       .limit(1)
       .maybeSingle(),
     supabase
@@ -73,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ])
 
   const badge = taskCount ?? 0
-  const isOwner = !teamMembership
+  const isOwner = !teamMembership?.id
   const isAdmin = profile?.role === 'admin'
 
   // Strip view-as if current user is not actually admin (tamper protection)

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
-import DarkModeProvider from '@/components/providers/DarkModeProvider'
 
 const geist = Geist({
   variable: '--font-geist',
@@ -53,9 +52,7 @@ export default function RootLayout({
         <div className="ambient-orb" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)', bottom: -100, right: -100 }} />
         <div className="ambient-orb" style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', top: '40%', right: '25%' }} />
         <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-          <DarkModeProvider>
-            {children}
-          </DarkModeProvider>
+          {children}
         </div>
       </body>
     </html>

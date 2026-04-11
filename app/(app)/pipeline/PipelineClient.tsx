@@ -87,7 +87,12 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
               : convRate >= target * 0.8 ? 'var(--neon-amber)'
               : 'var(--neon-red)'
           } else if (convRate !== null) {
-            rateColor = 'var(--neon-cyan)'
+            // No target set — use industry benchmarks: reply >15% green, >8% amber, else red
+            const benchmarks = [15, 30, 25, 60] // reply, booking, show-up, close
+            const bench = benchmarks[i] ?? 20
+            rateColor = convRate >= bench ? 'var(--neon-green)'
+              : convRate >= bench * 0.6 ? 'var(--neon-amber)'
+              : 'var(--neon-red)'
           }
 
           return (
@@ -111,7 +116,7 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                   style={{
                     marginBottom: '4px',
                     fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--text-1)',
+                    color: 'var(--neon-indigo)',
                   }}
                 >
                   {step.count}
@@ -133,11 +138,11 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                   }}
                 >
                   {convRate !== null && (
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: rateColor }}>
                       {convRate}%
                     </span>
                   )}
-                  <div style={{ width: 40, height: 1, background: 'var(--border-strong)', opacity: 0.8 }} />
+                  <div style={{ width: 40, height: 1, background: rateColor, opacity: 0.4 }} />
                   <span style={{ fontSize: '8px', color: 'var(--text-3)' }}>▶</span>
                 </div>
               )}
