@@ -426,7 +426,18 @@ function LeadCard({
 
 // ─── Mobile lead card ─────────────────────────────────────────────────────────
 
-function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp, stageLabel, stageAccent }: {
+const MOBILE_STAGE_CHIPS: { stage: LeadStage; label: string; accent: string }[] = [
+  { stage: 'follower',       label: 'Follower',  accent: '#3B82F6' },
+  { stage: 'replied',        label: 'Replied',   accent: '#8B5CF6' },
+  { stage: 'freebie_sent',   label: 'Freebie',   accent: '#8B5CF6' },
+  { stage: 'call_booked',    label: 'Booked',    accent: '#F97316' },
+  { stage: 'nurture',        label: 'Nurture',   accent: '#F59E0B' },
+  { stage: 'bad_fit',        label: 'Bad fit',   accent: '#FB7185' },
+  { stage: 'not_interested', label: 'Not int.',  accent: '#94A3B8' },
+  { stage: 'closed',         label: 'Closed',    accent: '#10B981' },
+]
+
+function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp, stageLabel, stageAccent, onStageChange }: {
   lead: Lead
   labels: LeadLabel[]
   assignedLabelIds: string[]
@@ -435,6 +446,7 @@ function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, s
   showFollowUp?: boolean
   stageLabel?: string
   stageAccent?: string
+  onStageChange?: (lead: Lead, stage: LeadStage) => void
 }) {
   const [contacted, setContacted] = useState(false)
   const days = daysSince(lead.last_contact_at)
@@ -535,6 +547,47 @@ function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, s
           </button>
         )}
       </div>
+
+      {/* Stage selector chips */}
+      {onStageChange && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            display: 'flex',
+            gap: '4px',
+            overflowX: 'auto',
+            paddingBottom: 4,
+            marginTop: '6px',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          } as React.CSSProperties}
+        >
+          {MOBILE_STAGE_CHIPS.map(chip => {
+            const isCurrent = lead.stage === chip.stage
+            return (
+              <button
+                key={chip.stage}
+                onClick={() => !isCurrent && onStageChange(lead, chip.stage)}
+                style={{
+                  flexShrink: 0,
+                  fontSize: 11,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: `1px solid ${isCurrent ? chip.accent : 'var(--border)'}`,
+                  background: isCurrent ? `${chip.accent}22` : 'var(--surface-2)',
+                  color: isCurrent ? chip.accent : 'var(--text-3)',
+                  fontWeight: isCurrent ? 700 : 500,
+                  cursor: isCurrent ? 'default' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 100ms ease',
+                }}
+              >
+                {chip.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -1105,128 +1158,145 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '10px 24px',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'stretch' : 'center',
+          gap: isMobile ? '8px' : '6px',
+          padding: '10px 16px',
           borderBottom: '1px solid var(--border)',
           background: 'var(--surface-1)',
-          overflowX: 'auto',
           flexShrink: 0,
         }}
       >
-        {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
-          const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
-          const isActive = tierFilter === f
-          return (
-            <button
-              key={f}
-              onClick={() => setTierFilter(f)}
-              className="badge"
-              style={{
-                cursor: 'pointer',
-                background: isActive ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
-                color: isActive ? 'var(--accent)' : 'var(--text-2)',
-                border: `1px solid ${isActive ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`,
-                padding: '4px 10px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-                transition: 'background 100ms ease, color 100ms ease',
-              }}
-            >
-              {f === 'all' ? 'All' : `T${f}`}
-              {' '}<span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>({count})</span>
-            </button>
-          )
-        })}
+        {/* Filter pills row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}>
+          {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
+            const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
+            const isActive = tierFilter === f
+            return (
+              <button
+                key={f}
+                onClick={() => setTierFilter(f)}
+                className="badge"
+                style={{
+                  cursor: 'pointer',
+                  background: isActive ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
+                  color: isActive ? 'var(--accent)' : 'var(--text-2)',
+                  border: `1px solid ${isActive ? 'rgba(37,99,235,0.3)' : 'var(--border)'}`,
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'background 100ms ease, color 100ms ease',
+                }}
+              >
+                {f === 'all' ? 'All' : `T${f}`}
+                {' '}<span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>({count})</span>
+              </button>
+            )
+          })}
 
-        {labels.length > 0 && (
-          <>
-            <div style={{ width: '1px', height: '16px', background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
-            {labels.map(l => {
-              const isActive = selectedLabels.includes(l.id)
-              const count = labelCounts[l.id] ?? 0
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => setSelectedLabels(prev =>
-                    isActive ? prev.filter(id => id !== l.id) : [...prev, l.id]
-                  )}
-                  className="badge"
-                  style={{
-                    cursor: 'pointer',
-                    background: l.bg_color,
-                    color: l.text_color,
-                    opacity: selectedLabels.length === 0 || isActive ? 1 : 0.45,
-                    outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
-                    outlineOffset: '1px',
-                    padding: '4px 10px',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {l.name} <span style={{ opacity: 0.75 }}>({count})</span>
-                </button>
-              )
-            })}
-          </>
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          {showColumnToggles && (
+          {labels.length > 0 && (
             <>
-              {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
-                const visible = !hiddenColumns.has(col.stage)
+              <div style={{ width: '1px', height: '16px', background: 'var(--border)', margin: '0 2px', flexShrink: 0 }} />
+              {labels.map(l => {
+                const isActive = selectedLabels.includes(l.id)
+                const count = labelCounts[l.id] ?? 0
                 return (
                   <button
-                    key={col.stage}
-                    onClick={() => toggleColumn(col.stage)}
+                    key={l.id}
+                    onClick={() => setSelectedLabels(prev =>
+                      isActive ? prev.filter(id => id !== l.id) : [...prev, l.id]
+                    )}
                     className="badge"
                     style={{
                       cursor: 'pointer',
-                      background: visible ? 'var(--surface-3)' : 'var(--surface-2)',
-                      color: visible ? 'var(--text-1)' : 'var(--text-3)',
-                      border: '1px solid var(--border)',
+                      background: l.bg_color,
+                      color: l.text_color,
+                      opacity: selectedLabels.length === 0 || isActive ? 1 : 0.45,
+                      outline: isActive ? `1.5px solid ${l.text_color}` : 'none',
+                      outlineOffset: '1px',
                       padding: '4px 10px',
                       fontSize: '12px',
                       whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
-                    {col.label}
+                    {l.name} <span style={{ opacity: 0.75 }}>({count})</span>
                   </button>
                 )
               })}
-              <div style={{ width: '1px', height: '16px', background: 'var(--border)', flexShrink: 0 }} />
             </>
           )}
 
-          <button
-            onClick={() => setShowColumnToggles(v => !v)}
-            style={{
-              padding: '6px',
-              borderRadius: 'var(--radius-btn)',
-              background: showColumnToggles ? 'rgba(37,99,235,0.1)' : 'transparent',
-              border: 'none',
-              color: showColumnToggles ? 'var(--accent)' : 'var(--text-3)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              transition: 'background 100ms ease',
-            }}
-            aria-label="Toggle column visibility"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
+          {!isMobile && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              {showColumnToggles && (
+                <>
+                  {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
+                    const visible = !hiddenColumns.has(col.stage)
+                    return (
+                      <button
+                        key={col.stage}
+                        onClick={() => toggleColumn(col.stage)}
+                        className="badge"
+                        style={{
+                          cursor: 'pointer',
+                          background: visible ? 'var(--surface-3)' : 'var(--surface-2)',
+                          color: visible ? 'var(--text-1)' : 'var(--text-3)',
+                          border: '1px solid var(--border)',
+                          padding: '4px 10px',
+                          fontSize: '12px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {col.label}
+                      </button>
+                    )
+                  })}
+                  <div style={{ width: '1px', height: '16px', background: 'var(--border)', flexShrink: 0 }} />
+                </>
+              )}
+              <button
+                onClick={() => setShowColumnToggles(v => !v)}
+                style={{
+                  padding: '6px',
+                  borderRadius: 'var(--radius-btn)',
+                  background: showColumnToggles ? 'rgba(37,99,235,0.1)' : 'transparent',
+                  border: 'none',
+                  color: showColumnToggles ? 'var(--accent)' : 'var(--text-3)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'background 100ms ease',
+                }}
+                aria-label="Toggle column visibility"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="input-base"
+                style={{ width: '160px' }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mobile: search on second row, full-width */}
+        {isMobile && (
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search…"
             className="input-base"
-            style={{ width: '160px' }}
+            style={{ width: '100%' }}
           />
-        </div>
+        )}
       </div>
 
       {/* Conversion funnel — desktop only */}
@@ -1286,6 +1356,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                   showFollowUp={CONTACTED_STAGES.includes(lead.stage)}
                   stageLabel={col?.label}
                   stageAccent={col?.accent}
+                  onStageChange={moveStage}
                 />
               )
             })

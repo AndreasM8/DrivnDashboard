@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import type { CoachStats } from './page'
+import { useT } from '@/contexts/LanguageContext'
 
 interface TeamMemberRow {
   id: string
@@ -83,6 +84,7 @@ function StatCard({ label, value, sub, accent }: {
 // ─── Aggregate funnel ─────────────────────────────────────────────────────────
 
 function AggregateFunnel({ coaches }: { coaches: CoachStats[] }) {
+  const t          = useT()
   const totLeads   = coaches.reduce((s, c) => s + c.totalLeads, 0)
   const totReplied = coaches.reduce((s, c) => s + c.totalReplied, 0)
   const totBooked  = coaches.reduce((s, c) => s + c.totalBooked, 0)
@@ -90,7 +92,7 @@ function AggregateFunnel({ coaches }: { coaches: CoachStats[] }) {
 
   if (totLeads === 0) return (
     <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-3)', fontSize: 13 }}>
-      No leads in the pipeline yet.
+      {t.admin.noData}
     </div>
   )
 
@@ -99,7 +101,7 @@ function AggregateFunnel({ coaches }: { coaches: CoachStats[] }) {
   const closeRate   = totBooked  > 0 ? Math.round((totClosed  / totBooked)  * 100) : null
 
   const rates      = [replyRate, bookingRate, closeRate]
-  const rateLabels = ['Reply rate', 'Booking rate', 'Close rate']
+  const rateLabels = [t.admin.replyRate, t.admin.bookingRate, t.admin.closeRate]
   const greenAts   = [15, 30, 25]
   const amberAts   = [8,  15, 15]
 
@@ -212,6 +214,7 @@ function TeamSection({
   todayEods: TodayEodRow[]
   coachStats: CoachStats[]
 }) {
+  const t = useT()
   if (teamMembers.length === 0) return null
 
   const eodSubmittedIds = new Set(todayEods.map(e => e.team_member_id))
@@ -232,7 +235,7 @@ function TeamSection({
   return (
     <div>
       <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: 12 }}>
-        Team
+        {t.admin.team}
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {Array.from(byCoach.entries()).map(([coachId, members]) => {
@@ -296,13 +299,13 @@ function TeamSection({
                       {/* EOD status */}
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
                         <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)', marginBottom: 3 }}>
-                          EOD today
+                          EOD
                         </p>
                         <span style={{
                           fontSize: 12, fontWeight: 600,
                           color: submitted ? '#10B981' : '#D97706',
                         }}>
-                          {submitted ? '✓ Submitted' : '⏳ Pending'}
+                          {submitted ? `✓ ${t.admin.eodSubmitted}` : `⏳ ${t.admin.eodPending}`}
                         </span>
                       </div>
                     </div>
@@ -319,6 +322,7 @@ function TeamSection({
 
 export default function AdminClient({ coachStats, currentMonth, missingCheckins, teamMembers, todayEods }: Props) {
   const router    = useRouter()
+  const t         = useT()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [tab,       setTab]       = useState<'overview' | 'numbers' | 'coaches'>('overview')
   const [nSortKey,  setNSortKey]  = useState<NumbersSortKey>('cashThisMonth')
@@ -375,14 +379,14 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
     r === null ? 'var(--border-strong)' : r >= g ? '#16A34A' : r >= a ? '#D97706' : '#DC2626'
 
   const TABLE_COLS: { key: SortKey; label: string }[] = [
-    { key: 'name',                   label: 'Coach' },
-    { key: 'totalLeads',             label: 'Leads' },
-    { key: 'replyRate',              label: 'Reply %' },
-    { key: 'bookingRate',            label: 'Book %' },
-    { key: 'closeRate',              label: 'Close %' },
-    { key: 'cashThisMonth',          label: 'Cash (mo.)' },
-    { key: 'clientsSignedThisMonth', label: 'Clients (mo.)' },
-    { key: 'lastLogin',              label: 'Last seen' },
+    { key: 'name',                   label: t.admin.coaches },
+    { key: 'totalLeads',             label: t.admin.totalLeads },
+    { key: 'replyRate',              label: t.admin.replyRate },
+    { key: 'bookingRate',            label: t.admin.bookingRate },
+    { key: 'closeRate',              label: t.admin.closeRate },
+    { key: 'cashThisMonth',          label: t.admin.cashThisMonth },
+    { key: 'clientsSignedThisMonth', label: t.admin.clientsSigned },
+    { key: 'lastLogin',              label: t.admin.lastLogin },
   ]
 
   function SortArrow({ col }: { col: SortKey }) {
@@ -422,7 +426,7 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>Admin</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>{t.admin.title}</h1>
           <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
             {coachStats.length} coach{coachStats.length !== 1 ? 'es' : ''} · {fmtMonth(currentMonth)}
           </p>
@@ -441,12 +445,12 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
               transition: 'all 120ms',
             }}
           >
-            Check-ins →
+            {t.admin.checkins} →
           </a>
           <div style={{ display: 'flex', gap: 2, background: 'var(--surface-2)', borderRadius: 'var(--radius-btn)', padding: 3 }}>
-            <button onClick={() => setTab('overview')} style={TAB_BTN(tab === 'overview')}>Overview</button>
-            <button onClick={() => setTab('numbers')}  style={TAB_BTN(tab === 'numbers')}>Numbers</button>
-            <button onClick={() => setTab('coaches')}  style={TAB_BTN(tab === 'coaches')}>Coaches</button>
+            <button onClick={() => setTab('overview')} style={TAB_BTN(tab === 'overview')}>{t.admin.overview}</button>
+            <button onClick={() => setTab('numbers')}  style={TAB_BTN(tab === 'numbers')}>{t.numbers.title}</button>
+            <button onClick={() => setTab('coaches')}  style={TAB_BTN(tab === 'coaches')}>{t.admin.coaches}</button>
           </div>
         </div>
       </div>
@@ -546,7 +550,7 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
             boxShadow:    'var(--shadow-card)',
           }}>
             <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: 16 }}>
-              Combined pipeline funnel — all coaches
+              {t.admin.aggregateFunnel}
             </p>
             <AggregateFunnel coaches={coachStats} />
           </div>

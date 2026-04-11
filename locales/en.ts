@@ -287,6 +287,26 @@ const en = {
     chooseLanguageSub: 'You can change this at any time in settings.',
     continue: 'Continue',
   },
+  admin: {
+    title: 'Admin',
+    overview: 'Overview',
+    coaches: 'Coaches',
+    team: 'Team',
+    checkins: 'Check-ins',
+    missingCheckins: 'Missing check-ins',
+    weakestLink: 'Biggest opportunity',
+    aggregateFunnel: 'Aggregate funnel',
+    noData: 'No data yet',
+    lastLogin: 'Last login',
+    replyRate: 'Reply rate',
+    bookingRate: 'Booking rate',
+    closeRate: 'Close rate',
+    cashThisMonth: 'Cash this month',
+    clientsSigned: 'Clients signed',
+    totalLeads: 'Total leads',
+    eodSubmitted: 'EOD submitted',
+    eodPending: 'EOD pending',
+  },
 }
 
 export default en

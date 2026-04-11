@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { CURRENCIES, TIMEZONES } from '@/types'
@@ -44,7 +44,7 @@ interface OnboardingData {
 const DEFAULTS: OnboardingData = {
   name: '', business_name: '', ig_handle: '', timezone: 'Europe/Oslo',
   base_currency: 'NOK',
-  secondary_currencies: [{ currency_code: 'AED', label: 'Meta ads', estimated_monthly: 500 }],
+  secondary_currencies: [],
   team_mode: 'solo', setters: [],
   cash_target: '75000', clients_target: '5', meetings_target: '25',
   followers_target: '200', close_rate_target: '25', show_up_target: '60',
@@ -426,7 +426,26 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [data, setData] = useState<OnboardingData>(DEFAULTS)
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
   const router = useRouter()
+
+  // Re-entry guard: redirect to /dashboard if onboarding already completed
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { setChecking(false); return }
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_complete, name')
+        .eq('id', user.id)
+        .single()
+      if (profile?.onboarding_complete) {
+        router.replace('/dashboard')
+      } else {
+        setChecking(false)
+      }
+    })
+  }, [router])
 
   function update(partial: Partial<OnboardingData>) {
     setData(d => ({ ...d, ...partial }))
@@ -497,6 +516,8 @@ export default function OnboardingPage() {
 
     router.push('/dashboard')
   }
+
+  if (checking) return null
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4 py-8">

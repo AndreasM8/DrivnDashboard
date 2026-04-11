@@ -289,6 +289,26 @@ const no: Translations = {
     chooseLanguageSub: 'Du kan endre dette når som helst i innstillinger.',
     continue: 'Fortsett',
   },
+  admin: {
+    title: 'Admin',
+    overview: 'Oversikt',
+    coaches: 'Coacher',
+    team: 'Team',
+    checkins: 'Rapporter',
+    missingCheckins: 'Manglende rapporter',
+    weakestLink: 'Største mulighet',
+    aggregateFunnel: 'Samlet pipeline',
+    noData: 'Ingen data ennå',
+    lastLogin: 'Sist innlogget',
+    replyRate: 'Svarrate',
+    bookingRate: 'Bookingrate',
+    closeRate: 'Lukkegrad',
+    cashThisMonth: 'Innbetalt denne måneden',
+    clientsSigned: 'Nye klienter',
+    totalLeads: 'Totale leads',
+    eodSubmitted: 'EOD levert',
+    eodPending: 'EOD mangler',
+  },
 }
 
 export default no
