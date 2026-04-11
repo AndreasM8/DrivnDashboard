@@ -166,12 +166,12 @@ function KpiCard({
 
   return (
     <div style={{
-      background:    'var(--surface-1)',
+      background:    'var(--bg-surface)',
       border:        '1px solid var(--border)',
       borderLeft:    `3px solid ${accent}`,
       borderRadius:  'var(--radius-card)',
       padding,
-      boxShadow:     'var(--shadow-card)',
+      boxShadow:     `inset 3px 0 12px ${accent}22`,
       display:       'flex',
       flexDirection: 'column',
     }}>
@@ -282,13 +282,15 @@ function SalesFunnel({ steps, leadsReplied }: { steps: FunnelStep[]; leadsReplie
             {/* Funnel box */}
             <div style={{
               flex: 1,
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
+              background: 'var(--bg-glass)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-strong)',
               borderRadius: '10px',
               padding: '14px 16px',
               minWidth: 0,
             }}>
-              <p style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.1, marginBottom: '4px' }}>
+              <p className="gradient-text hero-num" style={{ lineHeight: 1.1, marginBottom: '4px', fontSize: '22px' }}>
                 {box.value}
               </p>
               <p style={{ fontSize: '10px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '2px' }}>
@@ -412,12 +414,13 @@ function HistoryTable({
               <tr
                 key={s.month}
                 style={{
-                  background:   isCurrent ? 'rgba(37,99,235,0.04)' : 'transparent',
+                  background:   isCurrent ? 'rgba(99,102,241,0.06)' : 'transparent',
                   borderBottom: '1px solid var(--border)',
+                  borderLeft:   isCurrent ? '2px solid var(--neon-indigo)' : 'none',
                   fontWeight:   isCurrent ? '600' : '400',
                 }}
               >
-                <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', color: 'var(--text-1)', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: 'var(--surface-1)', zIndex: 1 }}>
+                <td style={{ padding: '10px 12px 10px 0', fontSize: '12px', color: 'var(--text-1)', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: isCurrent ? 'rgba(99,102,241,0.06)' : 'var(--bg-surface)', zIndex: 1 }}>
                   {fmtMonth(s.month)}
                   {isCurrent && (
                     <span style={{ display: 'inline-block', background: 'rgba(22,163,74,0.15)', color: '#16A34A', borderRadius: '4px', padding: '1px 5px', fontSize: '9px', fontWeight: 700, marginLeft: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -1164,7 +1167,7 @@ export default function NumbersClient({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3">
+              <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: 12 }}>
                 {([
                   {
                     label:   'Cash ROAS',
@@ -1189,14 +1192,27 @@ export default function NumbersClient({
                     key={col.label}
                     className={i < 2 ? 'md:border-r border-b md:border-b-0' : ''}
                     style={{
-                      padding:     '12px 16px',
-                      paddingLeft: i === 0 ? 0 : '16px',
+                      padding:             '20px',
+                      background:          'var(--bg-glass)',
+                      backdropFilter:      'blur(12px)',
+                      WebkitBackdropFilter:'blur(12px)',
+                      border:              '1px solid var(--border-glow)',
+                      borderRadius:        'var(--radius-card)',
+                      boxShadow:           'var(--glow-indigo)',
                     }}
                   >
                     <p style={{ fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: '6px' }}>
                       {col.label}
                     </p>
-                    <p style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-1)', lineHeight: 1 }}>
+                    <p style={{
+                      fontSize: 36, fontWeight: 800,
+                      background: 'linear-gradient(135deg, var(--neon-indigo), var(--neon-cyan))',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      fontFamily: 'var(--font-mono)',
+                      lineHeight: 1,
+                    }}>
                       {col.value != null ? `${col.value.toFixed(1)}x` : '—'}
                     </p>
                     <p style={{ fontSize: '11px', color: 'var(--text-2)', marginTop: '4px' }}>{col.sub}</p>

@@ -68,10 +68,9 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
     <div
       style={{
         margin: '16px 24px 8px',
-        background: 'var(--surface-1)',
+        background: 'var(--bg-surface)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-card)',
-        boxShadow: 'var(--shadow-card)',
         padding: '20px 24px',
       }}
     >
@@ -84,11 +83,11 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
 
           let rateColor = 'var(--text-3)'
           if (convRate !== null && target !== null) {
-            rateColor = convRate >= target ? '#16A34A'
-              : convRate >= target * 0.8 ? '#D97706'
-              : '#DC2626'
+            rateColor = convRate >= target ? 'var(--neon-green)'
+              : convRate >= target * 0.8 ? 'var(--neon-amber)'
+              : 'var(--neon-red)'
           } else if (convRate !== null) {
-            rateColor = 'var(--accent)'
+            rateColor = 'var(--neon-cyan)'
           }
 
           return (
@@ -97,20 +96,19 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
               <div
                 style={{
                   flex: 1,
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  minWidth: 0,
+                  background: 'var(--bg-glass)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  textAlign: 'center',
+                  minWidth: 100,
                 }}
               >
                 <div
+                  className="gradient-text hero-num"
                   style={{
-                    fontSize: '26px',
-                    fontWeight: 600,
-                    letterSpacing: '-0.03em',
-                    color: 'var(--text-1)',
-                    lineHeight: 1,
                     marginBottom: '4px',
                     fontVariantNumeric: 'tabular-nums',
                   }}
@@ -127,38 +125,19 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     padding: '0 8px',
                     flexShrink: 0,
                     gap: '2px',
                   }}
                 >
-                  <span style={{
-                    fontSize: '9px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--text-3)',
-                    whiteSpace: 'nowrap',
-                    lineHeight: 1,
-                  }}>
-                    {(['Reply rate', 'Booking rate', 'Closing rate'] as const)[i]}
-                  </span>
                   {convRate !== null && (
-                    <span
-                      style={{
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: rateColor,
-                        fontVariantNumeric: 'tabular-nums',
-                        lineHeight: 1,
-                      }}
-                    >
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neon-cyan)' }}>
                       {convRate}%
                     </span>
                   )}
-                  <svg width="20" height="12" viewBox="0 0 20 12" fill="none">
-                    <path d="M0 6H16M16 6L11 1M16 6L11 11" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <div style={{ width: 40, height: 1, background: 'var(--neon-indigo)', opacity: 0.5 }} />
+                  <span style={{ fontSize: '8px', color: 'var(--text-3)' }}>▶</span>
                 </div>
               )}
             </div>
@@ -167,6 +146,20 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
       </div>
     </div>
   )
+}
+
+// ─── Stage neon colors ────────────────────────────────────────────────────────
+
+const STAGE_COLORS: Record<string, string> = {
+  follower:       'var(--neon-indigo)',
+  replied:        'var(--neon-cyan)',
+  freebie_sent:   'var(--neon-purple)',
+  call_booked:    'var(--neon-amber)',
+  second_call:    'var(--neon-amber)',
+  closed:         'var(--neon-green)',
+  nurture:        'var(--neon-purple)',
+  bad_fit:        'var(--text-3)',
+  not_interested: 'var(--text-3)',
 }
 
 // ─── Stage column config ──────────────────────────────────────────────────────
@@ -277,26 +270,27 @@ function LeadCard({
       onDragEnd={isDraggable ? onDragEnd : undefined}
       onClick={onClick}
       style={{
-        background: 'var(--surface-1)',
+        background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-card)',
+        borderRadius: 10,
         padding: '10px 12px',
         cursor: 'pointer',
-        transition: 'transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease',
+        transition: 'border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease',
+        willChange: 'transform',
       }}
       onMouseEnter={e => {
         const el = e.currentTarget as HTMLDivElement
-        el.style.transform = 'translateY(-2px)'
-        el.style.boxShadow = 'var(--shadow-raised)'
-        el.style.borderColor = 'var(--border-strong)'
+        el.style.transform = 'translateY(-1px)'
+        el.style.boxShadow = 'var(--glow-indigo)'
+        el.style.borderColor = 'var(--border-glow)'
         // Show tier buttons
         const tierBtns = el.querySelector('[data-tier-btns]') as HTMLElement | null
         if (tierBtns) tierBtns.style.opacity = '1'
       }}
       onMouseLeave={e => {
         const el = e.currentTarget as HTMLDivElement
-        el.style.transform = ''
-        el.style.boxShadow = ''
+        el.style.transform = 'translateY(0)'
+        el.style.boxShadow = 'none'
         el.style.borderColor = 'var(--border)'
         const tierBtns = el.querySelector('[data-tier-btns]') as HTMLElement | null
         if (tierBtns) tierBtns.style.opacity = '0'
@@ -309,7 +303,7 @@ function LeadCard({
             fontFamily: 'var(--font-mono)',
             fontSize: '12px',
             fontWeight: 600,
-            color: 'var(--accent)',
+            color: 'var(--neon-indigo)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -380,7 +374,7 @@ function LeadCard({
                 height: '20px',
                 borderRadius: '4px',
                 border: '1px solid var(--border-strong)',
-                background: tier === t ? 'var(--accent)' : 'var(--surface-2)',
+                background: tier === t ? 'var(--neon-indigo)' : 'var(--bg-elevated)',
                 color: tier === t ? '#fff' : 'var(--text-2)',
                 fontSize: '10px',
                 fontWeight: 600,
@@ -485,7 +479,7 @@ function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, s
     >
       {/* Row 1: username + days + urgency dot [+ stage chip] */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: 'var(--accent)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 600, color: 'var(--neon-indigo)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           @{lead.ig_username}
         </span>
         {days !== null && (
@@ -795,9 +789,10 @@ function StageColumn({
         flexShrink: 0,
         width: '256px',
         minWidth: '256px',
-        background: isDragOver ? 'var(--surface-2)' : 'var(--surface-3)',
-        border: isDragOver ? `1.5px dashed ${accent}` : '1px solid var(--border)',
-        borderTop: `3px solid ${accent}`,
+        background: isDragOver ? 'var(--bg-elevated)' : 'var(--bg-surface)',
+        border: isDragOver ? `1.5px dashed ${STAGE_COLORS[stage] ?? accent}` : '1px solid var(--border)',
+        borderTop: `2px solid ${STAGE_COLORS[stage] ?? accent}`,
+        boxShadow: `0 0 20px ${STAGE_COLORS[stage] ?? 'transparent'}18`,
         borderRadius: 'var(--radius-card)',
         padding: '10px',
         display: 'flex',

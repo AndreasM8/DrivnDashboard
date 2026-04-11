@@ -70,11 +70,11 @@ function AgentModal({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', padding: '0 16px 16px' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', padding: '0 16px 16px' }}
       onClick={onClose}
     >
       <div
-        style={{ background: 'var(--surface-1)', width: '100%', maxWidth: 512, borderRadius: 'var(--radius-panel)', boxShadow: 'var(--shadow-dropdown)', overflow: 'hidden' }}
+        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', width: '100%', maxWidth: 512, borderRadius: 'var(--radius-panel)', boxShadow: 'var(--shadow-dropdown)', overflow: 'hidden' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -158,7 +158,15 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
   if (isUser) {
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <div style={{ maxWidth: '80%', background: 'var(--text-1)', color: 'var(--surface-1)', borderRadius: '16px 16px 4px 16px', padding: '10px 16px', fontSize: 14, lineHeight: 1.6 }}>
+        <div style={{
+          maxWidth: '80%',
+          background: 'linear-gradient(135deg, var(--neon-indigo), rgba(99,102,241,0.7))',
+          color: 'white',
+          borderRadius: '12px 12px 2px 12px',
+          padding: '10px 14px',
+          fontSize: 13,
+          lineHeight: 1.6,
+        }}>
           {message.content}
         </div>
       </div>
@@ -181,7 +189,7 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-      <div style={{ maxWidth: '85%', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '12px 16px', fontSize: 14, color: 'var(--text-1)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+      <div style={{ maxWidth: '85%', background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px 12px 12px 2px', padding: '10px 14px', fontSize: 13, color: 'var(--text-1)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>{formatted}</div>
       </div>
     </div>
@@ -193,7 +201,7 @@ function MessageBubble({ message, accentBg }: { message: ChatMessage; accentBg: 
 function TypingIndicator() {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-      <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '12px 16px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+      <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: '12px 12px 12px 2px', padding: '10px 14px' }}>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 16 }}>
           {[0, 1, 2].map(i => (
             <span
@@ -633,8 +641,8 @@ export default function AssistantPageClient({
       </div>}
 
       {/* Input — hidden during onboarding */}
-      {memoryReady && <div style={{ padding: '12px 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', borderTop: '1px solid var(--border)', background: 'var(--surface-1)', flexShrink: 0 }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      {memoryReady && <div style={{ padding: '12px 16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)', borderTop: '1px solid var(--border)', background: 'var(--sidebar-bg)', flexShrink: 0 }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: '4px 4px 4px 12px' }}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -644,11 +652,18 @@ export default function AssistantPageClient({
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
             }}
             onKeyDown={handleKeyDown}
+            onFocus={e => {
+              const form = e.currentTarget.closest('form') as HTMLFormElement | null
+              if (form) { form.style.borderColor = 'var(--neon-indigo)'; form.style.boxShadow = 'var(--glow-indigo)' }
+            }}
+            onBlur={e => {
+              const form = e.currentTarget.closest('form') as HTMLFormElement | null
+              if (form) { form.style.borderColor = 'var(--border-strong)'; form.style.boxShadow = 'none' }
+            }}
             placeholder={`Ask ${meta.name} anything…`}
             rows={1}
             disabled={streaming}
-            className="input-base"
-            style={{ flex: 1, borderRadius: 20, resize: 'none', lineHeight: 1.6, minHeight: '42px', maxHeight: '120px', opacity: streaming ? 0.5 : 1 }}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', resize: 'none', lineHeight: 1.6, minHeight: '42px', maxHeight: '120px', opacity: streaming ? 0.5 : 1, fontSize: 13, color: 'var(--text-1)', fontFamily: 'var(--font-sans)' }}
           />
           <button
             type="submit"

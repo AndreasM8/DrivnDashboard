@@ -116,11 +116,11 @@ function SectionCard({
 
   return (
     <div style={{
-      background: open ? s.bg : 'var(--surface-1)',
+      background: open ? s.bg : 'var(--bg-surface)',
       border: `1px solid ${open ? s.border + '33' : 'var(--border)'}`,
-      borderTop: `3px solid ${s.border}`,
+      borderTop: `2px solid ${s.border}`,
       borderRadius: '12px',
-      boxShadow: open ? '0 2px 8px rgba(0,0,0,0.06)' : 'var(--shadow-card)',
+      boxShadow: open ? `0 0 30px ${s.border}0D` : 'none',
       overflow: 'hidden',
       transition: 'background 200ms ease, box-shadow 200ms ease',
     }}>
@@ -178,8 +178,9 @@ function Checkbox({ checked, onChange, color }: { checked: boolean; onChange: ()
         style={{
           width: '20px', height: '20px', minWidth: '20px',
           borderRadius: '4px',
-          border: checked ? 'none' : `1.5px solid ${color}66`,
+          border: checked ? `2px solid ${color}` : `1.5px solid ${color}66`,
           background: checked ? color : 'transparent',
+          boxShadow: checked ? `0 0 12px ${color}99` : 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 150ms ease', flexShrink: 0,
         }}
@@ -383,7 +384,7 @@ function NonNegSection({
       {/* Progress bar + streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '16px' }}>
         <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: `${color}22`, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '2px', transition: 'width 300ms ease' }} />
+          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--neon-amber)', boxShadow: '0 0 8px rgba(245,158,11,0.4)', borderRadius: '2px', transition: 'width 300ms ease' }} />
         </div>
         {streak > 0 && (
           <span style={{

@@ -22,22 +22,22 @@ export default function AskPage() {
           {/* Andreas card */}
           <Link href="/ask/andreas" style={{ textDecoration: 'none', display: 'block' }}>
             <div style={{
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
+              background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(245,158,11,0.03) 100%)',
+              border: '1px solid var(--border-strong)',
+              borderTop: '2px solid var(--neon-amber)',
+              borderRadius: 'var(--radius-panel)',
+              boxShadow: '0 0 40px rgba(245,158,11,0.08)',
               padding: '20px',
               cursor: 'pointer',
-              transition: 'border-color 120ms ease, background 120ms ease',
+              transition: 'border-color 120ms ease, box-shadow 120ms ease',
             }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLDivElement
-                el.style.borderColor = 'var(--border-strong)'
-                el.style.background = 'var(--surface-2)'
+                el.style.boxShadow = '0 0 60px rgba(245,158,11,0.15)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLDivElement
-                el.style.borderColor = 'var(--border)'
-                el.style.background = 'var(--surface-1)'
+                el.style.boxShadow = '0 0 40px rgba(245,158,11,0.08)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
@@ -66,9 +66,10 @@ export default function AskPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
                     {['Reel scripts', 'Hook generator', 'Content calendar', 'Caption writing'].map(tag => (
                       <span key={tag} style={{
-                        fontSize: '11px', background: 'var(--surface-3)',
-                        color: 'var(--text-2)', padding: '3px 10px', borderRadius: '99px',
+                        fontSize: 11, background: 'var(--bg-elevated)',
+                        color: 'var(--text-2)', padding: '4px 12px', borderRadius: 20,
                         border: '1px solid var(--border)',
+                        transition: 'all 120ms ease',
                       }}>
                         {tag}
                       </span>
@@ -85,22 +86,22 @@ export default function AskPage() {
           {/* Sebastian card */}
           <Link href="/ask/sebastian" style={{ textDecoration: 'none', display: 'block' }}>
             <div style={{
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
+              background: 'linear-gradient(135deg, var(--bg-surface) 0%, rgba(99,102,241,0.03) 100%)',
+              border: '1px solid var(--border-strong)',
+              borderTop: '2px solid var(--neon-indigo)',
+              borderRadius: 'var(--radius-panel)',
+              boxShadow: '0 0 40px rgba(99,102,241,0.08)',
               padding: '20px',
               cursor: 'pointer',
-              transition: 'border-color 120ms ease, background 120ms ease',
+              transition: 'border-color 120ms ease, box-shadow 120ms ease',
             }}
               onMouseEnter={e => {
                 const el = e.currentTarget as HTMLDivElement
-                el.style.borderColor = 'var(--border-strong)'
-                el.style.background = 'var(--surface-2)'
+                el.style.boxShadow = '0 0 60px rgba(99,102,241,0.15)'
               }}
               onMouseLeave={e => {
                 const el = e.currentTarget as HTMLDivElement
-                el.style.borderColor = 'var(--border)'
-                el.style.background = 'var(--surface-1)'
+                el.style.boxShadow = '0 0 40px rgba(99,102,241,0.08)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
@@ -129,9 +130,10 @@ export default function AskPage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
                     {['DM openers', 'Objection handling', 'Follow-up sequences', 'Sales scripts'].map(tag => (
                       <span key={tag} style={{
-                        fontSize: '11px', background: 'var(--surface-3)',
-                        color: 'var(--text-2)', padding: '3px 10px', borderRadius: '99px',
+                        fontSize: 11, background: 'var(--bg-elevated)',
+                        color: 'var(--text-2)', padding: '4px 12px', borderRadius: 20,
                         border: '1px solid var(--border)',
+                        transition: 'all 120ms ease',
                       }}>
                         {tag}
                       </span>

@@ -59,26 +59,38 @@ function StatCard({
   value,
   sub,
   statusColor = 'var(--text-3)',
+  glass = false,
 }: {
   label: string
   value: string
   sub?: string
   statusColor?: string
+  glass?: boolean
 }) {
   return (
     <div
       className="stat-card"
       style={{
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-card)',
-        boxShadow: 'var(--shadow-card)',
-        padding: '14px',
+        background: glass ? 'var(--bg-glass)' : 'var(--bg-surface)',
+        backdropFilter: glass ? 'blur(12px)' : undefined,
+        WebkitBackdropFilter: glass ? 'blur(12px)' : undefined,
+        border: `1px solid ${glass ? 'var(--border-strong)' : 'var(--border)'}`,
         borderLeft: `3px solid ${statusColor}`,
+        borderRadius: 'var(--radius-card)',
+        padding: '16px 18px',
+        boxShadow: glass
+          ? `var(--glow-indigo), inset 3px 0 12px ${statusColor}22`
+          : `inset 3px 0 8px ${statusColor}18`,
+        transition: 'transform 120ms ease, box-shadow 120ms ease',
       }}
     >
       <p className="label-caps" style={{ marginBottom: '8px' }}>{label}</p>
-      <p className="hero-num">{value}</p>
+      <p className="hero-num" style={glass ? {
+        background: 'linear-gradient(135deg, var(--neon-indigo), var(--neon-cyan))',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+      } : {}}>{value}</p>
       {sub && (
         <p style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>{sub}</p>
       )}
@@ -90,7 +102,12 @@ function StatCard({
 
 function TaskRow({ task }: { task: Task }) {
   const style = TASK_TYPE_STYLES[task.type]
-  const borderColor = task.priority === 'overdue' ? '#DC2626' : task.priority === 'today' ? '#D97706' : 'var(--border-strong)'
+  const borderColor = task.priority === 'overdue' ? 'var(--neon-red)'
+    : task.priority === 'today' ? 'var(--neon-amber)'
+    : 'var(--border-strong)'
+  const glowColor = task.priority === 'overdue' ? 'var(--glow-red)'
+    : task.priority === 'today' ? 'var(--glow-amber)'
+    : 'none'
 
   return (
     <div
@@ -103,6 +120,7 @@ function TaskRow({ task }: { task: Task }) {
         borderLeft: `3px solid ${borderColor}`,
         paddingLeft: '12px',
         marginLeft: '-20px',
+        boxShadow: glowColor,
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -169,7 +187,7 @@ function MiniRevenueChart({ history, currency, language }: { history: { month: s
               key={h.month}
               x={x} y={y} width={barW} height={barH}
               rx="3"
-              fill={isLast ? '#2563EB' : 'rgba(255,255,255,0.08)'}
+              fill={isLast ? 'var(--neon-indigo)' : 'rgba(255,255,255,0.08)'}
             />
           )
         })}
@@ -234,11 +252,11 @@ function SectionCard({ title, href, seeAllLabel, children }: { title: string; hr
   return (
     <div
       style={{
-        background: 'var(--surface-1)',
+        background: 'var(--bg-surface)',
         border: '1px solid var(--border)',
         borderRadius: 'var(--radius-card)',
-        boxShadow: 'var(--shadow-card)',
         padding: '20px',
+        transition: 'border-color 120ms ease',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -502,7 +520,16 @@ export default async function DashboardPage() {
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <h1 className="page-title">
+          <h1 style={{
+            fontSize: 22,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            background: 'linear-gradient(135deg, var(--text-1), var(--neon-cyan))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            margin: 0,
+          }}>
             {greeting(t)}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
           </h1>
         </div>
@@ -526,7 +553,7 @@ export default async function DashboardPage() {
             style={{
               fontSize: '13px',
               color: 'var(--text-2)',
-              background: 'var(--surface-2)',
+              background: 'var(--bg-elevated)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-badge)',
               padding: '4px 10px',
@@ -546,20 +573,22 @@ export default async function DashboardPage() {
           value={formatCurrency(cashCollected, currency)}
           sub={cashTarget ? `Target: ${formatCurrency(cashTarget, currency)}` : undefined}
           statusColor={cashStatusColor}
+          glass={true}
         />
         <StatCard
           label={t.dashboard.activeClients}
           value={String(activeClientCount)}
-          statusColor="#16A34A"
+          statusColor="var(--neon-green)"
+          glass={true}
         />
         <StatCard label={t.dashboard.callsThisMonth} value={String(callsHeld)} />
-        <StatCard label={t.dashboard.clientsSigned} value={String(clientsSignedThisMonth)} sub={t.dashboard.thisMonth} statusColor="#16A34A" />
+        <StatCard label={t.dashboard.clientsSigned} value={String(clientsSignedThisMonth)} sub={t.dashboard.thisMonth} statusColor="var(--neon-green)" />
       </div>
 
       {/* Mini revenue chart */}
       {revenueHistory && revenueHistory.length > 1 && (
         <div style={{
-          background: 'var(--surface-1)',
+          background: 'var(--bg-surface)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-card)',
           padding: '16px 20px',
@@ -678,8 +707,8 @@ export default async function DashboardPage() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: 'rgba(37,99,235,0.12)',
-                    color: 'var(--accent)',
+                    background: 'rgba(99,102,241,0.12)',
+                    color: 'var(--neon-indigo)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

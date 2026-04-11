@@ -43,14 +43,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full`}>
+    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full dark`}>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="h-full bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 antialiased">
-        <DarkModeProvider>
-          {children}
-        </DarkModeProvider>
+      <body className="h-full antialiased">
+        {/* Ambient orbs — behind all content */}
+        <div className="ambient-orb" style={{ width: 600, height: 600, background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)', top: -200, left: -100 }} />
+        <div className="ambient-orb" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)', bottom: -100, right: -100 }} />
+        <div className="ambient-orb" style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', top: '40%', right: '25%' }} />
+        <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
+          <DarkModeProvider>
+            {children}
+          </DarkModeProvider>
+        </div>
       </body>
     </html>
   )

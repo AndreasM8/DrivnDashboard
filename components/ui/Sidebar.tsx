@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useT } from '@/contexts/LanguageContext'
+import LogoMark from '@/components/ui/LogoMark'
 
 interface NavItem {
   href: string
@@ -24,19 +25,21 @@ function NavLink({ href, label, icon, badge }: NavItem) {
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        padding: '7px 12px',
+        padding: active ? '7px 12px 7px 10px' : '7px 12px',
         borderRadius: '7px',
         fontSize: '13px',
         fontWeight: active ? '500' : '400',
         color: active ? 'var(--text-1)' : 'var(--text-2)',
-        background: active ? 'var(--surface-2)' : 'transparent',
+        background: active ? 'var(--bg-elevated)' : 'transparent',
+        borderLeft: active ? '2px solid var(--neon-indigo)' : '2px solid transparent',
         textDecoration: 'none',
         transition: 'background 120ms ease, color 120ms ease',
         overflow: 'hidden',
+        animation: active ? 'pulse-glow 3s ease-in-out infinite' : undefined,
       }}
       onMouseEnter={e => {
         if (!active) {
-          ;(e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'
+          ;(e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'
           ;(e.currentTarget as HTMLElement).style.color = 'var(--text-1)'
         }
       }}
@@ -47,21 +50,6 @@ function NavLink({ href, label, icon, badge }: NavItem) {
         }
       }}
     >
-      {/* Active accent border */}
-      {active && (
-        <span
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: '20%',
-            bottom: '20%',
-            width: '2px',
-            background: 'var(--accent)',
-            borderRadius: '0 2px 2px 0',
-          }}
-        />
-      )}
-
       {/* Icon */}
       <span
         style={{
@@ -69,7 +57,7 @@ function NavLink({ href, label, icon, badge }: NavItem) {
           height: '16px',
           flexShrink: 0,
           opacity: active ? 1 : 0.45,
-          color: active ? 'var(--accent)' : 'inherit',
+          color: active ? 'var(--neon-indigo)' : 'inherit',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -84,13 +72,14 @@ function NavLink({ href, label, icon, badge }: NavItem) {
       {badge != null && badge > 0 && (
         <span
           style={{
-            background: 'var(--danger)',
-            color: '#fff',
-            fontSize: '10px',
-            fontWeight: '600',
-            borderRadius: '99px',
+            background: 'var(--neon-red)',
+            color: 'white',
+            fontSize: 10,
+            fontWeight: 700,
             padding: '1px 6px',
-            lineHeight: '1.4',
+            borderRadius: 10,
+            marginLeft: 'auto',
+            boxShadow: 'var(--glow-red)',
           }}
         >
           {badge > 99 ? '99+' : badge}
@@ -132,7 +121,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
       {/* Logo */}
       <div
         style={{
-          height: '52px',
+          height: '56px',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
@@ -141,22 +130,19 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           flexShrink: 0,
         }}
       >
-        {/* Geometric mark */}
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <rect x="1" y="1" width="9" height="9" rx="2.5" fill="var(--accent)" />
-          <rect x="12" y="1" width="9" height="9" rx="2.5" fill="var(--accent)" opacity="0.4" />
-          <rect x="1" y="12" width="9" height="9" rx="2.5" fill="var(--accent)" opacity="0.4" />
-          <rect x="12" y="12" width="9" height="9" rx="2.5" fill="var(--accent)" opacity="0.2" />
-        </svg>
+        <LogoMark size={28} />
         <span
           style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: 'var(--text-1)',
+            fontSize: 14,
+            fontWeight: 600,
             letterSpacing: '-0.01em',
+            background: 'linear-gradient(135deg, #F0F2F8, var(--neon-cyan))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
           }}
         >
-          DrivnDashboardr
+          Drivn
         </span>
       </div>
 
@@ -232,7 +218,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
             transition: 'background 120ms ease, color 120ms ease',
           }}
           onMouseEnter={e => {
-            ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)'
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-elevated)'
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-1)'
           }}
           onMouseLeave={e => {

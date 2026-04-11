@@ -62,10 +62,11 @@ export default function CallBookedModal({ lead, setters, onClose, onSaved }: Pro
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, background: 'rgba(0,0,0,0.4)',
+      padding: 16, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
     }}>
       <div className="modal-enter" style={{
-        background: 'var(--surface-1)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-strong)',
         borderRadius: 'var(--radius-panel)',
         boxShadow: 'var(--shadow-dropdown)',
         width: '100%', maxWidth: 380, padding: 24,

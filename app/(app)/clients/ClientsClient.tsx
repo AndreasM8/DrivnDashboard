@@ -191,10 +191,13 @@ export default function ClientsClient({ initialClients, installments, userId, ba
           <div
             key={s.label}
             style={{
-              background: 'var(--surface-2)',
+              background: 'var(--bg-glass)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-strong)',
+              borderLeft: `3px solid ${s.accent}`,
               borderRadius: 'var(--radius-card)',
               padding: '10px 12px',
-              borderLeft: `3px solid ${s.accent}`,
             }}
           >
             <p className="label-caps" style={{ marginBottom: '4px' }}>{s.label}</p>
@@ -327,22 +330,22 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                       onClick={() => setDrawerClient(client)}
                       style={{
                         borderRadius: 'var(--radius-card)',
-                        background: 'var(--surface-1)',
+                        background: 'var(--bg-surface)',
                         border: `1px solid ${borderColor}`,
                         borderLeft: `3px solid ${borderColor}`,
-                        boxShadow: 'var(--shadow-card)',
                         cursor: 'pointer',
-                        transition: 'border-color 120ms ease, box-shadow 120ms ease',
+                        transition: 'border-color 120ms ease, box-shadow 120ms ease, background 120ms ease',
                         overflow: 'hidden',
+                        willChange: 'transform',
                       }}
                       onMouseEnter={e => {
                         const el = e.currentTarget as HTMLDivElement
-                        el.style.boxShadow = 'var(--shadow-raised)'
+                        el.style.background = 'var(--bg-elevated)'
                         if (!hasOverdue && !isUpsell) el.style.borderColor = 'var(--border-strong)'
                       }}
                       onMouseLeave={e => {
                         const el = e.currentTarget as HTMLDivElement
-                        el.style.boxShadow = 'var(--shadow-card)'
+                        el.style.background = 'var(--bg-surface)'
                         el.style.borderColor = borderColor
                       }}
                     >
@@ -354,8 +357,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             width: 36,
                             height: 36,
                             borderRadius: '50%',
-                            background: 'rgba(37,99,235,0.12)',
-                            color: 'var(--accent)',
+                            background: 'rgba(99,102,241,0.12)',
+                            color: 'var(--neon-indigo)',
                             flexShrink: 0,
                             display: 'flex',
                             alignItems: 'center',
@@ -417,8 +420,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             width: '34px',
                             height: '34px',
                             borderRadius: '50%',
-                            background: 'rgba(37,99,235,0.12)',
-                            color: 'var(--accent)',
+                            background: 'rgba(99,102,241,0.12)',
+                            color: 'var(--neon-indigo)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

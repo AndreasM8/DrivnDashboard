@@ -131,10 +131,10 @@ export default function WeeklyCheckinModal({
   const canSubmit = canSubmitStep2 && (!isLastCheckinOfMonth || step !== 3 || monthlyConfirmed)
 
   const cardStyle: React.CSSProperties = {
-    background: 'var(--surface-1)',
-    border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-card)',
-    boxShadow: 'var(--shadow-card)',
+    background: 'var(--bg-elevated)',
+    border: '1px solid var(--border-strong)',
+    borderRadius: 'var(--radius-panel)',
+    boxShadow: 'var(--shadow-dropdown)',
     width: '100%',
     maxWidth: 600,
     maxHeight: '90vh',
@@ -148,7 +148,7 @@ export default function WeeklyCheckinModal({
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.55)',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
       }}>
@@ -190,7 +190,7 @@ export default function WeeklyCheckinModal({
           borderBottom: '1px solid var(--border)',
           paddingBottom: 16,
           position: 'sticky', top: 0,
-          background: 'var(--surface-1)',
+          background: 'var(--bg-elevated)',
           zIndex: 1,
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>

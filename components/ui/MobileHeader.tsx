@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
+import LogoMark from '@/components/ui/LogoMark'
 
 interface Props {
   isOwner?: boolean
@@ -38,18 +39,18 @@ export default function MobileHeader({ isOwner = false }: Props) {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '10px 16px',
-        background: 'var(--surface-1)',
+        background: 'var(--sidebar-bg)',
         borderBottom: '1px solid var(--border)',
         flexShrink: 0,
       }}
     >
-      <span className="page-title">Drivn</span>
+      <LogoMark size={24} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {isOwner && (
           <Link
             href="/settings"
             style={{ ...iconBtnStyle, textDecoration: 'none' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
           >
             <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
