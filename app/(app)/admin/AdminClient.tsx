@@ -4,10 +4,26 @@ import { useRouter } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import type { CoachStats } from './page'
 
+interface TeamMemberRow {
+  id: string
+  coach_id: string
+  name: string
+  email: string
+  role: string
+  status: string
+}
+
+interface TodayEodRow {
+  team_member_id: string
+  submitted_at: string
+}
+
 interface Props {
   coachStats: CoachStats[]
   currentMonth: string
   missingCheckins: string[]
+  teamMembers: TeamMemberRow[]
+  todayEods: TodayEodRow[]
 }
 
 type SortKey = 'name' | 'totalLeads' | 'replyRate' | 'bookingRate' | 'closeRate'
@@ -185,7 +201,123 @@ function AggregateFunnel({ coaches }: { coaches: CoachStats[] }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function AdminClient({ coachStats, currentMonth, missingCheckins }: Props) {
+// ─── Team Section ─────────────────────────────────────────────────────────────
+
+function TeamSection({
+  teamMembers,
+  todayEods,
+  coachStats,
+}: {
+  teamMembers: TeamMemberRow[]
+  todayEods: TodayEodRow[]
+  coachStats: CoachStats[]
+}) {
+  if (teamMembers.length === 0) return null
+
+  const eodSubmittedIds = new Set(todayEods.map(e => e.team_member_id))
+
+  // Group team members by coach_id
+  const byCoach = new Map<string, TeamMemberRow[]>()
+  for (const m of teamMembers) {
+    const list = byCoach.get(m.coach_id) ?? []
+    list.push(m)
+    byCoach.set(m.coach_id, list)
+  }
+
+  const coachNameMap = new Map<string, string>()
+  for (const c of coachStats) {
+    coachNameMap.set(c.userId, c.name)
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: 12 }}>
+        Team
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {Array.from(byCoach.entries()).map(([coachId, members]) => {
+          const coachName = coachNameMap.get(coachId) ?? coachId
+          return (
+            <div key={coachId}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8 }}>
+                {coachName}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {members.map(m => {
+                  const submitted = eodSubmittedIds.has(m.id)
+                  const roleColor = m.role === 'setter' ? '#7C3AED' : '#2563EB'
+                  const roleBg = m.role === 'setter' ? 'rgba(124,58,237,0.1)' : 'rgba(37,99,235,0.1)'
+
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px',
+                        background: 'var(--surface-1)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                      }}
+                    >
+                      {/* Avatar */}
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        background: roleBg, color: roleColor,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 700,
+                      }}>
+                        {m.name.charAt(0).toUpperCase()}
+                      </div>
+
+                      {/* Name + role */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{m.name}</span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                            background: roleBg, color: roleColor,
+                            textTransform: 'uppercase', letterSpacing: '0.06em',
+                          }}>
+                            {m.role}
+                          </span>
+                          {m.status === 'invited' && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                              background: 'rgba(245,158,11,0.1)', color: '#F59E0B',
+                              textTransform: 'uppercase', letterSpacing: '0.06em',
+                            }}>
+                              Invited
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{m.email}</p>
+                      </div>
+
+                      {/* EOD status */}
+                      <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                        <p style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-3)', marginBottom: 3 }}>
+                          EOD today
+                        </p>
+                        <span style={{
+                          fontSize: 12, fontWeight: 600,
+                          color: submitted ? '#10B981' : '#D97706',
+                        }}>
+                          {submitted ? '✓ Submitted' : '⏳ Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export default function AdminClient({ coachStats, currentMonth, missingCheckins, teamMembers, todayEods }: Props) {
   const router    = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [tab,       setTab]       = useState<'overview' | 'numbers' | 'coaches'>('overview')
@@ -418,6 +550,9 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins 
             </p>
             <AggregateFunnel coaches={coachStats} />
           </div>
+
+          {/* Team section */}
+          <TeamSection teamMembers={teamMembers} todayEods={todayEods} coachStats={coachStats} />
 
           {/* Per-coach sortable table */}
           <div>

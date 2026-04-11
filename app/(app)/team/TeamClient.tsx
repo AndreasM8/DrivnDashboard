@@ -169,15 +169,22 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m
 
 // ─── Member Card with expanded view ──────────────────────────────────────────
 
+const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
 function MemberCard({ member }: { member: TeamMember }) {
   const [expanded, setExpanded] = useState(false)
   const [questions, setQuestions] = useState<CheckinQuestion[]>([])
   const [eodHour, setEodHour] = useState(20)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [savingTemplate, setSavingTemplate] = useState(false)
+  const [savingWeekly, setSavingWeekly] = useState(false)
   const [nonNegs, setNonNegs] = useState<Array<{ id: string; title: string; order_index: number }>>([])
   const [newNonNeg, setNewNonNeg] = useState('')
   const [loadedDetail, setLoadedDetail] = useState(false)
+  // Weekly check-in state
+  const [weeklyQuestions, setWeeklyQuestions] = useState<CheckinQuestion[]>([])
+  const [weeklyEnabled, setWeeklyEnabled] = useState(false)
+  const [weeklyDay, setWeeklyDay] = useState(1)
 
   const statusStyle = STATUS_COLORS[member.status] ?? STATUS_COLORS.inactive
 
@@ -185,14 +192,19 @@ function MemberCard({ member }: { member: TeamMember }) {
     if (loadedDetail) return
     setLoadingTemplate(true)
     try {
-      const [tplRes, nnRes] = await Promise.all([
+      const [tplRes, weeklyTplRes, nnRes] = await Promise.all([
         fetch(`/api/team/members/${member.id}/template?type=eod`),
+        fetch(`/api/team/members/${member.id}/template?type=weekly`),
         fetch(`/api/team/members/${member.id}/non-negotiables`),
       ])
       const tplData = await tplRes.json() as { template: { questions: CheckinQuestion[]; eod_hour?: number } | null }
+      const weeklyTplData = await weeklyTplRes.json() as { template: { questions: CheckinQuestion[]; weekly_enabled?: boolean; weekly_day?: number } | null }
       const nnData = await nnRes.json() as { non_negs: Array<{ id: string; title: string; order_index: number }> }
       setQuestions(tplData.template?.questions ?? [])
       setEodHour(tplData.template?.eod_hour ?? 20)
+      setWeeklyQuestions(weeklyTplData.template?.questions ?? [])
+      setWeeklyEnabled(weeklyTplData.template?.weekly_enabled ?? false)
+      setWeeklyDay(weeklyTplData.template?.weekly_day ?? 1)
       setNonNegs(nnData.non_negs ?? [])
       setLoadedDetail(true)
     } finally {
@@ -215,6 +227,16 @@ function MemberCard({ member }: { member: TeamMember }) {
     setSavingTemplate(false)
   }
 
+  async function saveWeeklyTemplate() {
+    setSavingWeekly(true)
+    await fetch(`/api/team/members/${member.id}/template`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'weekly', questions: weeklyQuestions, weekly_enabled: weeklyEnabled, weekly_day: weeklyDay }),
+    })
+    setSavingWeekly(false)
+  }
+
   function addQuestion() {
     const id = `q${Date.now()}`
     setQuestions(prev => [...prev, { id, label: '', type: 'number', required: false }])
@@ -226,6 +248,19 @@ function MemberCard({ member }: { member: TeamMember }) {
 
   function updateQuestion(id: string, field: keyof CheckinQuestion, value: string | boolean | CheckinQuestionType) {
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, [field]: value } : q))
+  }
+
+  function addWeeklyQuestion() {
+    const id = `wq${Date.now()}`
+    setWeeklyQuestions(prev => [...prev, { id, label: '', type: 'text', required: false }])
+  }
+
+  function removeWeeklyQuestion(id: string) {
+    setWeeklyQuestions(prev => prev.filter(q => q.id !== id))
+  }
+
+  function updateWeeklyQuestion(id: string, field: keyof CheckinQuestion, value: string | boolean | CheckinQuestionType) {
+    setWeeklyQuestions(prev => prev.map(q => q.id === id ? { ...q, [field]: value } : q))
   }
 
   async function addNonNeg() {
@@ -407,6 +442,97 @@ function MemberCard({ member }: { member: TeamMember }) {
                     style={{ padding: '7px 14px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: savingTemplate ? 'not-allowed' : 'pointer', opacity: savingTemplate ? 0.7 : 1 }}
                   >
                     {savingTemplate ? 'Saving…' : 'Save questions'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Weekly check-in */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Weekly check-in
+                </p>
+
+                {/* Enable toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 2px' }}>Enable weekly check-in</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Show a weekly reflection prompt on the configured day</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWeeklyEnabled(e => !e)}
+                    style={{
+                      width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', flexShrink: 0,
+                      background: weeklyEnabled ? '#2563EB' : 'var(--border-strong)',
+                      position: 'relative', transition: 'background 150ms',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: 3, left: weeklyEnabled ? 21 : 3,
+                      width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                      transition: 'left 150ms',
+                    }} />
+                  </button>
+                </div>
+
+                {/* Day selector (only when enabled) */}
+                {weeklyEnabled && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 2px' }}>Check-in day</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Day of week to show the weekly check-in prompt</p>
+                    </div>
+                    <select
+                      value={weeklyDay}
+                      onChange={e => setWeeklyDay(Number(e.target.value))}
+                      style={{ padding: '7px 10px', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-1)', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      {DAY_LABELS.map((label, i) => (
+                        <option key={i} value={i}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Weekly questions */}
+                {weeklyQuestions.map((q, i) => (
+                  <div key={q.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', minWidth: 16 }}>{i + 1}.</span>
+                    <input
+                      value={q.label}
+                      onChange={e => updateWeeklyQuestion(q.id, 'label', e.target.value)}
+                      placeholder="Question text"
+                      style={{ flex: 1, ...inputStyle, padding: '7px 10px', fontSize: 13 }}
+                    />
+                    <select
+                      value={q.type}
+                      onChange={e => updateWeeklyQuestion(q.id, 'type', e.target.value as CheckinQuestionType)}
+                      style={{ padding: '7px 8px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 12, color: 'var(--text-1)', cursor: 'pointer' }}
+                    >
+                      {(Object.keys(Q_TYPE_LABELS) as CheckinQuestionType[]).map(t => (
+                        <option key={t} value={t}>{Q_TYPE_LABELS[t]}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => removeWeeklyQuestion(q.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2 }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={addWeeklyQuestion} style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, fontSize: 13, cursor: 'pointer', color: 'var(--text-1)' }}>
+                    + Add question
+                  </button>
+                  <button
+                    onClick={saveWeeklyTemplate}
+                    disabled={savingWeekly}
+                    style={{ padding: '7px 14px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: savingWeekly ? 'not-allowed' : 'pointer', opacity: savingWeekly ? 0.7 : 1 }}
+                  >
+                    {savingWeekly ? 'Saving…' : 'Save weekly'}
                   </button>
                 </div>
               </div>

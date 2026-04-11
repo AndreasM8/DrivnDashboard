@@ -58,6 +58,8 @@ export default async function AdminPage() {
   monday.setUTCDate(now.getUTCDate() - ((dayOfWeek + 6) % 7))
   const thisWeekStart = monday.toISOString().slice(0, 10)
 
+  const today = new Date().toISOString().slice(0, 10)
+
   // Fetch everything in parallel
   const [
     { data: allClients },
@@ -65,12 +67,16 @@ export default async function AdminPage() {
     { data: allSnapshots },
     { data: authData },
     { data: thisWeekCheckins },
+    { data: allTeamMembers },
+    { data: todayEods },
   ] = await Promise.all([
     supabase.from('clients').select('user_id, total_amount, payment_type, active'),
     supabase.from('leads').select('id, user_id, stage'),
     supabase.from('monthly_snapshots').select('*').eq('month', currentMonth),
     adminClient.auth.admin.listUsers({ perPage: 1000 }),
     supabase.from('weekly_checkins').select('user_id, submitted_at').eq('week_start', thisWeekStart),
+    supabase.from('team_members').select('id, coach_id, name, email, role, status').eq('status', 'active').order('created_at'),
+    supabase.from('team_eod_reports').select('team_member_id, submitted_at').eq('date', today),
   ])
 
   // Build lookup maps
@@ -132,5 +138,13 @@ export default async function AdminPage() {
     .filter(c => !submittedIds.has(c.userId))
     .map(c => c.name)
 
-  return <AdminClient coachStats={coachStats} currentMonth={currentMonth} missingCheckins={missingCheckins} />
+  return (
+    <AdminClient
+      coachStats={coachStats}
+      currentMonth={currentMonth}
+      missingCheckins={missingCheckins}
+      teamMembers={(allTeamMembers ?? []) as Array<{ id: string; coach_id: string; name: string; email: string; role: string; status: string }>}
+      todayEods={(todayEods ?? []) as Array<{ team_member_id: string; submitted_at: string }>}
+    />
+  )
 }

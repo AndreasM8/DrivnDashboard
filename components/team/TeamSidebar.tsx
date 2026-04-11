@@ -161,7 +161,7 @@ export default function TeamSidebar({ member }: TeamSidebarProps) {
           </>
         )}
         {member.permissions.clients && (
-          <NavLink href="/clients" label="Clients" icon={<ClientsIcon />} />
+          <NavLink href="/team-dashboard/clients" label="Clients" icon={<ClientsIcon />} />
         )}
       </nav>
 
