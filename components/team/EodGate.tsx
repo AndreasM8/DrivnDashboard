@@ -14,7 +14,11 @@ interface Props {
 
 export default function EodGate({ member, questions, today }: Props) {
   const router = useRouter()
-  const [dismissed, setDismissed] = useState(false)
+  const storageKey = `eod_dismissed_${today}`
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return sessionStorage.getItem(storageKey) === '1'
+  })
   const [answers, setAnswers] = useState<AnswerMap>(() => {
     const m: AnswerMap = {}
     for (const q of questions) {
@@ -27,6 +31,11 @@ export default function EodGate({ member, questions, today }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   if (dismissed || submitted) return null
+
+  function dismiss() {
+    sessionStorage.setItem(storageKey, '1')
+    setDismissed(true)
+  }
 
   function setAnswer(qid: string, value: string | number | boolean) {
     setAnswers(prev => ({ ...prev, [qid]: value }))
@@ -80,7 +89,7 @@ export default function EodGate({ member, questions, today }: Props) {
               End of day report
             </h2>
             <button
-              onClick={() => setDismissed(true)}
+              onClick={dismiss}
               title="Remind me later"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12, padding: '4px 8px', borderRadius: 6 }}
             >
@@ -96,7 +105,7 @@ export default function EodGate({ member, questions, today }: Props) {
         {questions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <p style={{ fontSize: 14, color: 'var(--text-2)' }}>No EOD questions set up yet — ask your coach to configure them.</p>
-            <button onClick={() => setDismissed(true)} className="btn-ghost" style={{ marginTop: 12 }}>
+            <button onClick={dismiss} className="btn-ghost" style={{ marginTop: 12 }}>
               Close
             </button>
           </div>

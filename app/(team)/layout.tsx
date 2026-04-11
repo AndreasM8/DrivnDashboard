@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getTeamSession } from '@/lib/team-auth'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import TeamSidebar from '@/components/team/TeamSidebar'
+import TeamBottomNav from '@/components/team/TeamBottomNav'
 import EodGate from '@/components/team/EodGate'
 import WeeklyCheckinGate from '@/components/team/WeeklyCheckinGate'
 import type { TeamCheckinTemplate } from '@/types'
@@ -109,6 +110,8 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
           weekEnd={thisWeekEnd}
         />
       )}
+
+      <TeamBottomNav member={session.member} />
     </div>
   )
 }

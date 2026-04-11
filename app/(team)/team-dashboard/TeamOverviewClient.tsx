@@ -12,7 +12,9 @@ interface Props {
   openTeamTasks: TeamTask[]
   openPersonalTasks: TeamPersonalTask[]
   eodSubmitted: boolean
+  shouldShowEodBanner: boolean
   today: string
+  streak: number
 }
 
 const CARD: React.CSSProperties = {
@@ -28,14 +30,15 @@ export default function TeamOverviewClient({
   completedNonNegs,
   openTeamTasks,
   openPersonalTasks,
-  eodSubmitted,
+  shouldShowEodBanner,
+  streak,
 }: Props) {
   const nnPct = totalNonNegs > 0 ? Math.round((completedNonNegs / totalNonNegs) * 100) : 0
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>
           Hey {member.name} 👋
         </h1>
@@ -44,8 +47,31 @@ export default function TeamOverviewClient({
         </p>
       </div>
 
-      {/* EOD banner */}
-      {!eodSubmitted && (
+      {/* Streak chip */}
+      <div style={{ marginBottom: 20 }}>
+        {streak > 0 ? (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+            color: '#F59E0B', borderRadius: 99, padding: '4px 12px',
+            fontSize: 13, fontWeight: 600,
+          }}>
+            🔥 {streak} day streak
+          </span>
+        ) : (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'var(--surface-1)', border: '1px solid var(--border)',
+            color: 'var(--text-3)', borderRadius: 99, padding: '4px 12px',
+            fontSize: 13, fontWeight: 500,
+          }}>
+            No streak yet
+          </span>
+        )}
+      </div>
+
+      {/* EOD banner — only shown after eodHour */}
+      {shouldShowEodBanner && (
         <div style={{
           background: 'rgba(37,99,235,0.08)',
           border: '1px solid rgba(37,99,235,0.2)',

@@ -15,7 +15,11 @@ interface Props {
 
 export default function WeeklyCheckinGate({ member: _member, questions, weekStart, weekEnd }: Props) {
   const router = useRouter()
-  const [dismissed, setDismissed] = useState(false)
+  const storageKey = `weekly_dismissed_${weekStart}`
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return sessionStorage.getItem(storageKey) === '1'
+  })
   const [answers, setAnswers] = useState<AnswerMap>(() => {
     const m: AnswerMap = {}
     for (const q of questions) {
@@ -29,6 +33,11 @@ export default function WeeklyCheckinGate({ member: _member, questions, weekStar
 
   if (questions.length === 0) return null
   if (dismissed || submitted) return null
+
+  function dismiss() {
+    sessionStorage.setItem(storageKey, '1')
+    setDismissed(true)
+  }
 
   function setAnswer(qid: string, value: string | number | boolean) {
     setAnswers(prev => ({ ...prev, [qid]: value }))
@@ -88,7 +97,7 @@ export default function WeeklyCheckinGate({ member: _member, questions, weekStar
               Weekly check-in
             </h2>
             <button
-              onClick={() => setDismissed(true)}
+              onClick={dismiss}
               title="Remind me later"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12, padding: '4px 8px', borderRadius: 6 }}
             >
