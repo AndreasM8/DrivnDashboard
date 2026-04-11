@@ -18,7 +18,7 @@ interface Props {
   products: Product[]
 }
 
-type FilterKey = 'all' | 'invoice_due' | 'plan' | 'upsell'
+type FilterKey = 'all' | 'invoice_due' | 'plan' | 'upsell' | 'expiring'
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
@@ -75,12 +75,19 @@ export default function ClientsClient({ initialClients, installments, userId, ba
     }
     return sum
   }, 0)
-  const totalLtv         = clients.reduce((sum, c) => sum + (c.total_amount ?? 0), 0)
   const invoicesDueSoon  = allInstallments.filter(i => {
     const d = daysUntil(i.due_date)
     return !i.paid && d >= 0 && d <= 7
   }).length
-  const upsellReady = clients.filter(c => c.upsell_reminder_set).length
+  const expiringSoonCount = useMemo(() => {
+    const today = new Date()
+    const in30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+    return clients.filter(c => {
+      if (!c.contract_end_date) return false
+      const end = new Date(c.contract_end_date)
+      return end >= today && end <= in30
+    }).length
+  }, [clients])
 
   const filtered = useMemo(() => {
     let list = clients
@@ -90,6 +97,15 @@ export default function ClientsClient({ initialClients, installments, userId, ba
     }
     if (filter === 'plan')   list = list.filter(c => c.payment_type === 'plan')
     if (filter === 'upsell') list = list.filter(c => c.upsell_reminder_set)
+    if (filter === 'expiring') {
+      const today = new Date()
+      const in30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+      list = list.filter(c => {
+        if (!c.contract_end_date) return false
+        const end = new Date(c.contract_end_date)
+        return end >= today && end <= in30
+      })
+    }
     if (search) {
       const q = search.toLowerCase()
       list = list.filter(c => c.full_name.toLowerCase().includes(q) || c.ig_username.toLowerCase().includes(q))
@@ -119,17 +135,18 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   }
 
   const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'all',          label: 'All clients' },
-    { key: 'invoice_due',  label: 'Invoice due' },
-    { key: 'plan',         label: 'Payment plan' },
-    { key: 'upsell',       label: 'Upsell ready' },
+    { key: 'all',          label: t.clients.filterAll },
+    { key: 'invoice_due',  label: t.clients.filterInvoiceDue },
+    { key: 'plan',         label: t.clients.filterPlan },
+    { key: 'upsell',       label: t.clients.filterUpsell },
+    { key: 'expiring',     label: t.clients.filterExpiring },
   ]
 
   const STAT_CARDS = [
-    { label: t.clients.active,          value: String(activeCount),                                                   accent: 'var(--accent)' },
-    { label: t.clients.monthlyRecurring, value: monthlyRecurring > 0 ? formatCurrency(monthlyRecurring, baseCurrency) : '—', accent: 'var(--success)' },
-    { label: t.clients.totalLtv,        value: totalLtv > 0 ? formatCurrency(totalLtv, baseCurrency) : '—',          accent: 'var(--purple)' },
-    { label: 'Invoices due soon', value: String(invoicesDueSoon),                                              accent: invoicesDueSoon > 0 ? 'var(--warning)' : 'var(--border-strong)' },
+    { label: t.clients.active,           value: String(activeCount),                                                    accent: 'var(--accent)' },
+    { label: t.clients.monthlyRecurring,  value: monthlyRecurring > 0 ? formatCurrency(monthlyRecurring, baseCurrency) : '—', accent: 'var(--success)' },
+    { label: t.clients.invoicesDueSoon,   value: String(invoicesDueSoon),                                               accent: invoicesDueSoon > 0 ? 'var(--warning)' : 'var(--border-strong)' },
+    { label: t.clients.expiringSoon,      value: String(expiringSoonCount),                                             accent: expiringSoonCount > 0 ? '#DC2626' : 'var(--border-strong)' },
   ]
 
   return (
@@ -280,14 +297,14 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                   <>
                     <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '6px' }}>{t.clients.noClients}</p>
                     <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '16px' }}>
-                      Clients appear automatically when you close a deal in the Pipeline, or you can add them manually.
+                      {t.clients.addedManually}
                     </p>
                     <button onClick={() => setAddOpen(true)} className="btn-primary">{t.clients.addClient}</button>
                   </>
                 ) : (
                   <>
-                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>No clients match this filter</p>
-                    <button onClick={() => setFilter('all')} className="btn-ghost">Clear filter</button>
+                    <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>{t.clients.noClientsFilter}</p>
+                    <button onClick={() => setFilter('all')} className="btn-ghost">{t.clients.clearFilter}</button>
                   </>
                 )}
               </div>
@@ -299,6 +316,10 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                   const hasOverdue = insts.some(i => !i.paid && new Date(i.due_date) < new Date())
                   const isUpsell  = client.upsell_reminder_set
                   const borderColor = hasOverdue ? 'var(--danger)' : isUpsell ? 'var(--purple)' : 'var(--border)'
+                  const daysToExpiry = client.contract_end_date
+                    ? Math.ceil((new Date(client.contract_end_date).getTime() - Date.now()) / 86400000)
+                    : null
+                  const isExpiringSoon = daysToExpiry !== null && daysToExpiry >= 0 && daysToExpiry <= 30
 
                   return (
                     <div
@@ -359,7 +380,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                           </p>
                         </div>
                         {/* Status badge */}
-                        <div style={{ flexShrink: 0 }}>
+                        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                           {hasOverdue ? (
                             <span className="badge" style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--danger)', fontSize: 10 }}>
                               Overdue
@@ -371,6 +392,11 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                           ) : (
                             <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 10 }}>
                               {client.payment_type === 'pif' ? 'PIF' : client.payment_type === 'split' ? 'Split' : `${client.plan_months}mo`}
+                            </span>
+                          )}
+                          {isExpiringSoon && (
+                            <span className="badge" style={{ background: 'rgba(220,38,38,0.1)', color: '#DC2626', fontSize: 10 }}>
+                              Exp. {daysToExpiry}d
                             </span>
                           )}
                         </div>
@@ -415,13 +441,18 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                         </div>
 
                         {/* Payment type */}
-                        <div style={{ flex: '0 0 100px' }}>
+                        <div style={{ flex: '0 0 100px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <span
                             className="badge"
                             style={{ background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: '10px' }}
                           >
                             {client.payment_type === 'pif' ? 'Paid in full' : client.payment_type === 'split' ? 'Split pay' : `Plan (${client.plan_months}mo)`}
                           </span>
+                          {isExpiringSoon && (
+                            <span className="badge" style={{ background: 'rgba(220,38,38,0.1)', color: '#DC2626', fontSize: '10px' }}>
+                              Exp. {daysToExpiry}d
+                            </span>
+                          )}
                         </div>
 
                         {/* Monthly */}

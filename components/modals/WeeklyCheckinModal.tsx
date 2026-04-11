@@ -17,11 +17,11 @@ interface Props {
 }
 
 function formatWeekLabel(weekStart: string, weekEnd: string): string {
+  const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-GB'
   const s = new Date(weekStart + 'T00:00:00Z')
   const e = new Date(weekEnd + 'T00:00:00Z')
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', timeZone: 'UTC' }
-  const year = e.getUTCFullYear()
-  return `${s.toLocaleDateString('en', opts)} – ${e.toLocaleDateString('en', { ...opts, year: 'numeric', timeZone: 'UTC' })}`
+  return `${s.toLocaleDateString(locale, opts)} – ${e.toLocaleDateString(locale, { ...opts, year: 'numeric', timeZone: 'UTC' })}`
 }
 
 function happinessLabel(val: number): string {
@@ -495,55 +495,61 @@ export default function WeeklyCheckinModal({
               )}
             </div>
 
-            {isLastCheckinOfMonth ? (
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button
-                onClick={() => setStep(3)}
-                disabled={!canSubmitStep2}
+                type="button"
+                onClick={() => setStep(1)}
                 style={{
-                  width: '100%', height: 52,
+                  flex: '0 0 auto',
+                  height: 52,
+                  padding: '0 20px',
                   borderRadius: 'var(--radius-btn)',
-                  background: canSubmitStep2 ? 'var(--accent)' : 'var(--surface-3)',
-                  color: canSubmitStep2 ? '#fff' : 'var(--text-3)',
-                  border: 'none',
-                  fontSize: 15, fontWeight: 600,
-                  cursor: canSubmitStep2 ? 'pointer' : 'not-allowed',
+                  background: 'transparent',
+                  color: 'var(--text-2)',
+                  border: '1px solid var(--border-strong)',
+                  fontSize: 14, fontWeight: 500,
+                  cursor: 'pointer',
                   transition: 'background 150ms ease',
-                  marginTop: 4,
                 }}
               >
-                Next — Monthly review →
+                ← Back
               </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmitStep2 || submitting}
-                style={{
-                  width: '100%', height: 52,
-                  borderRadius: 'var(--radius-btn)',
-                  background: canSubmitStep2 && !submitting ? 'var(--accent)' : 'var(--surface-3)',
-                  color: canSubmitStep2 && !submitting ? '#fff' : 'var(--text-3)',
-                  border: 'none',
-                  fontSize: 15, fontWeight: 600,
-                  cursor: canSubmitStep2 && !submitting ? 'pointer' : 'not-allowed',
-                  transition: 'background 150ms ease',
-                  marginTop: 4,
-                }}
-              >
-                {submitting ? 'Submitting…' : 'Submit check-in ✓'}
-              </button>
-            )}
-
-            <button
-              onClick={() => setStep(1)}
-              style={{
-                background: 'none', border: 'none',
-                fontSize: 13, color: 'var(--text-3)',
-                cursor: 'pointer', padding: '4px 0',
-                textAlign: 'center', width: '100%',
-              }}
-            >
-              ← Back to reflection
-            </button>
+              {isLastCheckinOfMonth ? (
+                <button
+                  onClick={() => setStep(3)}
+                  disabled={!canSubmitStep2}
+                  style={{
+                    flex: 1, height: 52,
+                    borderRadius: 'var(--radius-btn)',
+                    background: canSubmitStep2 ? 'var(--accent)' : 'var(--surface-3)',
+                    color: canSubmitStep2 ? '#fff' : 'var(--text-3)',
+                    border: 'none',
+                    fontSize: 15, fontWeight: 600,
+                    cursor: canSubmitStep2 ? 'pointer' : 'not-allowed',
+                    transition: 'background 150ms ease',
+                  }}
+                >
+                  Next — Monthly review →
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canSubmitStep2 || submitting}
+                  style={{
+                    flex: 1, height: 52,
+                    borderRadius: 'var(--radius-btn)',
+                    background: canSubmitStep2 && !submitting ? 'var(--accent)' : 'var(--surface-3)',
+                    color: canSubmitStep2 && !submitting ? '#fff' : 'var(--text-3)',
+                    border: 'none',
+                    fontSize: 15, fontWeight: 600,
+                    cursor: canSubmitStep2 && !submitting ? 'pointer' : 'not-allowed',
+                    transition: 'background 150ms ease',
+                  }}
+                >
+                  {submitting ? 'Submitting…' : 'Submit check-in ✓'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -591,35 +597,42 @@ export default function WeeklyCheckinModal({
                 </span>
               </label>
 
-              <button
-                onClick={handleSubmit}
-                disabled={!monthlyConfirmed || submitting}
-                style={{
-                  width: '100%', height: 52,
-                  borderRadius: 'var(--radius-btn)',
-                  background: monthlyConfirmed && !submitting ? 'var(--accent)' : 'var(--surface-3)',
-                  color: monthlyConfirmed && !submitting ? '#fff' : 'var(--text-3)',
-                  border: 'none',
-                  fontSize: 15, fontWeight: 600,
-                  cursor: monthlyConfirmed && !submitting ? 'pointer' : 'not-allowed',
-                  transition: 'background 150ms ease',
-                  marginTop: 4,
-                }}
-              >
-                {submitting ? 'Submitting…' : 'Submit check-in ✓'}
-              </button>
-
-              <button
-                onClick={() => setStep(2)}
-                style={{
-                  background: 'none', border: 'none',
-                  fontSize: 13, color: 'var(--text-3)',
-                  cursor: 'pointer', padding: '4px 0',
-                  textAlign: 'center', width: '100%',
-                }}
-              >
-                ← Back to numbers
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  style={{
+                    flex: '0 0 auto',
+                    height: 52,
+                    padding: '0 20px',
+                    borderRadius: 'var(--radius-btn)',
+                    background: 'transparent',
+                    color: 'var(--text-2)',
+                    border: '1px solid var(--border-strong)',
+                    fontSize: 14, fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'background 150ms ease',
+                  }}
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!monthlyConfirmed || submitting}
+                  style={{
+                    flex: 1, height: 52,
+                    borderRadius: 'var(--radius-btn)',
+                    background: monthlyConfirmed && !submitting ? 'var(--accent)' : 'var(--surface-3)',
+                    color: monthlyConfirmed && !submitting ? '#fff' : 'var(--text-3)',
+                    border: 'none',
+                    fontSize: 15, fontWeight: 600,
+                    cursor: monthlyConfirmed && !submitting ? 'pointer' : 'not-allowed',
+                    transition: 'background 150ms ease',
+                  }}
+                >
+                  {submitting ? 'Submitting…' : 'Submit check-in ✓'}
+                </button>
+              </div>
             </div>
           )
         })()}
