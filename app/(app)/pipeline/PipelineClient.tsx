@@ -107,10 +107,11 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                 }}
               >
                 <div
-                  className="gradient-text hero-num"
+                  className="hero-num"
                   style={{
                     marginBottom: '4px',
                     fontVariantNumeric: 'tabular-nums',
+                    color: 'var(--text-1)',
                   }}
                 >
                   {step.count}
@@ -132,11 +133,11 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
                   }}
                 >
                   {convRate !== null && (
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neon-cyan)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-2)' }}>
                       {convRate}%
                     </span>
                   )}
-                  <div style={{ width: 40, height: 1, background: 'var(--neon-indigo)', opacity: 0.5 }} />
+                  <div style={{ width: 40, height: 1, background: 'var(--border-strong)', opacity: 0.8 }} />
                   <span style={{ fontSize: '8px', color: 'var(--text-3)' }}>▶</span>
                 </div>
               )}
