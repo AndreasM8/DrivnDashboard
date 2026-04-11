@@ -84,7 +84,7 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
 
 // ─── Section: KPI Targets ─────────────────────────────────────────────────────
 
-function TargetsSection({ userId, targets }: { userId: string; targets: KpiTargets | null }) {
+function TargetsSection({ userId, targets, baseCurrency }: { userId: string; targets: KpiTargets | null; baseCurrency: string }) {
   const [values, setValues] = useState({
     cash_target: String(targets?.cash_target ?? ''),
     revenue_target: String(targets?.revenue_target ?? ''),
@@ -126,8 +126,8 @@ function TargetsSection({ userId, targets }: { userId: string; targets: KpiTarge
     {
       title: 'Revenue',
       fields: [
-        { key: 'cash_target', label: 'Monthly cash target', unit: 'NOK' },
-        { key: 'revenue_target', label: 'Monthly revenue contracted', unit: 'NOK' },
+        { key: 'cash_target', label: 'Monthly cash target', unit: baseCurrency },
+        { key: 'revenue_target', label: 'Monthly revenue contracted', unit: baseCurrency },
       ],
     },
     {
@@ -1798,7 +1798,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
 
   function renderSection(key: Section) {
     switch (key) {
-      case 'targets':      return <TargetsSection userId={userId} targets={targets} />
+      case 'targets':      return <TargetsSection userId={userId} targets={targets} baseCurrency={profile.base_currency} />
       case 'setters':      return <SettersSection userId={userId} initialSetters={setters} />
       case 'integrations': return <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />
       case 'notifications': return <NotificationsSection userId={userId} />

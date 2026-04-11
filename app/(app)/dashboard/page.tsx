@@ -6,6 +6,7 @@ import type { Task, Lead, Client, WeeklyCheckin, CheckinPrefill } from '@/types'
 import Link from 'next/link'
 import CheckinTrigger from '@/components/dashboard/CheckinTrigger'
 import { getTranslations } from '@/lib/i18n'
+import type { Translations } from '@/locales/en'
 
 // ─── Live stats helper ────────────────────────────────────────────────────────
 
@@ -34,15 +35,21 @@ function formatCurrency(amount: number, currency: string) {
   }).format(amount)
 }
 
-function greeting() {
+function greeting(t: Translations) {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 12) return t.dashboard.goodMorning
+  if (h < 17) return t.dashboard.goodAfternoon
+  return t.dashboard.goodEvening
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })
+function todayLabel(language: 'en' | 'no' = 'en') {
+  const locale = language === 'no' ? 'nb-NO' : 'en-GB'
+  return new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })
+}
+
+function dayPassedThisWeek(checkinDay: number, todayDay: number): boolean {
+  const toWeekOrd = (d: number) => d === 0 ? 7 : d // Sun=7, Mon=1, …, Sat=6
+  return toWeekOrd(todayDay) > toWeekOrd(checkinDay)
 }
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
@@ -131,7 +138,7 @@ function ProgressBar({ value, max, color = 'var(--accent)' }: { value: number; m
 
 // ─── Mini Revenue Chart ───────────────────────────────────────────────────────
 
-function MiniRevenueChart({ history, currency }: { history: { month: string; cash_collected: number | null }[]; currency: string }) {
+function MiniRevenueChart({ history, currency, language }: { history: { month: string; cash_collected: number | null }[]; currency: string; language?: string }) {
   if (!history || history.length === 0) return null
 
   // Sort ascending (oldest → newest)
@@ -170,7 +177,8 @@ function MiniRevenueChart({ history, currency }: { history: { month: string; cas
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         {sorted.map((h, i) => {
           const [y, m] = h.month.split('-')
-          const label = new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'short' })
+          const locale = language === 'no' ? 'nb-NO' : 'en-GB'
+          const label = new Date(Number(y), Number(m) - 1).toLocaleDateString(locale, { month: 'short' })
           const isLast = i === sorted.length - 1
           return (
             <div key={h.month} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
@@ -222,7 +230,7 @@ function PipelineChip({ label, count, leads }: { label: string; count: number; l
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
-function SectionCard({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
+function SectionCard({ title, href, seeAllLabel, children }: { title: string; href: string; seeAllLabel?: string; children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -244,7 +252,7 @@ function SectionCard({ title, href, children }: { title: string; href: string; c
             fontWeight: 500,
           }}
         >
-          See all →
+          {seeAllLabel ?? 'See all'} →
         </Link>
       </div>
       {children}
@@ -281,7 +289,6 @@ export default async function DashboardPage() {
   const { weekStart, weekEnd } = getWeekBounds(now)
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const monthEnd = nextMonth.toISOString().slice(0, 10)
-  const monthName = now.toLocaleString('en-US', { month: 'long' })
 
   const [
     { data: profile },
@@ -384,17 +391,24 @@ export default async function DashboardPage() {
   const activeClientCount = allActiveClients?.length ?? 0
   const clients = clientsForTable
   const currency = profile?.base_currency ?? 'NOK'
-  const t = getTranslations((profile?.language as 'en' | 'no' | undefined) ?? 'en')
+  const userLanguage = (profile?.language as 'en' | 'no' | undefined) ?? 'en'
+  const t = getTranslations(userLanguage)
+  const monthLocale = userLanguage === 'no' ? 'nb-NO' : 'en-US'
+  const monthName = now.toLocaleString(monthLocale, { month: 'long' })
+  const revenueChartTitle = userLanguage === 'no'
+    ? `Inntekt — siste ${revenueHistory?.length ?? 0} måneder`
+    : `Revenue — last ${revenueHistory?.length ?? 0} months`
+  const numbersCardTitle = `${t.dashboard.numbersFor} ${monthName}`
 
   // ─── Check-in logic ─────────────────────────────────────────────────────────
   const checkinEnabled = (profile as Record<string, unknown>)?.checkin_enabled !== false
   const checkinDay = ((profile as Record<string, unknown>)?.checkin_day as number | null) ?? 0
-  const todayDayOfWeek = now.getUTCDay() // 0=Sun
+  const todayDayOfWeek = now.getDay() // local time, 0=Sun
   const existingCheckin = thisWeekCheckin as WeeklyCheckin | null
   const alreadySubmitted = !!existingCheckin?.submitted_at
   const isSnoozed = !!(existingCheckin?.snoozed_until && new Date(existingCheckin.snoozed_until) > now)
   const checkinDue = checkinEnabled && !alreadySubmitted && !isSnoozed && (todayDayOfWeek === checkinDay)
-  const checkinOverdue = checkinEnabled && !alreadySubmitted && todayDayOfWeek > 2
+  const checkinOverdue = checkinEnabled && !alreadySubmitted && !isSnoozed && dayPassedThisWeek(checkinDay, todayDayOfWeek)
   const canSnooze = !existingCheckin?.snoozed_until || new Date(existingCheckin.snoozed_until) <= now
 
   // Prefill computation for check-in
@@ -433,11 +447,11 @@ export default async function DashboardPage() {
   }, {})
 
   const pipelineCols = [
-    { label: 'Follower', key: 'follower' },
-    { label: 'Replied', key: 'replied' },
-    { label: 'Freebie', key: 'freebie_sent' },
-    { label: 'Call booked', key: 'call_booked' },
-    { label: 'Nurture', key: 'nurture' },
+    { label: t.pipeline.follower, key: 'follower' },
+    { label: t.pipeline.replied, key: 'replied' },
+    { label: t.pipeline.freebieSent, key: 'freebie_sent' },
+    { label: t.pipeline.callBooked, key: 'call_booked' },
+    { label: t.dashboard.nurture, key: 'nurture' },
   ]
 
   // ─── Login streak ──────────────────────────────────────────────────────────
@@ -489,7 +503,7 @@ export default async function DashboardPage() {
       >
         <div style={{ minWidth: 0 }}>
           <h1 className="page-title">
-            {greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
+            {greeting(t)}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
           </h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -505,7 +519,7 @@ export default async function DashboardPage() {
                 padding: '4px 10px',
               }}
             >
-              🔥 {loginStreak}-day streak
+              🔥 {loginStreak} {t.dashboard.dayStreak}
             </span>
           )}
           <span
@@ -518,7 +532,7 @@ export default async function DashboardPage() {
               padding: '4px 10px',
             }}
           >
-            {todayLabel()}
+            {todayLabel(userLanguage)}
           </span>
         </div>
       </div>
@@ -538,7 +552,7 @@ export default async function DashboardPage() {
           value={String(activeClientCount)}
           statusColor="#16A34A"
         />
-        <StatCard label="Calls this month" value={String(callsHeld)} />
+        <StatCard label={t.dashboard.callsThisMonth} value={String(callsHeld)} />
         <StatCard label={t.dashboard.clientsSigned} value={String(clientsSignedThisMonth)} sub={t.dashboard.thisMonth} statusColor="#16A34A" />
       </div>
 
@@ -552,12 +566,12 @@ export default async function DashboardPage() {
           marginBottom: '16px',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-            <p className="label-caps">Revenue — last {revenueHistory.length} months</p>
+            <p className="label-caps">{revenueChartTitle}</p>
             <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)' }}>
               {formatCurrency(cashCollected, currency)} this month
             </p>
           </div>
-          <MiniRevenueChart history={revenueHistory as { month: string; cash_collected: number | null }[]} currency={currency} />
+          <MiniRevenueChart history={revenueHistory as { month: string; cash_collected: number | null }[]} currency={currency} language={userLanguage} />
         </div>
       )}
 
@@ -566,11 +580,11 @@ export default async function DashboardPage() {
         className="lg:grid-cols-2"
       >
         {/* Tasks */}
-        <SectionCard title="Do these today" href="/tasks">
+        <SectionCard title={t.dashboard.doToday} href="/tasks" seeAllLabel={t.common.seeAll}>
           {(tasks?.length ?? 0) === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <p style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</p>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>You&apos;re all caught up!</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>{t.dashboard.allCaughtUp}</p>
             </div>
           ) : (
             <div>
@@ -580,11 +594,11 @@ export default async function DashboardPage() {
         </SectionCard>
 
         {/* Revenue */}
-        <SectionCard title={`Numbers for ${monthName}`} href="/numbers">
+        <SectionCard title={numbersCardTitle} href="/numbers" seeAllLabel={t.common.seeAll}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[
-              { label: 'Expected this month', value: expectedThisMonth, target: cashTarget, color: '#16A34A' },
-              { label: 'Revenue contracted', value: revenueContracted, target: revenueTarget, color: 'var(--accent)' },
+              { label: t.dashboard.expectedThisMonth, value: expectedThisMonth, target: cashTarget, color: '#16A34A' },
+              { label: t.dashboard.revenueContracted, value: revenueContracted, target: revenueTarget, color: 'var(--accent)' },
             ].map(row => (
               <div key={row.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
@@ -607,15 +621,15 @@ export default async function DashboardPage() {
 
       {/* Pipeline snapshot */}
       <div style={{ marginBottom: '16px' }}>
-        <SectionCard title="Pipeline snapshot" href="/pipeline">
+        <SectionCard title={t.dashboard.pipelineSnapshot} href="/pipeline" seeAllLabel={t.common.seeAll}>
           {(leads?.length ?? 0) === 0 ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>No leads yet.</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>{t.dashboard.noLeadsYet}</p>
               <Link
                 href="/pipeline"
                 style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}
               >
-                Add your first lead →
+                {t.dashboard.addFirstLead} →
               </Link>
             </div>
           ) : (
@@ -634,15 +648,15 @@ export default async function DashboardPage() {
       </div>
 
       {/* Clients */}
-      <SectionCard title="Active clients" href="/clients">
+      <SectionCard title={t.dashboard.activeClients} href="/clients" seeAllLabel={t.common.seeAll}>
         {(clients?.length ?? 0) === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>No clients yet.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '12px' }}>{t.dashboard.noClientsYet}</p>
             <Link
               href="/clients"
               style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent)', textDecoration: 'none' }}
             >
-              Add your first client →
+              {t.dashboard.addFirstClient} →
             </Link>
           </div>
         ) : (
