@@ -12,12 +12,12 @@ export default function LogoMark({ height = 32, maxWidth = 160 }: Props) {
       src="/drivn-logo.png"
       alt="Drivn"
       style={{
-        height,
+        height: 'auto',
+        maxHeight: height,
         width: 'auto',
         maxWidth,
-        objectFit: 'contain',
-        flexShrink: 0,
         display: 'block',
+        flexShrink: 0,
       }}
     />
   )
