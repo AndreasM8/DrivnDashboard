@@ -129,7 +129,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           flexShrink: 0,
         }}
       >
-        <LogoMark height={36} maxWidth={180} />
+        <LogoMark height={44} maxWidth={200} />
       </div>
 
       {/* Nav */}
@@ -168,12 +168,6 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           </>
         )}
 
-        {isOwner && (
-          <>
-            <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
-            <NavLink href="/ask" label="AI Coach" icon={<AskIcon />} />
-          </>
-        )}
       </nav>
 
       {/* Bottom: Settings + Logout */}

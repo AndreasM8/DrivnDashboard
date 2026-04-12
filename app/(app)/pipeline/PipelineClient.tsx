@@ -1168,8 +1168,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           flexShrink: 0,
         }}
       >
-        {/* Filter pills row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}>
+        {/* Filter pills — scrollable, takes all available space */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}>
           {(['all', '1', '2', '3'] as TierFilter[]).map(f => {
             const count = f === 'all' ? leads.length : tierCounts[f as unknown as 1 | 2 | 3]
             const isActive = tierFilter === f
@@ -1228,96 +1228,96 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
               })}
             </>
           )}
-
-          {!isMobile && (
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              {/* Eye — column visibility dropdown */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setShowColumnToggles(v => !v)}
-                  style={{
-                    padding: '6px',
-                    borderRadius: 'var(--radius-btn)',
-                    background: showColumnToggles ? 'rgba(99,102,241,0.12)' : 'transparent',
-                    border: 'none',
-                    color: showColumnToggles ? 'var(--neon-indigo)' : 'var(--text-3)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'background 100ms ease, color 100ms ease',
-                  }}
-                  aria-label="Toggle column visibility"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </button>
-                {showColumnToggles && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 6px)',
-                      right: 0,
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-card)',
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px',
-                      zIndex: 50,
-                      minWidth: '140px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    }}
-                  >
-                    <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 6px 6px', margin: 0 }}>Columns</p>
-                    {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
-                      const visible = !hiddenColumns.has(col.stage)
-                      return (
-                        <button
-                          key={col.stage}
-                          onClick={() => toggleColumn(col.stage)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '6px 8px',
-                            borderRadius: '6px',
-                            background: 'transparent',
-                            border: 'none',
-                            color: visible ? 'var(--text-1)' : 'var(--text-3)',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background 80ms ease',
-                          }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                        >
-                          <span style={{ width: 14, height: 14, borderRadius: 3, border: `1.5px solid ${visible ? 'var(--neon-indigo)' : 'var(--border)'}`, background: visible ? 'var(--neon-indigo)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 80ms ease' }}>
-                            {visible && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                          </span>
-                          {col.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search…"
-                className="input-base"
-                style={{ width: '160px' }}
-              />
-            </div>
-          )}
         </div>
 
-        {/* Mobile: search on second row, full-width */}
+        {/* Eye + Search — always fixed on the right, never scrolls */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowColumnToggles(v => !v)}
+                style={{
+                  padding: '6px',
+                  borderRadius: 'var(--radius-btn)',
+                  background: showColumnToggles ? 'rgba(99,102,241,0.12)' : 'transparent',
+                  border: 'none',
+                  color: showColumnToggles ? 'var(--neon-indigo)' : 'var(--text-3)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  transition: 'background 100ms ease, color 100ms ease',
+                }}
+                aria-label="Toggle column visibility"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+              {showColumnToggles && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: 0,
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-card)',
+                    padding: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    zIndex: 50,
+                    minWidth: '140px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 6px 6px', margin: 0 }}>Columns</p>
+                  {STAGE_COLUMNS.filter(c => c.hideable).map(col => {
+                    const visible = !hiddenColumns.has(col.stage)
+                    return (
+                      <button
+                        key={col.stage}
+                        onClick={() => toggleColumn(col.stage)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: visible ? 'var(--text-1)' : 'var(--text-3)',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          textAlign: 'left',
+                          width: '100%',
+                          transition: 'background 80ms ease',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                      >
+                        <span style={{ width: 14, height: 14, borderRadius: 3, border: `1.5px solid ${visible ? 'var(--neon-indigo)' : 'var(--border)'}`, background: visible ? 'var(--neon-indigo)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 80ms ease' }}>
+                          {visible && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        {col.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="input-base"
+              style={{ width: '160px' }}
+            />
+          </div>
+        )}
+
+        {/* Mobile: search full-width below pills */}
         {isMobile && (
           <input
             value={search}
