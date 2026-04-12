@@ -44,7 +44,7 @@ export default function MobileHeader({ isOwner = false }: Props) {
         flexShrink: 0,
       }}
     >
-      <LogoMark height={44} maxWidth={180} />
+      <LogoMark height={56} maxWidth={220} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {isOwner && (
           <Link

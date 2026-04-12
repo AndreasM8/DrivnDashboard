@@ -93,9 +93,10 @@ interface SidebarProps {
   taskBadge?: number
   isOwner?: boolean
   isAdmin?: boolean
+  showTeam?: boolean
 }
 
-export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false }: SidebarProps) {
+export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false, showTeam = false }: SidebarProps) {
   const router = useRouter()
   const t = useT()
 
@@ -129,7 +130,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           flexShrink: 0,
         }}
       >
-        <LogoMark height={44} maxWidth={200} />
+        <LogoMark height={52} maxWidth={200} />
       </div>
 
       {/* Nav */}
@@ -157,7 +158,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
 
         <NavLink href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
 
-        {(isOwner || isAdmin) && (
+        {(showTeam || isAdmin) && (
           <NavLink href="/team" label={t.nav.team} icon={<TeamIcon />} />
         )}
 

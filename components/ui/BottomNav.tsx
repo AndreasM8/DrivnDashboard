@@ -67,9 +67,10 @@ function Tab({ href, label, icon, badge }: TabItem) {
 interface BottomNavProps {
   taskBadge?: number
   isOwner?: boolean
+  showTeam?: boolean
 }
 
-export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavProps) {
+export default function BottomNav({ taskBadge = 0, isOwner = false, showTeam = false }: BottomNavProps) {
   const t = useT()
   return (
     <nav
@@ -91,7 +92,7 @@ export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavP
       <Tab href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />
       <Tab href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
       <Tab href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
-      {isOwner
+      {showTeam
         ? <Tab href="/team" label="Team" icon={<TeamIcon />} />
         : <Tab href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
       }

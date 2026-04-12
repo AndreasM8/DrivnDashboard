@@ -45,6 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { data: teamMembership },
     { data: profile },
     { data: thisWeekCheckin },
+    { count: teamMemberCount },
   ] = await Promise.all([
     supabase
       .from('tasks')
@@ -60,7 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .maybeSingle(),
     supabase
       .from('users')
-      .select('role, checkin_enabled, checkin_day, base_currency, language')
+      .select('role, checkin_enabled, checkin_day, base_currency, language, team_mode')
       .eq('id', user.id)
       .single(),
     supabase
@@ -69,11 +70,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .eq('user_id', user.id)
       .eq('week_start', weekStart)
       .maybeSingle(),
+    supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('coach_id', user.id),
   ])
 
   const badge = taskCount ?? 0
   const isOwner = !teamMembership?.id
   const isAdmin = profile?.role === 'admin'
+  const teamMode = ((profile as Record<string, unknown> | null)?.team_mode as string | null) ?? 'solo'
+  const showTeam = isOwner && (teamMode === 'team' || (teamMemberCount ?? 0) > 0)
 
   // Strip view-as if current user is not actually admin (tamper protection)
   if (viewAs && !isAdmin) viewAs = null
@@ -117,14 +124,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           />
         )}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} />
+          <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} showTeam={showTeam} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <MobileHeader isOwner={isOwner} />
             <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
               {children}
             </main>
           </div>
-          <BottomNav taskBadge={badge} isOwner={isOwner} />
+          <BottomNav taskBadge={badge} isOwner={isOwner} showTeam={showTeam} />
         </div>
       </div>
     </LanguageProvider>
