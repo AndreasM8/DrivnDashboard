@@ -46,10 +46,16 @@ export async function POST(req: Request) {
   if (action === 'submit') {
     upsertData.submitted_at = new Date().toISOString()
   } else if (action === 'snooze') {
-    const tomorrow = new Date()
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-    tomorrow.setUTCHours(9, 0, 0, 0)
-    upsertData.snoozed_until = tomorrow.toISOString()
+    // Snooze to 9am tomorrow in Norwegian time (Europe/Oslo), handles CET/CEST automatically
+    const tomorrowDateStr = new Date(Date.now() + 86400000)
+      .toLocaleDateString('sv', { timeZone: 'Europe/Oslo' }) // "YYYY-MM-DD"
+    // Anchor at CET (UTC+1), then check actual Oslo hour and correct if on CEST
+    const base = new Date(`${tomorrowDateStr}T09:00:00+01:00`)
+    const osloHour = parseInt(
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Oslo', hour: 'numeric', hour12: false }).format(base),
+      10
+    )
+    upsertData.snoozed_until = new Date(base.getTime() - (osloHour - 9) * 3_600_000).toISOString()
   }
 
   const { data, error } = await supabase

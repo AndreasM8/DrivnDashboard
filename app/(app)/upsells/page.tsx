@@ -53,7 +53,7 @@ export default async function UpsellsPage() {
   ] = await Promise.all([
     supabase.from('users').select('notification_prefs').eq('id', uid).single(),
     supabase.from('clients').select('id, ig_username, full_name, payment_type, plan_months, started_at, contract_end_date, upsell_reminder_set, testimonial_requested_at, referral_requested_at, testimonial_opt_out, referral_opt_out').eq('user_id', uid).eq('active', true).order('started_at'),
-    supabase.from('tasks').select('client_id').eq('user_id', uid).eq('type', 'upsell').eq('done', false),
+    supabase.from('tasks').select('client_id').eq('user_id', uid).eq('type', 'upsell').eq('completed', false),
   ])
 
   const prefs = resolveNotifPrefs(profileData?.notification_prefs)

@@ -27,7 +27,7 @@ interface OnboardingData {
   secondary_currencies: SecondaryCurrencyInput[]
   // Step 4
   team_mode: 'solo' | 'team'
-  setters: { name: string; role: 'setter' | 'closer' | 'both' }[]
+  setters: { name: string; email: string; role: 'setter' | 'closer' }[]
   // Step 5
   cash_target: string
   clients_target: string
@@ -288,7 +288,143 @@ function Step3({ data, onChange, onNext, onBack }: StepProps) {
   )
 }
 
-// ─── Step 4 (shown as step 4): Cash Target ────────────────────────────────────
+// ─── Step 4: Team Mode ────────────────────────────────────────────────────────
+
+function Step4TeamMode({ data, onChange, onNext, onBack }: StepProps) {
+  const showTeamInputs = data.team_mode === 'team'
+
+  function addMember() {
+    onChange({ setters: [...data.setters, { name: '', email: '', role: 'setter' }] })
+  }
+
+  function removeMember(i: number) {
+    onChange({ setters: data.setters.filter((_, idx) => idx !== i) })
+  }
+
+  function updateMember(i: number, field: 'name' | 'email' | 'role', value: string) {
+    const updated = data.setters.map((s, idx) =>
+      idx === i ? { ...s, [field]: value } : s
+    )
+    onChange({ setters: updated })
+  }
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 mb-1">How do you work?</h2>
+      <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">This helps us tailor the experience to how you run your business.</p>
+
+      <div className="flex flex-col gap-3 mb-6">
+        {/* Solo card */}
+        <button
+          type="button"
+          onClick={() => { onChange({ team_mode: 'solo', setters: [] }) }}
+          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+            data.team_mode === 'solo'
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+              : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/30 hover:border-gray-300 dark:hover:border-slate-500'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">🧑‍💻</span>
+            <div>
+              <p className={`font-semibold text-sm ${data.team_mode === 'solo' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-slate-100'}`}>
+                Solo — just me
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">I handle my own pipeline, clients, and content</p>
+            </div>
+          </div>
+        </button>
+
+        {/* Team card */}
+        <button
+          type="button"
+          onClick={() => onChange({ team_mode: 'team' })}
+          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+            data.team_mode === 'team'
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+              : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/30 hover:border-gray-300 dark:hover:border-slate-500'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">👥</span>
+            <div>
+              <p className={`font-semibold text-sm ${data.team_mode === 'team' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-slate-100'}`}>
+                With a team
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">I have setters, closers, or other team members</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Team member rows (only when team selected) */}
+      {showTeamInputs && (
+        <div className="mb-6">
+          <p className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Add your team members <span className="text-gray-400 dark:text-slate-500 font-normal">(optional)</span></p>
+
+          {data.setters.map((s, i) => (
+            <div key={i} className="flex gap-2 mb-2 items-center">
+              <input
+                type="text"
+                value={s.name}
+                onChange={e => updateMember(i, 'name', e.target.value)}
+                placeholder="Name"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="email"
+                value={s.email}
+                onChange={e => updateMember(i, 'email', e.target.value)}
+                placeholder="Email"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-1 flex-shrink-0">
+                {(['setter', 'closer'] as const).map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => updateMember(i, 'role', r)}
+                    className={`px-2.5 py-2 rounded-lg text-xs font-medium border transition-all ${
+                      s.role === r
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-200 dark:border-slate-600 text-gray-500 dark:text-slate-400 hover:border-gray-300'
+                    }`}
+                  >
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeMember(i)}
+                className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addMember}
+            className="mt-1 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            + Add row
+          </button>
+        </div>
+      )}
+
+      <StepNav onBack={onBack} onNext={onNext} />
+      <button type="button" onClick={onNext} className="w-full text-center text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-400 mt-3 transition-colors">
+        Skip — I&apos;ll invite my team later
+      </button>
+    </div>
+  )
+}
+
+// ─── Step 5: Cash Target ──────────────────────────────────────────────────────
 
 function Step5({ data, onChange, onNext, onBack }: StepProps) {
   const currency = data.base_currency
@@ -419,8 +555,8 @@ function StepNav({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-// Steps: 0=Language, 1=Welcome, 2=Profile, 3=Currency, 4=Cash target, 5=Done
-const TOTAL_STEPS = 5
+// Steps: 0=Language, 1=Welcome, 2=Profile, 3=Currency, 4=TeamMode, 5=CashTarget, 6=Done
+const TOTAL_STEPS = 6
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0)
@@ -495,22 +631,19 @@ export default function OnboardingPage() {
       show_up_target: Number(data.show_up_target) || null,
     })
 
-    // Save setter (self or team)
-    if (data.team_mode === 'solo') {
-      await supabase.from('setters').insert({
-        user_id: user.id,
-        name: data.name || 'Me',
-        role: 'both',
-        is_self: true,
-      })
-    } else {
-      for (const s of data.setters.filter(s => s.name)) {
-        await supabase.from('setters').insert({
-          user_id: user.id,
-          name: s.name,
-          role: s.role,
-          is_self: false,
-        })
+    // Save team_mode
+    await supabase.from('users').update({ team_mode: data.team_mode }).eq('id', user.id)
+
+    // If team mode with members, create team_member invites
+    if (data.team_mode === 'team') {
+      for (const m of data.setters.filter(s => s.name && s.email)) {
+        await supabase.from('team_members').insert({
+          coach_id: user.id,
+          name: m.name,
+          email: m.email,
+          role: m.role,
+          status: 'invited',
+        }).select().single()
       }
     }
 
@@ -537,8 +670,9 @@ export default function OnboardingPage() {
           {step === 1 && <Step1 onNext={next} />}
           {step === 2 && <Step2 data={data} onChange={update} onNext={next} onBack={back} />}
           {step === 3 && <Step3 data={data} onChange={update} onNext={next} onBack={back} />}
-          {step === 4 && <Step5 data={data} onChange={update} onNext={next} onBack={back} />}
-          {step === 5 && <Step6Done data={data} onFinish={finish} loading={loading} />}
+          {step === 4 && <Step4TeamMode data={data} onChange={update} onNext={next} onBack={back} />}
+          {step === 5 && <Step5 data={data} onChange={update} onNext={next} onBack={back} />}
+          {step === 6 && <Step6Done data={data} onFinish={finish} loading={loading} />}
         </div>
       </div>
     </div>

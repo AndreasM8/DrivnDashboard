@@ -177,6 +177,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
 function MemberCard({ member }: { member: TeamMember }) {
   const [expanded, setExpanded] = useState(false)
+  const [permissions, setPermissions] = useState<TeamPermissions>(member.permissions)
   const [questions, setQuestions] = useState<CheckinQuestion[]>([])
   const [eodHour, setEodHour] = useState(20)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
@@ -312,6 +313,16 @@ function MemberCard({ member }: { member: TeamMember }) {
     }
   }
 
+  async function togglePermission(key: keyof TeamPermissions) {
+    const updated = { ...permissions, [key]: !permissions[key] }
+    setPermissions(updated)
+    await fetch(`/api/team/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permissions: updated }),
+    })
+  }
+
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
       {/* Header row */}
@@ -430,19 +441,24 @@ function MemberCard({ member }: { member: TeamMember }) {
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {PERM_KEYS.map(k => (
-                    <div
+                    <button
                       key={k}
+                      type="button"
+                      onClick={() => togglePermission(k)}
                       style={{
                         padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                        background: member.permissions[k] ? 'rgba(37,99,235,0.1)' : 'var(--surface-2)',
-                        color: member.permissions[k] ? '#2563EB' : 'var(--text-3)',
-                        border: `1px solid ${member.permissions[k] ? 'rgba(37,99,235,0.2)' : 'var(--border)'}`,
+                        cursor: 'pointer', border: '1px solid',
+                        background: permissions[k] ? 'rgba(16,185,129,0.12)' : 'var(--surface-2)',
+                        color: permissions[k] ? '#10B981' : 'var(--text-3)',
+                        borderColor: permissions[k] ? 'rgba(16,185,129,0.3)' : 'var(--border)',
+                        transition: 'all 150ms',
                       }}
                     >
-                      {PERM_LABELS[k]}
-                    </div>
+                      {permissions[k] ? '✓ ' : ''}{PERM_LABELS[k]}
+                    </button>
                   ))}
                 </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>Click a permission to toggle it on or off</p>
               </div>
 
               {/* Non-negotiables */}

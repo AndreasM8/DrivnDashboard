@@ -92,6 +92,7 @@ export default function BottomNav({ taskBadge = 0, isOwner = false }: BottomNavP
       <Tab href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
       <Tab href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
       <Tab href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
+      {isOwner && <Tab href="/ask" label="AI" icon={<AskIcon />} />}
     </nav>
   )
 }
