@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { getLiveRate } from '@/lib/exchange-rates-client'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
 import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 import { useT } from '@/contexts/LanguageContext'
+import { useWalkthrough } from '@/components/walkthrough/WalkthroughContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1635,6 +1636,58 @@ function AccountSection({ userId, userEmail, profile }: { userId: string; userEm
           </div>
         </div>
       </div>
+
+      {/* Help */}
+      <HelpCard />
+    </div>
+  )
+}
+
+// ─── Help card (walkthrough restart) ─────────────────────────────────────────
+
+function HelpCard() {
+  const { start } = useWalkthrough()
+  const [restarted, setRestarted] = useState(false)
+
+  const handleRestart = useCallback(() => {
+    localStorage.removeItem('drivn_walkthrough_done')
+    start()
+    setRestarted(true)
+    setTimeout(() => setRestarted(false), 2000)
+  }, [start])
+
+  return (
+    <div style={{
+      ...CARD,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 16,
+    }}>
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 2 }}>App tour</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.4 }}>
+          Restart the guided walkthrough to rediscover what each section does.
+        </p>
+      </div>
+      <button
+        onClick={handleRestart}
+        style={{
+          flexShrink: 0,
+          fontSize: 13,
+          fontWeight: 600,
+          padding: '8px 14px',
+          borderRadius: 8,
+          border: '1px solid var(--neon-indigo)',
+          background: restarted ? 'var(--neon-indigo)' : 'transparent',
+          color: restarted ? '#fff' : 'var(--neon-indigo)',
+          cursor: 'pointer',
+          transition: 'all 150ms ease',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {restarted ? 'Starting…' : 'Restart tour'}
+      </button>
     </div>
   )
 }

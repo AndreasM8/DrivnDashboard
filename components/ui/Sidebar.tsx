@@ -11,15 +11,17 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   badge?: number
+  walkthroughId?: string
 }
 
-function NavLink({ href, label, icon, badge }: NavItem) {
+function NavLink({ href, label, icon, badge, walkthroughId }: NavItem) {
   const pathname = usePathname()
   const active = pathname === href || pathname.startsWith(href + '/')
 
   return (
     <Link
       href={href}
+      {...(walkthroughId ? { 'data-walkthrough': walkthroughId } : {})}
       style={{
         position: 'relative',
         display: 'flex',
@@ -145,18 +147,19 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
         }}
       >
         <NavLink href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
-        <NavLink href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />
+        <NavLink href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} walkthroughId="nav-tasks" />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
-        <NavLink href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
+        <NavLink href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} walkthroughId="nav-pipeline" />
+        <NavLink href="/clients" label={t.nav.clients} icon={<ClientsIcon />} walkthroughId="nav-clients" />
         <NavLink href="/upsells" label={t.nav.upsells} icon={<UpsellsIcon />} />
-        <NavLink href="/checkins" label={t.nav.checkins} icon={<CheckinsIcon />} />
+        <NavLink href="/checkins" label={t.nav.checkins} icon={<CheckinsIcon />} walkthroughId="nav-checkins" />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
+        <NavLink href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} walkthroughId="nav-numbers" />
+        <NavLink href="/ask" label={t.nav.ask} icon={<AskIcon />} walkthroughId="nav-ask" />
 
         {(showTeam || isAdmin) && (
           <NavLink href="/team" label={t.nav.team} icon={<TeamIcon />} />

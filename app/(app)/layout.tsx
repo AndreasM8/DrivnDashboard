@@ -8,6 +8,7 @@ import ViewAsBanner from '@/components/ui/ViewAsBanner'
 import NavigationProgress from '@/components/ui/NavigationProgress'
 import CheckinGate from '@/components/ui/CheckinGate'
 import LanguageProvider from '@/components/providers/LanguageProvider'
+import WalkthroughShell from '@/components/walkthrough/WalkthroughShell'
 import type { AdminViewAs, WeeklyCheckin, Language } from '@/types'
 
 function getWeekBounds(date: Date = new Date()): { weekStart: string; weekEnd: string } {
@@ -111,29 +112,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <LanguageProvider language={language}>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <NavigationProgress />
-        {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}
-        {needsCheckin && (
-          <CheckinGate
-            weekStart={weekStart}
-            weekEnd={weekEnd}
-            currency={currency}
-            existingCheckin={existingCheckin}
-            isLastCheckinOfMonth={isLastCheckinOfMonth}
-          />
-        )}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} showTeam={showTeam} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <MobileHeader isOwner={isOwner} />
-            <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
-              {children}
-            </main>
+      <WalkthroughShell>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <NavigationProgress />
+          {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}
+          {needsCheckin && (
+            <CheckinGate
+              weekStart={weekStart}
+              weekEnd={weekEnd}
+              currency={currency}
+              existingCheckin={existingCheckin}
+              isLastCheckinOfMonth={isLastCheckinOfMonth}
+            />
+          )}
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} showTeam={showTeam} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <MobileHeader isOwner={isOwner} />
+              <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
+                {children}
+              </main>
+            </div>
+            <BottomNav taskBadge={badge} isOwner={isOwner} showTeam={showTeam} />
           </div>
-          <BottomNav taskBadge={badge} isOwner={isOwner} showTeam={showTeam} />
         </div>
-      </div>
+      </WalkthroughShell>
     </LanguageProvider>
   )
 }

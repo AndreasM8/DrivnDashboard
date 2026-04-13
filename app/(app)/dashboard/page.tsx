@@ -565,7 +565,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '24px' }}
+      <div data-walkthrough="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '24px' }}
         className="md:grid-cols-4"
       >
         <StatCard
@@ -609,18 +609,20 @@ export default async function DashboardPage() {
         className="lg:grid-cols-2"
       >
         {/* Tasks */}
-        <SectionCard title={t.dashboard.doToday} href="/tasks" seeAllLabel={t.common.seeAll}>
-          {(tasks?.length ?? 0) === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0' }}>
-              <p style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</p>
-              <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>{t.dashboard.allCaughtUp}</p>
-            </div>
-          ) : (
-            <div>
-              {(tasks as Task[]).map(t => <TaskRow key={t.id} task={t} />)}
-            </div>
-          )}
-        </SectionCard>
+        <div data-walkthrough="dashboard-tasks">
+          <SectionCard title={t.dashboard.doToday} href="/tasks" seeAllLabel={t.common.seeAll}>
+            {(tasks?.length ?? 0) === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <p style={{ fontSize: '24px', marginBottom: '8px' }}>🎉</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>{t.dashboard.allCaughtUp}</p>
+              </div>
+            ) : (
+              <div>
+                {(tasks as Task[]).map(t => <TaskRow key={t.id} task={t} />)}
+              </div>
+            )}
+          </SectionCard>
+        </div>
 
         {/* Revenue */}
         <SectionCard title={numbersCardTitle} href="/numbers" seeAllLabel={t.common.seeAll}>
