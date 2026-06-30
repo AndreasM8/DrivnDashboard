@@ -5,7 +5,9 @@
       "name": "drivn",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "cwd": "/Users/andreasmeberg/Documents/Claude shii/drivn",
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

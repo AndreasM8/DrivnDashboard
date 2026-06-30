@@ -2,6 +2,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getEffectiveUserId } from '@/lib/admin'
 import { redirect } from 'next/navigation'
 import NumbersClient from './NumbersClient'
+import WeeklyInsightCard from '@/components/numbers/WeeklyInsightCard'
+import { getMonday } from '@/lib/insights/context'
 import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
 
 export default async function NumbersPage() {
@@ -12,6 +14,7 @@ export default async function NumbersPage() {
   const uid = await getEffectiveUserId()
 
   const now = new Date()
+  const weekStart = getMonday(now)
   const currentMonth = now.toISOString().slice(0, 7)
   // monthStart as date-only string (for DATE fields like started_at)
   const monthStart = `${currentMonth}-01`
@@ -35,6 +38,7 @@ export default async function NumbersPage() {
     { count: totalLeadsCount },
     { count: totalClientsCount },
     { data: allExpensesData },
+    { data: weeklyInsight },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', uid).single(),
@@ -68,6 +72,8 @@ export default async function NumbersPage() {
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', uid),
     // All expenses ever (for all-time profit)
     supabase.from('expenses').select('amount').eq('user_id', uid),
+    // Weekly AI insight for current week
+    supabase.from('weekly_insights').select('insight_text, generated_at').eq('user_id', user.id).eq('week_start', weekStart).maybeSingle(),
   ])
 
   // ── Exchange rate for ad spend currency conversion ────────────────────────
@@ -176,31 +182,37 @@ export default async function NumbersPage() {
     .filter(i => !i.paid)
     .reduce((s, i) => s + i.amount, 0)
 
+  type WeeklyInsightRow = { insight_text: string; generated_at: string } | null
+  const initialInsight = (weeklyInsight as WeeklyInsightRow) ?? null
+
   return (
-    <NumbersClient
-      baseCurrency={baseCurrency}
-      targets={(targets as KpiTargets) ?? null}
-      currentSnapshot={liveSnapshot}
-      lastMonthSnapshot={(lastMonthSnapshot as MonthlySnapshot) ?? null}
-      history={(snapshots as MonthlySnapshot[]) ?? []}
-      clients={allClients}
-      installments={allInstallments}
-      currentMonth={currentMonth}
-      expenses={(expenses as Expense[]) ?? []}
-      adSpendTotal={adSpendTotal}
-      adSpendLog={adSpendLog}
-      totalAdSpend={totalAdSpend}
-      totalAllExpenses={totalAllExpenses}
-      monthlyRevenueDue={monthlyRevenueDue}
-      totalContracted={totalContracted}
-      totalCashCollected={totalCashCollected}
-      totalOutstanding={totalOutstanding}
-      cashPending={cashPending}
-      leadsReplied={leadsReplied}
-      totalLeads={totalLeadsCount ?? 0}
-      totalClientsAcquired={totalClientsCount ?? 0}
-      adSpendCurrency={adSpendCurrency}
-      adToBaseRate={adToBaseRate}
-    />
+    <>
+      <WeeklyInsightCard initialInsight={initialInsight} />
+      <NumbersClient
+        baseCurrency={baseCurrency}
+        targets={(targets as KpiTargets) ?? null}
+        currentSnapshot={liveSnapshot}
+        lastMonthSnapshot={(lastMonthSnapshot as MonthlySnapshot) ?? null}
+        history={(snapshots as MonthlySnapshot[]) ?? []}
+        clients={allClients}
+        installments={allInstallments}
+        currentMonth={currentMonth}
+        expenses={(expenses as Expense[]) ?? []}
+        adSpendTotal={adSpendTotal}
+        adSpendLog={adSpendLog}
+        totalAdSpend={totalAdSpend}
+        totalAllExpenses={totalAllExpenses}
+        monthlyRevenueDue={monthlyRevenueDue}
+        totalContracted={totalContracted}
+        totalCashCollected={totalCashCollected}
+        totalOutstanding={totalOutstanding}
+        cashPending={cashPending}
+        leadsReplied={leadsReplied}
+        totalLeads={totalLeadsCount ?? 0}
+        totalClientsAcquired={totalClientsCount ?? 0}
+        adSpendCurrency={adSpendCurrency}
+        adToBaseRate={adToBaseRate}
+      />
+    </>
   )
 }
