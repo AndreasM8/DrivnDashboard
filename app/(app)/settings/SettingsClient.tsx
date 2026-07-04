@@ -8,6 +8,7 @@ import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 import { useT } from '@/contexts/LanguageContext'
 import { useWalkthrough } from '@/components/walkthrough/WalkthroughContext'
+import ImportClient from '@/components/import/ImportClient'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ interface Props {
   calendlyErrorDetail?: string
 }
 
-type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'checkins'
+type Section = 'targets' | 'setters' | 'integrations' | 'notifications' | 'account' | 'checkins' | 'import'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -1808,6 +1809,22 @@ function CheckinsSection({ userId }: { userId: string }) {
   )
 }
 
+// ─── Section: Import ──────────────────────────────────────────────────────────
+
+function ImportSection() {
+  return (
+    <div style={CARD}>
+      <div style={{ marginBottom: 16 }}>
+        <p className="section-title" style={{ marginBottom: 4 }}>Import data</p>
+        <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+          Upload a CSV from Google Sheets to bulk-import historical business data. Claude will intelligently map your columns.
+        </p>
+      </div>
+      <ImportClient />
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { key: Section; label: string }[] = [
@@ -1816,6 +1833,7 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
   { key: 'integrations', label: 'Integrations' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'checkins', label: 'Check-ins' },
+  { key: 'import', label: 'Import data' },
   { key: 'account', label: 'Account' },
 ]
 
@@ -1832,6 +1850,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
       case 'integrations': return <IntegrationsSection calendlyResult={calendlyResult} calendlyErrorStep={calendlyErrorStep} calendlyErrorDetail={calendlyErrorDetail} />
       case 'notifications': return <NotificationsSection userId={userId} />
       case 'checkins':     return <CheckinsSection userId={userId} />
+      case 'import':       return <ImportSection />
       case 'account':      return <AccountSection userId={userId} userEmail={userEmail} profile={profile} />
     }
   }
