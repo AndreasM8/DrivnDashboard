@@ -112,7 +112,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <LanguageProvider language={language}>
-      <WalkthroughShell>
+      <WalkthroughShell blocked={needsCheckin}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <NavigationProgress />
           {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}

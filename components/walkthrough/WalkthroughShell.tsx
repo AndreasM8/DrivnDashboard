@@ -2,9 +2,14 @@
 import { WalkthroughProvider } from './WalkthroughContext'
 import WalkthroughOverlay from './WalkthroughOverlay'
 
-export default function WalkthroughShell({ children }: { children: React.ReactNode }) {
+interface Props {
+  children: React.ReactNode
+  blocked?: boolean // suppress auto-start when check-in or other gate is active
+}
+
+export default function WalkthroughShell({ children, blocked = false }: Props) {
   return (
-    <WalkthroughProvider>
+    <WalkthroughProvider blocked={blocked}>
       {children}
       <WalkthroughOverlay />
     </WalkthroughProvider>

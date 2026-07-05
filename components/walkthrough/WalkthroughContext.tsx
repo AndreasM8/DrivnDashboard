@@ -78,19 +78,19 @@ const Ctx = createContext<WalkthroughCtx>({
 
 export function useWalkthrough() { return useContext(Ctx) }
 
-export function WalkthroughProvider({ children }: { children: React.ReactNode }) {
+export function WalkthroughProvider({ children, blocked = false }: { children: React.ReactNode; blocked?: boolean }) {
   const [active, setActive] = useState(false)
   const [step, setStep] = useState(0)
 
-  // Auto-start for new users (no localStorage entry)
+  // Auto-start for new users — but not if a blocking gate (check-in, EOD) is active
   useEffect(() => {
+    if (blocked) return
     const done = localStorage.getItem(STORAGE_KEY)
     if (!done) {
-      // Small delay to let the page render first
       const t = setTimeout(() => setActive(true), 1200)
       return () => clearTimeout(t)
     }
-  }, [])
+  }, [blocked])
 
   const start = useCallback(() => { setStep(0); setActive(true) }, [])
 
