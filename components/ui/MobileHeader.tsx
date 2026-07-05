@@ -33,9 +33,8 @@ export default function MobileHeader({ isOwner = false }: Props) {
 
   return (
     <header
-      className="md:hidden"
+      className="flex md:hidden"
       style={{
-        display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '10px 16px',

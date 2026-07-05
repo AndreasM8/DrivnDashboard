@@ -111,7 +111,6 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
   return (
     <aside
       style={{
-        display: 'none',
         flexDirection: 'column',
         width: '220px',
         background: 'var(--sidebar-bg)',
@@ -119,7 +118,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
         height: '100%',
         flexShrink: 0,
       }}
-      className="md:flex"
+      className="hidden md:flex"
     >
       {/* Logo */}
       <Link
