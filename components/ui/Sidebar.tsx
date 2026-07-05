@@ -122,7 +122,8 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
       className="md:flex"
     >
       {/* Logo */}
-      <div
+      <Link
+        href="/dashboard"
         style={{
           height: '56px',
           display: 'flex',
@@ -130,10 +131,11 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
           padding: '0 16px',
           borderBottom: '1px solid var(--border)',
           flexShrink: 0,
+          textDecoration: 'none',
         }}
       >
         <LogoMark height={52} maxWidth={200} />
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav
