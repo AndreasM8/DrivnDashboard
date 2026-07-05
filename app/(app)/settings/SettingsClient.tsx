@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { getLiveRate } from '@/lib/exchange-rates-client'
 import type { KpiTargets, Setter, User, SecondaryCurrency, SetterRole } from '@/types'
@@ -8,6 +9,7 @@ import { CURRENCIES, TIMEZONES, resolveNotifPrefs } from '@/types'
 import IntegrationGuide, { type GuideStep } from './IntegrationGuide'
 import { useT } from '@/contexts/LanguageContext'
 import { useWalkthrough } from '@/components/walkthrough/WalkthroughContext'
+import { useDarkMode } from '@/components/providers/DarkModeProvider'
 import ImportClient from '@/components/import/ImportClient'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -406,7 +408,7 @@ function WebhookCard({
   return (
     <div style={{
       ...CARD,
-      borderLeft: configured ? '3px solid var(--success)' : '3px solid var(--border)',
+      borderLeft: '3px solid var(--border)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         <IntegrationIcon type="webhook" />
@@ -418,9 +420,9 @@ function WebhookCard({
               borderRadius: 'var(--radius-badge)', background: 'var(--surface-2)',
               color: 'var(--text-3)', flexShrink: 0,
             }}>Optional</span>
-            <StatusDot on={configured} />
-            <span style={{ fontSize: 12, color: configured ? 'var(--success)' : 'var(--text-3)' }}>
-              {configured ? 'Configured' : 'Not set up'}
+            <StatusDot on={true} />
+            <span style={{ fontSize: 12, color: 'var(--success)' }}>
+              Ready to use
             </span>
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>{desc}</p>
@@ -1075,7 +1077,7 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
       <WebhookCard
         name="ManyChat"
         desc="Automatically adds new followers to your pipeline when they DM you. Uses ManyChat's built-in External Request action — no Zapier needed."
-        configured={status?.zapier.configured ?? false}
+        configured={false}
         webhookUrl={zapierUrl}
         webhookSecret={status?.zapier.webhook_secret}
         instructions={[
@@ -1101,7 +1103,7 @@ function IntegrationsSection({ calendlyResult, calendlyErrorStep, calendlyErrorD
       <WebhookCard
         name="Zapier"
         desc="Connect any app to your pipeline via Zapier — Instagram Lead Ads, Typeform, Google Forms, and more."
-        configured={status?.zapier.configured ?? false}
+        configured={false}
         webhookUrl={zapierUrl}
         webhookSecret={status?.zapier.webhook_secret}
         instructions={[
@@ -1419,6 +1421,56 @@ function LanguageSection({ userId, currentLanguage }: { userId: string; currentL
   )
 }
 
+function AppearanceCard() {
+  const { dark, toggle } = useDarkMode()
+
+  return (
+    <div style={{ ...CARD, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 2 }}>Appearance</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.4 }}>
+          {dark ? 'Dark mode is on' : 'Light mode is on'}
+        </p>
+      </div>
+      <button
+        onClick={toggle}
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 13,
+          fontWeight: 600,
+          padding: '8px 14px',
+          borderRadius: 8,
+          border: '1px solid var(--border-strong)',
+          background: 'var(--surface-2)',
+          color: 'var(--text-1)',
+          cursor: 'pointer',
+          transition: 'all 150ms ease',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {dark ? (
+          <>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+              <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+            </svg>
+            Light mode
+          </>
+        ) : (
+          <>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+            </svg>
+            Dark mode
+          </>
+        )}
+      </button>
+    </div>
+  )
+}
+
 function AccountSection({ userId, userEmail, profile }: { userId: string; userEmail: string; profile: User }) {
   const [profileData, setProfileData] = useState({
     name: profile.name,
@@ -1459,6 +1511,9 @@ function AccountSection({ userId, userEmail, profile }: { userId: string; userEm
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Appearance */}
+      <AppearanceCard />
+
       {/* Language */}
       <LanguageSection userId={userId} currentLanguage={profile.language ?? 'en'} />
 
@@ -1839,9 +1894,16 @@ const NAV_ITEMS: { key: Section; label: string }[] = [
 
 export default function SettingsClient({ userId, userEmail, isAdmin = false, profile, targets, setters, secondaryCurrencies, initialSection, calendlyResult, calendlyErrorStep, calendlyErrorDetail }: Props) {
   const t = useT()
+  const router = useRouter()
   const [section, setSection] = useState<Section>(initialSection ?? 'targets')
   const [navHover, setNavHover] = useState<Section | null>(null)
   const [expandedSection, setExpandedSection] = useState<Section | null>('targets')
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/auth/login'
+  }
 
   function renderSection(key: Section) {
     switch (key) {
@@ -1915,6 +1977,24 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
               </a>
             </>
           )}
+          <div style={{ height: 1, background: 'var(--border)', margin: '8px 4px' }} />
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%', textAlign: 'left',
+              padding: '7px 12px',
+              borderRadius: 'var(--radius-btn)',
+              border: 'none',
+              borderLeft: '2px solid transparent',
+              background: 'transparent',
+              color: 'var(--danger)',
+              fontSize: 13, fontWeight: 400,
+              cursor: 'pointer',
+              opacity: 0.8,
+            }}
+          >
+            Log out
+          </button>
         </nav>
       </div>
 
@@ -1989,6 +2069,29 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
             </a>
           </div>
         )}
+        {/* Logout — mobile */}
+        <div style={{ borderBottom: '1px solid var(--border)' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 16px',
+              height: 48,
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--danger)',
+              textAlign: 'left',
+              opacity: 0.85,
+            }}
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </div>
   )

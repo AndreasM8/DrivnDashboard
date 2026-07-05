@@ -224,15 +224,20 @@ export default function WeeklyCheckinModal({
         {step === 1 && (
           <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { emoji: '🏆', label: 'Biggest win this week', value: biggestWin, onChange: setBiggestWin, placeholder: 'What went really well?' },
-              { emoji: '🎯', label: 'Main focus next week', value: mainFocus, onChange: setMainFocus, placeholder: 'What are you locking in on?' },
-              { emoji: '🤝', label: 'Support needed', value: supportNeeded, onChange: setSupportNeeded, placeholder: 'Where do you need help or resources?' },
-              { emoji: '💡', label: 'Program suggestions', value: programSuggestions, onChange: setProgramSuggestions, placeholder: 'Any feedback on your program or systems?' },
-              { emoji: '📝', label: 'Week summary', value: weekSummary, onChange: setWeekSummary, placeholder: 'Anything else to note about this week?' },
+              { emoji: '🏆', label: 'Biggest win this week', value: biggestWin, onChange: setBiggestWin, placeholder: 'What went really well?', optional: false },
+              { emoji: '🎯', label: 'Main focus next week', value: mainFocus, onChange: setMainFocus, placeholder: 'What are you locking in on?', optional: false },
+              { emoji: '🤝', label: 'Support needed', value: supportNeeded, onChange: setSupportNeeded, placeholder: 'Where do you need help or resources?', optional: true },
+              { emoji: '💡', label: 'Program feedback', value: programSuggestions, onChange: setProgramSuggestions, placeholder: 'Any feedback on the program or systems?', optional: true },
+              { emoji: '📝', label: 'Week summary', value: weekSummary, onChange: setWeekSummary, placeholder: 'Anything else to note about this week?', optional: true },
             ].map(field => (
               <div key={field.label}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {field.emoji} {field.label}
+                  {field.optional && (
+                    <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-3)', background: 'var(--surface-3)', padding: '1px 6px', borderRadius: 99 }}>
+                      optional
+                    </span>
+                  )}
                 </p>
                 <textarea
                   value={field.value}

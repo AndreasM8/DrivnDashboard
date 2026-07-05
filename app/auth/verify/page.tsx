@@ -11,8 +11,9 @@ function VerifyInner() {
   const [msg,    setMsg]    = useState('')
 
   useEffect(() => {
-    const tokenHash = params.get('token_hash')
-    const type      = (params.get('type') ?? 'magiclink') as 'magiclink' | 'email'
+    const tokenHash  = params.get('token_hash')
+    const type       = (params.get('type') ?? 'magiclink') as 'magiclink' | 'email'
+    const teamToken  = params.get('team_token')
 
     if (!tokenHash) {
       setMsg('Invalid or missing link. Please request a new one.')
@@ -27,9 +28,29 @@ function VerifyInner() {
         setStatus('error')
         return
       }
-      // Check onboarding
+
+      // Team member join flow — forward to team-callback with token
+      if (teamToken) {
+        router.replace(`/auth/team-callback?token=${teamToken}`)
+        return
+      }
+
+      // Regular login — check if they're a team member and route accordingly
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        const { data: teamMembership } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle()
+
+        if (teamMembership) {
+          router.replace('/team-dashboard')
+          return
+        }
+
         const { data: profile } = await supabase
           .from('users')
           .select('onboarding_complete')

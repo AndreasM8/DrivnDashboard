@@ -105,7 +105,7 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
   async function handleLogout() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    window.location.href = '/auth/login'
   }
 
   return (

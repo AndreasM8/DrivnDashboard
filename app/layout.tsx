@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Inter, JetBrains_Mono } from 'next/font/google'
+import DarkModeProvider from '@/components/providers/DarkModeProvider'
 import './globals.css'
 
 const geist = Geist({
@@ -42,18 +43,31 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full dark`}>
+    <html lang="en" className={`${geist.variable} ${inter.variable} ${jetbrainsMono.variable} h-full`}>
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Apply saved theme before first paint to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var t = localStorage.getItem('theme');
+            if (t === 'light') {
+              document.documentElement.classList.remove('dark');
+            } else {
+              document.documentElement.classList.add('dark');
+            }
+          } catch(e) { document.documentElement.classList.add('dark'); }
+        ` }} />
       </head>
       <body className="h-full antialiased">
         {/* Ambient orbs — behind all content */}
         <div className="ambient-orb" style={{ width: 600, height: 600, background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)', top: -200, left: -100 }} />
         <div className="ambient-orb" style={{ width: 500, height: 500, background: 'radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)', bottom: -100, right: -100 }} />
         <div className="ambient-orb" style={{ width: 400, height: 400, background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', top: '40%', right: '25%' }} />
-        <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-          {children}
-        </div>
+        <DarkModeProvider>
+          <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
+            {children}
+          </div>
+        </DarkModeProvider>
       </body>
     </html>
   )

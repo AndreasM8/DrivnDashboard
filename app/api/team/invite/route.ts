@@ -1,6 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import type { TeamRole, TeamPermissions } from '@/types'
+
+const adminSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
+
+async function sendInviteEmail({
+  to, name, coachName, inviteUrl,
+}: { to: string; name: string; coachName: string; inviteUrl: string }) {
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Drivn <noreply@drivnscaling.com>',
+      to,
+      subject: `${coachName} invited you to join their team on Drivn`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+          <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">You've been invited 🎉</h2>
+          <p style="color:#6b7280;margin-bottom:8px">Hi ${name},</p>
+          <p style="color:#6b7280;margin-bottom:24px">
+            <strong style="color:#111827">${coachName}</strong> has invited you to join their team on Drivn.
+            Click the button below to accept and set up your account.
+          </p>
+          <a href="${inviteUrl}"
+             style="display:inline-block;background:#2563EB;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+            Accept invite
+          </a>
+          <p style="color:#9ca3af;font-size:13px;margin-top:24px">
+            This invite link expires in 7 days. If you didn't expect this, you can safely ignore it.
+          </p>
+        </div>
+      `,
+    }),
+  })
+}
 
 const DEFAULT_PERMISSIONS: Record<TeamRole, TeamPermissions> = {
   setter: { pipeline: true,  clients: false, finances: false, labels: true,  content: false },
@@ -22,6 +63,16 @@ export async function POST(request: NextRequest) {
   if (!body.role || !body.name || !body.email) {
     return NextResponse.json({ error: 'role, name and email are required' }, { status: 400 })
   }
+
+  // Get coach name for the invite email
+  const { data: coachProfile } = await supabase
+    .from('users')
+    .select('name, business_name')
+    .eq('id', user.id)
+    .single()
+  const coachName = (coachProfile as { name?: string; business_name?: string } | null)?.name
+    || (coachProfile as { name?: string; business_name?: string } | null)?.business_name
+    || 'Your coach'
 
   const permissions = body.permissions ?? DEFAULT_PERMISSIONS[body.role]
 
@@ -60,9 +111,16 @@ export async function POST(request: NextRequest) {
   })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const inviteUrl = `${appUrl}/join/${data.invite_token as string}`
+
+  // Send invite email (best-effort — don't block response on failure)
+  sendInviteEmail({ to: body.email, name: body.name, coachName, inviteUrl }).catch(err =>
+    console.error('Failed to send invite email:', err)
+  )
+
   return NextResponse.json({
     member: data,
-    invite_url: `${appUrl}/join/${data.invite_token as string}`,
+    invite_url: inviteUrl,
   }, { status: 201 })
 }
 

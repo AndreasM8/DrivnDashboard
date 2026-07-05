@@ -15,6 +15,7 @@ function AuthCallbackInner() {
     async function handle() {
       const code       = params.get('code')
       const token_hash = params.get('token_hash')
+      const team_token = params.get('team_token')
       const type       = params.get('type') as 'magiclink' | 'email' | 'signup' | 'recovery' | null
 
       // ── Implicit flow: tokens in URL hash ──────────────────────────────────
@@ -45,9 +46,28 @@ function AuthCallbackInner() {
         return
       }
 
-      // Check onboarding
+      // ── Team member invite — session is now set, forward to team-callback ──
+      if (team_token) {
+        router.replace(`/auth/team-callback?token=${team_token}`)
+        return
+      }
+
+      // Route team members to their dashboard
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        const { data: teamMembership } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle()
+
+        if (teamMembership) {
+          router.replace('/team-dashboard')
+          return
+        }
+
         const { data: profile } = await supabase
           .from('users')
           .select('onboarding_complete')

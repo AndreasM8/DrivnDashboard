@@ -391,12 +391,29 @@ export default function TeamDashboard({ members }: Props) {
       {error}
     </div>
   )
-  if (!data || data.members.length === 0) return (
-    <div style={{ padding: 40, textAlign: 'center', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
-      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>No active team members</p>
-      <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>Switch to the Members tab to add or activate team members.</p>
-    </div>
-  )
+  if (!data || data.members.length === 0) {
+    const invitedCount = members.filter(m => m.status === 'invited').length
+    return (
+      <div style={{ padding: 40, textAlign: 'center', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)' }}>
+        {invitedCount > 0 ? (
+          <>
+            <p style={{ fontSize: 24, marginBottom: 12 }}>⏳</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
+              {invitedCount === 1 ? '1 member hasn\'t joined yet' : `${invitedCount} members haven't joined yet`}
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 12px', lineHeight: 1.5 }}>
+              They need to click their invite link to activate their account. Go to the <strong>Members</strong> tab to copy and resend the link.
+            </p>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>No active team members</p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>Switch to the Members tab to add your first setter or closer.</p>
+          </>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

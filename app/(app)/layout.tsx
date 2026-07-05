@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/auth/login')
 
   const cookieStore = await cookies()
+  const walkthroughDone = cookieStore.get('drivn_walkthrough_done')?.value === '1'
   const viewAsRaw = cookieStore.get('drivn_view_as')?.value ?? null
   let viewAs: AdminViewAs | null = null
   if (viewAsRaw) {
@@ -104,6 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const needsCheckin =
     !isAdmin &&
+    walkthroughDone &&
     checkinEnabled &&
     !alreadySubmitted &&
     now >= checkinDayDate
@@ -112,7 +114,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <LanguageProvider language={language}>
-      <WalkthroughShell blocked={needsCheckin}>
+      <WalkthroughShell>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <NavigationProgress />
           {viewAs && <ViewAsBanner coachName={viewAs.coachName} />}

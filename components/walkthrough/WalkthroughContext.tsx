@@ -84,21 +84,34 @@ export function WalkthroughProvider({ children, blocked = false }: { children: R
 
   // Auto-start for new users — but not if a blocking gate (check-in, EOD) is active
   useEffect(() => {
-    if (blocked) return
     const done = localStorage.getItem(STORAGE_KEY)
-    if (!done) {
-      const t = setTimeout(() => setActive(true), 1200)
-      return () => clearTimeout(t)
+    if (done) {
+      // Backfill cookie for existing users who already completed the walkthrough
+      // before the cookie was introduced, so the check-in gate works correctly.
+      if (!document.cookie.split(';').some(c => c.trim().startsWith(`${STORAGE_KEY}=`))) {
+        document.cookie = `${STORAGE_KEY}=1; path=/; max-age=31536000; SameSite=Lax`
+      }
+      return
     }
+    if (blocked) return
+    const t = setTimeout(() => setActive(true), 1200)
+    return () => clearTimeout(t)
   }, [blocked])
 
   const start = useCallback(() => { setStep(0); setActive(true) }, [])
+
+  function markDone() {
+    localStorage.setItem(STORAGE_KEY, '1')
+    // Also set a cookie so the server can suppress the check-in gate
+    // until the walkthrough is complete
+    document.cookie = `${STORAGE_KEY}=1; path=/; max-age=31536000; SameSite=Lax`
+  }
 
   const next = useCallback(() => {
     setStep(s => {
       if (s >= STEPS.length - 1) {
         setActive(false)
-        localStorage.setItem(STORAGE_KEY, '1')
+        markDone()
         return 0
       }
       return s + 1
@@ -107,7 +120,7 @@ export function WalkthroughProvider({ children, blocked = false }: { children: R
 
   const skip = useCallback(() => {
     setActive(false)
-    localStorage.setItem(STORAGE_KEY, '1')
+    markDone()
     setStep(0)
   }, [])
 
