@@ -84,8 +84,8 @@ export default async function NumbersPage() {
     supabase.from('ads').select('*').eq('user_id', uid).order('started_at', { ascending: false }),
     // Leads YTD with ad attribution (followers chart + CPF — uses followed_at for correct bucketing)
     supabase.from('leads').select('created_at, followed_at, ad_id').eq('user_id', uid).gte('created_at', `${currentMonth.slice(0, 4)}-01-01T00:00:00.000Z`),
-    // Avg sales cycle: clients with a linked lead
-    supabase.from('clients').select('started_at, leads!lead_id(created_at)').eq('user_id', uid).not('lead_id', 'is', null),
+    // Avg sales cycle: clients with either a linked lead or a direct followed_at date
+    supabase.from('clients').select('started_at, followed_at, leads!lead_id(created_at, followed_at)').eq('user_id', uid),
   ])
 
   // ── Exchange rate for ad spend currency conversion ────────────────────────
@@ -195,11 +195,15 @@ export default async function NumbersPage() {
     .reduce((s, i) => s + i.amount, 0)
 
   // ── Avg sales cycle ───────────────────────────────────────────────────────
-  type ClientWithLead = { started_at: string; leads: { created_at: string } | null }
+  type ClientWithLead = { started_at: string; followed_at: string | null; leads: { created_at: string; followed_at: string | null } | null }
   const salesCycleDays = ((clientsWithLeads ?? []) as unknown as ClientWithLead[])
-    .filter(c => c.leads?.created_at)
-    .map(c => (new Date(c.started_at).getTime() - new Date(c.leads!.created_at).getTime()) / 86_400_000)
-    .filter(d => d > 0)
+    .map(c => {
+      // Prefer lead.followed_at, then lead.created_at, then client.followed_at
+      const followDate = c.leads?.followed_at ?? c.leads?.created_at ?? c.followed_at
+      if (!followDate) return null
+      return (new Date(c.started_at).getTime() - new Date(followDate).getTime()) / 86_400_000
+    })
+    .filter((d): d is number => d !== null && d > 0)
   const avgSalesCycleDays = salesCycleDays.length > 0
     ? salesCycleDays.reduce((s, d) => s + d, 0) / salesCycleDays.length
     : null

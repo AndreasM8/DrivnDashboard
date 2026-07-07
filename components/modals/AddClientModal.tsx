@@ -35,6 +35,7 @@ export default function AddClientModal({ userId, baseCurrency, products, onClose
   const [splitPayments, setSplitPayments] = useState(2)
   const [splitAmount, setSplitAmount] = useState('')
   const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 10))
+  const [followedAt, setFollowedAt] = useState(new Date().toISOString().slice(0, 10))
   const [showMore, setShowMore] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
@@ -66,6 +67,7 @@ export default function AddClientModal({ userId, baseCurrency, products, onClose
       total_amount: total,
       currency: baseCurrency,
       started_at: new Date(startedAt).toISOString(),
+      followed_at: followedAt || null,
     }).select().single()
 
     if (data) {
@@ -201,21 +203,34 @@ export default function AddClientModal({ userId, baseCurrency, products, onClose
             />
           </div>
 
-          {/* Start date */}
-          <div>
-            <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Start date</label>
-            <input
-              type="date"
-              value={startedAt}
-              onChange={e => setStartedAt(e.target.value)}
-              className="input-base"
-            />
-            {isBackdated && (
-              <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: 4 }}>
-                Backdated client — payment installments will be created from this date. Tap the dots in the client drawer to mark which ones have already been paid.
-              </p>
-            )}
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Date signed</label>
+              <input
+                type="date"
+                value={startedAt}
+                onChange={e => setStartedAt(e.target.value)}
+                className="input-base"
+                max={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
+            <div>
+              <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Date followed</label>
+              <input
+                type="date"
+                value={followedAt}
+                onChange={e => setFollowedAt(e.target.value)}
+                className="input-base"
+                max={startedAt}
+              />
+            </div>
           </div>
+          {isBackdated && (
+            <p style={{ fontSize: 12, color: 'var(--warning)', marginTop: -8 }}>
+              Backdated client — payment installments will be created from the signed date. Tap the dots in the client drawer to mark which ones have already been paid.
+            </p>
+          )}
 
           {/* Payment type */}
           <div>

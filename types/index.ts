@@ -266,6 +266,7 @@ export interface Client {
   total_paid: number
   currency: string
   started_at: string
+  followed_at: string | null
   contract_end_date: string | null
   closer_id: string | null
   upsell_reminder_month: number | null
