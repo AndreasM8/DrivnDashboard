@@ -23,7 +23,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
   const [fullName, setFullName] = useState('')
   const [setterId, setSetterId] = useState('')
   const [notes, setNotes] = useState('')
-  const [followedAt, setFollowedAt] = useState('')
+  const [followedAt, setFollowedAt] = useState(() => new Date().toISOString().slice(0, 10))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -154,7 +154,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
 
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
-              Followed on <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(leave blank for today)</span>
+              Date followed
             </label>
             <input
               type="date"
