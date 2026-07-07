@@ -217,6 +217,7 @@ export interface Lead {
   source_flow: string
   not_interested: boolean
   ad_id: string | null
+  followed_at: string | null
   created_at: string
   updated_at: string
 }

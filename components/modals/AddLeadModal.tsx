@@ -23,6 +23,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
   const [fullName, setFullName] = useState('')
   const [setterId, setSetterId] = useState('')
   const [notes, setNotes] = useState('')
+  const [followedAt, setFollowedAt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -47,6 +48,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
           setter_id: setterId || null,
           setter_notes: notes,
           last_contact_at: new Date().toISOString(),
+          followed_at: followedAt || null,
         }),
       })
       const json = await res.json() as { lead?: Lead; error?: string }
@@ -67,6 +69,7 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
         setter_id: setterId || null,
         setter_notes: notes,
         last_contact_at: new Date().toISOString(),
+        followed_at: followedAt || null,
       })
       .select()
       .single()
@@ -148,6 +151,19 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
               </select>
             </div>
           )}
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+              Followed on <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(leave blank for today)</span>
+            </label>
+            <input
+              type="date"
+              value={followedAt}
+              onChange={e => setFollowedAt(e.target.value)}
+              className="input-base"
+              max={new Date().toISOString().slice(0, 10)}
+            />
+          </div>
 
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Notes</label>

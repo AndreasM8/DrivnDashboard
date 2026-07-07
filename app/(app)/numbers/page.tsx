@@ -82,8 +82,8 @@ export default async function NumbersPage() {
     supabase.from('recurring_expenses').select('*').eq('user_id', uid).order('created_at', { ascending: true }),
     // Ads
     supabase.from('ads').select('*').eq('user_id', uid).order('started_at', { ascending: false }),
-    // Leads this month with ad attribution (followers-per-day chart + CPF)
-    supabase.from('leads').select('created_at, ad_id').eq('user_id', uid).gte('created_at', monthStartTs),
+    // Leads YTD with ad attribution (followers chart + CPF — uses followed_at for correct bucketing)
+    supabase.from('leads').select('created_at, followed_at, ad_id').eq('user_id', uid).gte('created_at', `${currentMonth.slice(0, 4)}-01-01T00:00:00.000Z`),
     // Avg sales cycle: clients with a linked lead
     supabase.from('clients').select('started_at, leads!lead_id(created_at)').eq('user_id', uid).not('lead_id', 'is', null),
   ])
@@ -236,7 +236,7 @@ export default async function NumbersPage() {
         adSpendCurrency={adSpendCurrency}
         adToBaseRate={adToBaseRate}
         ads={(adsData as Ad[]) ?? []}
-        monthLeads={(monthLeadsData ?? []) as { created_at: string; ad_id: string | null }[]}
+        allYearLeads={(monthLeadsData ?? []) as { created_at: string; followed_at: string | null; ad_id: string | null }[]}
         avgSalesCycleDays={avgSalesCycleDays}
       />
     </>

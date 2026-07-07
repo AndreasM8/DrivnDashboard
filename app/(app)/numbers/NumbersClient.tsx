@@ -35,7 +35,7 @@ interface Props {
   adSpendCurrency: string
   adToBaseRate: number
   ads: Ad[]
-  monthLeads: { created_at: string; ad_id: string | null }[]
+  allYearLeads: { created_at: string; followed_at: string | null; ad_id: string | null }[]
   avgSalesCycleDays: number | null
 }
 
@@ -680,7 +680,7 @@ export default function NumbersClient({
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
   adSpendCurrency, adToBaseRate,
-  ads, monthLeads, avgSalesCycleDays,
+  ads, allYearLeads, avgSalesCycleDays,
 }: Props) {
   const t = useT()
   const [viewMode, setViewMode]       = useState<'month' | 'alltime'>('month')
@@ -1242,7 +1242,7 @@ export default function NumbersClient({
         {/* ── Ads tracking ──────────────────────────────────────────────────── */}
         <AdsSection
           ads={ads}
-          dailyLeads={monthLeads}
+          allYearLeads={allYearLeads}
           baseCurrency={baseCurrency}
           currentMonth={currentMonth}
           avgSalesCycleDays={avgSalesCycleDays}
