@@ -89,10 +89,10 @@ export default function BottomNav({ taskBadge = 0, isOwner = false, showTeam = f
     >
       <Tab href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
       <Tab href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />
-      <Tab href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
       <Tab href="/clients" label={t.nav.clients} icon={<ClientsIcon />} />
-      {showTeam
-        ? <Tab href="/team" label="Team" icon={<TeamIcon />} />
+      <Tab href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} />
+      {(showTeam || isOwner)
+        ? <Tab href="/team" label={t.nav.team} icon={<TeamIcon />} />
         : <Tab href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} />
       }
     </nav>

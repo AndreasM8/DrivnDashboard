@@ -148,23 +148,22 @@ export default function Sidebar({ taskBadge = 0, isOwner = true, isAdmin = false
         }}
       >
         <NavLink href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
-        <NavLink href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} walkthroughId="nav-tasks" />
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
-        <NavLink href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} walkthroughId="nav-pipeline" />
+        <NavLink href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} walkthroughId="nav-tasks" />
         <NavLink href="/clients" label={t.nav.clients} icon={<ClientsIcon />} walkthroughId="nav-clients" />
-        <NavLink href="/upsells" label={t.nav.upsells} icon={<UpsellsIcon />} />
-        <NavLink href="/checkins" label={t.nav.checkins} icon={<CheckinsIcon />} walkthroughId="nav-checkins" />
+        <NavLink href="/pipeline" label={t.nav.pipeline} icon={<PipelineIcon />} walkthroughId="nav-pipeline" />
+        {(showTeam || isAdmin) && (
+          <NavLink href="/team" label={t.nav.team} icon={<TeamIcon />} />
+        )}
 
         <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
 
         <NavLink href="/numbers" label={t.nav.numbers} icon={<NumbersIcon />} walkthroughId="nav-numbers" />
+        <NavLink href="/upsells" label={t.nav.upsells} icon={<UpsellsIcon />} />
         <NavLink href="/ask" label={t.nav.ask} icon={<AskIcon />} walkthroughId="nav-ask" />
-
-        {(showTeam || isAdmin) && (
-          <NavLink href="/team" label={t.nav.team} icon={<TeamIcon />} />
-        )}
+        <NavLink href="/checkins" label={t.nav.checkins} icon={<CheckinsIcon />} walkthroughId="nav-checkins" />
 
         {isAdmin && (
           <>
