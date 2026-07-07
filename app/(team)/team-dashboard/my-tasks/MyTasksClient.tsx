@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { TeamPersonalTask } from '@/types'
+import type { TeamPersonalTask, TeamTask } from '@/types'
 
 type Priority = TeamPersonalTask['priority']
 
@@ -14,15 +14,18 @@ const PRIORITY_LABEL: Record<Priority, string> = {
 interface Props {
   memberId: string
   initialTasks: TeamPersonalTask[]
+  coachTasks: TeamTask[]
 }
 
-export default function MyTasksClient({ memberId, initialTasks }: Props) {
+export default function MyTasksClient({ memberId, initialTasks, coachTasks: initialCoachTasks }: Props) {
   const [tasks, setTasks] = useState<TeamPersonalTask[]>(initialTasks)
+  const [coachTasks, setCoachTasks] = useState<TeamTask[]>(initialCoachTasks)
   const [newTitle, setNewTitle] = useState('')
   const [newPriority, setNewPriority] = useState<Priority>('this_week')
   const [adding, setAdding] = useState(false)
   const [toggling, setToggling] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<Set<string>>(new Set())
+  const [togglingCoach, setTogglingCoach] = useState<Set<string>>(new Set())
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault()
@@ -61,6 +64,23 @@ export default function MyTasksClient({ memberId, initialTasks }: Props) {
     }
   }
 
+  async function toggleCoachTask(task: TeamTask) {
+    if (togglingCoach.has(task.id)) return
+    setTogglingCoach(prev => new Set(prev).add(task.id))
+    try {
+      const res = await fetch(`/api/team/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !task.done }),
+      })
+      if (res.ok) {
+        setCoachTasks(prev => prev.map(t => t.id === task.id ? { ...t, done: !t.done } : t))
+      }
+    } finally {
+      setTogglingCoach(prev => { const n = new Set(prev); n.delete(task.id); return n })
+    }
+  }
+
   async function deleteTask(id: string) {
     if (deleting.has(id)) return
     setDeleting(prev => new Set(prev).add(id))
@@ -74,13 +94,53 @@ export default function MyTasksClient({ memberId, initialTasks }: Props) {
 
   const open = tasks.filter(t => !t.done)
   const done = tasks.filter(t => t.done)
+  const coachOpen = coachTasks.filter(t => !t.done)
+  const coachDone = coachTasks.filter(t => t.done)
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>My Tasks</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Private tasks only you can see</p>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Your tasks and assignments from your coach</p>
       </div>
+
+      {/* Assigned by coach */}
+      {coachTasks.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+              Assigned by coach
+            </p>
+            <span style={{
+              fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.12)',
+              color: 'var(--accent)', borderRadius: 4, padding: '1px 6px',
+            }}>
+              {coachOpen.length} open
+            </span>
+          </div>
+          <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-glow)', borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
+            {coachOpen.map((task, i) => (
+              <CoachTaskRow
+                key={task.id}
+                task={task}
+                toggling={togglingCoach.has(task.id)}
+                onToggle={toggleCoachTask}
+                bordered={i < coachOpen.length - 1 || coachDone.length > 0}
+              />
+            ))}
+            {coachDone.map((task, i) => (
+              <CoachTaskRow
+                key={task.id}
+                task={task}
+                toggling={togglingCoach.has(task.id)}
+                onToggle={toggleCoachTask}
+                bordered={i < coachDone.length - 1}
+                dim
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Add task form */}
       <form onSubmit={addTask} style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
@@ -145,6 +205,54 @@ export default function MyTasksClient({ memberId, initialTasks }: Props) {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function CoachTaskRow({
+  task, toggling, onToggle, bordered, dim,
+}: {
+  task: TeamTask
+  toggling: boolean
+  onToggle: (t: TeamTask) => void
+  bordered?: boolean
+  dim?: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
+        borderBottom: bordered ? '1px solid var(--border)' : 'none',
+        opacity: dim ? 0.5 : 1,
+      }}
+    >
+      <div
+        style={{
+          width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+          border: task.done ? 'none' : '2px solid var(--accent)',
+          background: task.done ? 'var(--accent)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: toggling ? 'wait' : 'pointer',
+        }}
+        onClick={() => onToggle(task)}
+      >
+        {task.done && (
+          <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+            <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => onToggle(task)}>
+        <p style={{ fontSize: 14, color: 'var(--text-1)', margin: 0, textDecoration: task.done ? 'line-through' : 'none' }}>
+          {task.title}
+        </p>
+        {task.description && (
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '2px 0 0' }}>{task.description}</p>
+        )}
+        <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '2px 0 0' }}>
+          {PRIORITY_LABEL[task.priority]}
+        </p>
+      </div>
     </div>
   )
 }
