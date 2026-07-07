@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { getTeamSession } from '@/lib/team-auth'
+
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getTeamSession()
@@ -8,7 +14,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params
   const body = await request.json() as { done?: boolean; title?: string; priority?: string }
-  const supabase = await createServerSupabaseClient()
 
   const update: Record<string, unknown> = {}
   if (body.done !== undefined) {
@@ -18,7 +23,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.title !== undefined) update.title = body.title
   if (body.priority !== undefined) update.priority = body.priority
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('team_personal_tasks')
     .update(update)
     .eq('id', id)
@@ -33,9 +38,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const supabase = await createServerSupabaseClient()
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('team_personal_tasks')
     .delete()
     .eq('id', id)

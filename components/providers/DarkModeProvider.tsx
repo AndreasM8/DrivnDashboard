@@ -20,10 +20,11 @@ export default function DarkModeProvider({ children }: { children: React.ReactNo
     if (saved === 'light') {
       setDark(false)
       document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
     } else {
-      // 'dark' or no preference → dark mode
       setDark(true)
       document.documentElement.classList.add('dark')
+      document.documentElement.classList.remove('light')
     }
   }, [])
 
@@ -32,9 +33,11 @@ export default function DarkModeProvider({ children }: { children: React.ReactNo
     setDark(next)
     if (next) {
       document.documentElement.classList.add('dark')
+      document.documentElement.classList.remove('light')
       localStorage.setItem('theme', 'dark')
     } else {
       document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
       localStorage.setItem('theme', 'light')
     }
   }

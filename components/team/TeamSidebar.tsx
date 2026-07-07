@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import type { TeamMember } from '@/types'
+import type { TeamMember, WorkspaceSummary } from '@/types'
+import WorkspaceSwitcher from './WorkspaceSwitcher'
 
 interface NavItem {
   href: string
@@ -68,19 +69,18 @@ function NavLink({ href, label, icon }: NavItem) {
 
 interface TeamSidebarProps {
   member: TeamMember
+  workspaces?: WorkspaceSummary[]
 }
 
-export default function TeamSidebar({ member }: TeamSidebarProps) {
-  const router = useRouter()
-
+export default function TeamSidebar({ member, workspaces = [] }: TeamSidebarProps) {
   async function handleLogout() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    window.location.href = '/auth/login'
   }
 
-  const roleColor = member.role === 'setter' ? '#7C3AED' : '#2563EB'
-  const roleBg = member.role === 'setter' ? 'rgba(124,58,237,0.12)' : 'rgba(37,99,235,0.12)'
+  const roleColor = member.role === 'setter' ? '#7C3AED' : member.role === 'closer' ? '#2563EB' : '#059669'
+  const roleBg = member.role === 'setter' ? 'rgba(124,58,237,0.12)' : member.role === 'closer' ? 'rgba(37,99,235,0.12)' : 'rgba(5,150,105,0.12)'
 
   return (
     <aside
@@ -118,28 +118,31 @@ export default function TeamSidebar({ member }: TeamSidebarProps) {
       <div style={{
         padding: '12px 14px',
         borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: roleBg,
-          color: roleColor,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 700, flexShrink: 0,
-        }}>
-          {member.name.charAt(0).toUpperCase()}
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {member.name}
-          </p>
-          <span style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-            color: roleColor, background: roleBg, padding: '1px 6px', borderRadius: 4,
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: roleBg,
+            color: roleColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, fontWeight: 700, flexShrink: 0,
           }}>
-            {member.role}
-          </span>
+            {member.name.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {member.name}
+            </p>
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: roleColor, background: roleBg, padding: '1px 6px', borderRadius: 4,
+            }}>
+              {member.role === 'setter' ? 'Setter' : member.role === 'closer' ? 'Closer' : 'Setter + Closer'}
+            </span>
+          </div>
         </div>
+        {workspaces.length > 1 && <WorkspaceSwitcher workspaces={workspaces} />}
       </div>
 
       {/* Nav */}
@@ -157,12 +160,15 @@ export default function TeamSidebar({ member }: TeamSidebarProps) {
         {member.permissions.pipeline && (
           <>
             <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
-            <NavLink href="/pipeline" label="Pipeline" icon={<PipelineIcon />} />
+            <NavLink href="/team-dashboard/pipeline" label="Pipeline" icon={<PipelineIcon />} />
           </>
         )}
         {member.permissions.clients && (
           <NavLink href="/team-dashboard/clients" label="Clients" icon={<ClientsIcon />} />
         )}
+
+        <div style={{ height: '1px', background: 'var(--border)', margin: '8px 2px' }} />
+        <NavLink href="/team-dashboard/settings" label="Settings" icon={<SettingsIcon />} />
       </nav>
 
       {/* Bottom: Logout */}
@@ -255,6 +261,14 @@ function ClientsIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
       <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+    </svg>
+  )
+}
+
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+      <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
     </svg>
   )
 }

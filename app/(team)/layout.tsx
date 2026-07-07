@@ -1,11 +1,18 @@
 import { redirect } from 'next/navigation'
 import { getTeamSession } from '@/lib/team-auth'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import TeamSidebar from '@/components/team/TeamSidebar'
 import TeamBottomNav from '@/components/team/TeamBottomNav'
 import EodGate from '@/components/team/EodGate'
 import WeeklyCheckinGate from '@/components/team/WeeklyCheckinGate'
-import type { TeamCheckinTemplate } from '@/types'
+import type { TeamCheckinTemplate, TeamRole, WorkspaceSummary } from '@/types'
+
+const adminSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 function getThisWeekStart(): string {
   const now = new Date()
@@ -36,12 +43,13 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
   const thisWeekStart = getThisWeekStart()
   const thisWeekEnd = getThisWeekEnd(thisWeekStart)
 
-  // Fetch EOD template, today's EOD submission, weekly template, and this week's weekly submission
+  // Fetch EOD/weekly templates + workspace list in parallel
   const [
     { data: eodTemplateData },
     { data: eodData },
     { data: weeklyTemplateData },
     { data: weeklySubmission },
+    { data: allMembers },
   ] = await Promise.all([
     supabase
       .from('team_checkin_templates')
@@ -67,7 +75,37 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
       .eq('team_member_id', session.member.id)
       .eq('week_start', thisWeekStart)
       .maybeSingle(),
+    // All active memberships for this user (for workspace switcher)
+    session.member.user_id
+      ? adminSupabase
+          .from('team_members')
+          .select('id, coach_id, role')
+          .eq('user_id', session.member.user_id)
+          .eq('status', 'active')
+          .order('created_at')
+      : Promise.resolve({ data: null }),
   ])
+
+  // Build workspace list — only fetch coach names if there are multiple workspaces
+  let workspaces: WorkspaceSummary[] = []
+  if (allMembers && allMembers.length > 1) {
+    const coachIds = allMembers.map(m => m.coach_id as string)
+    const { data: coaches } = await adminSupabase
+      .from('users')
+      .select('id, name, business_name')
+      .in('id', coachIds)
+
+    workspaces = allMembers.map(m => ({
+      memberId: m.id as string,
+      coachId: m.coach_id as string,
+      coachName:
+        coaches?.find(c => c.id === m.coach_id)?.business_name ||
+        coaches?.find(c => c.id === m.coach_id)?.name ||
+        'Unknown',
+      role: m.role as TeamRole,
+      isActive: m.id === session.member.id,
+    }))
+  }
 
   const eodTemplate = eodTemplateData as TeamCheckinTemplate | null
   const weeklyTemplate = weeklyTemplateData as TeamCheckinTemplate | null
@@ -89,8 +127,11 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
-      <TeamSidebar member={session.member} />
-      <main style={{ flex: 1, padding: '24px 24px 88px', maxWidth: '100%', overflowX: 'hidden' }}>
+      <TeamSidebar member={session.member} workspaces={workspaces} />
+      <main
+        className="nav-scroll-pad"
+        style={{ flex: 1, paddingTop: 24, paddingLeft: 24, paddingRight: 24, maxWidth: '100%', overflowX: 'hidden' }}
+      >
         {children}
       </main>
 
@@ -104,7 +145,6 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
 
       {shouldShowWeeklyGate && (
         <WeeklyCheckinGate
-          member={session.member}
           questions={weeklyTemplate?.questions ?? []}
           weekStart={thisWeekStart}
           weekEnd={thisWeekEnd}

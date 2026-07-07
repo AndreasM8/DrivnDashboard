@@ -98,7 +98,7 @@ export default function EodGate({ member, questions, today }: Props) {
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>
             Quick daily summary before you sign off,{' '}
-            {new Date(today).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+            {new Date(today + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export default function EodGate({ member, questions, today }: Props) {
                       value={String(answers[q.id] ?? '')}
                       onChange={e => setAnswer(q.id, e.target.value === '' ? '' : Number(e.target.value))}
                       required={q.required}
-                      placeholder={q.placeholder ?? '0'}
+                      placeholder={q.placeholder ?? ''}
                       className="input-base"
                     />
                   )}

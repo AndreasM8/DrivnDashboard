@@ -2,18 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { CheckinQuestion, TeamMember } from '@/types'
+import type { CheckinQuestion } from '@/types'
 
 type AnswerMap = Record<string, string | number | boolean>
 
 interface Props {
-  member: TeamMember
   questions: CheckinQuestion[]
   weekStart: string
   weekEnd: string
 }
 
-export default function WeeklyCheckinGate({ member: _member, questions, weekStart, weekEnd }: Props) {
+export default function WeeklyCheckinGate({ questions, weekStart, weekEnd }: Props) {
   const router = useRouter()
   const storageKey = `weekly_dismissed_${weekStart}`
   const [dismissed, setDismissed] = useState<boolean>(() => {
@@ -44,8 +43,9 @@ export default function WeeklyCheckinGate({ member: _member, questions, weekStar
   }
 
   const weekLabel = (() => {
-    const start = new Date(weekStart)
-    const end = new Date(weekEnd)
+    // Use T12:00:00 to avoid UTC-midnight date rollback in negative-UTC timezones
+    const start = new Date(weekStart + 'T12:00:00')
+    const end = new Date(weekEnd + 'T12:00:00')
     return `${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
   })()
 
@@ -127,7 +127,7 @@ export default function WeeklyCheckinGate({ member: _member, questions, weekStar
                     value={String(answers[q.id] ?? '')}
                     onChange={e => setAnswer(q.id, e.target.value === '' ? '' : Number(e.target.value))}
                     required={q.required}
-                    placeholder={q.placeholder ?? '0'}
+                    placeholder={q.placeholder ?? ''}
                     className="input-base"
                   />
                 )}

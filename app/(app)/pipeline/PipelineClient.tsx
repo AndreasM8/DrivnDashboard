@@ -23,6 +23,8 @@ interface Props {
   assignments: LeadLabelAssignment[]
   userId: string
   kpiTargets: KpiTargets | null
+  /** When true, mutations go through /api/team/leads/* instead of direct Supabase */
+  teamMode?: boolean
 }
 
 type TierFilter = 'all' | '1' | '2' | '3' | 'needs_followup'
@@ -220,7 +222,7 @@ const TIER_META = {
 } as const
 
 function LeadCard({
-  lead, labels, assignedLabelIds, onClick, onTierChange, onDragStart, onDragEnd, onContacted,
+  lead, labels, assignedLabelIds, onClick, onTierChange, onDragStart, onDragEnd, onContacted, teamMode,
 }: {
   lead: Lead
   labels: LeadLabel[]
@@ -230,6 +232,7 @@ function LeadCard({
   onDragStart: (e: React.DragEvent<HTMLDivElement>) => void
   onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void
   onContacted: (leadId: string) => void
+  teamMode?: boolean
 }) {
   const [contactedFlash, setContactedFlash] = useState(false)
   // Disable native HTML drag on touch devices — it blocks swipe-scroll and shows white ghost boxes
@@ -260,7 +263,10 @@ function LeadCard({
     if (contactedFlash) return
     setContactedFlash(true)
     setTimeout(() => setContactedFlash(false), 1200)
-    await fetch(`/api/leads/${lead.id}/contacted`, { method: 'PATCH' })
+    const url = teamMode
+      ? `/api/team/leads/${lead.id}/contacted`
+      : `/api/leads/${lead.id}/contacted`
+    await fetch(url, { method: 'PATCH' })
     onContacted(lead.id)
   }
 
@@ -437,7 +443,7 @@ const MOBILE_STAGE_CHIPS: { stage: LeadStage; label: string; accent: string }[] 
   { stage: 'closed',         label: 'Closed',    accent: '#10B981' },
 ]
 
-function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp, stageLabel, stageAccent, onStageChange }: {
+function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp, stageLabel, stageAccent, onStageChange, teamMode }: {
   lead: Lead
   labels: LeadLabel[]
   assignedLabelIds: string[]
@@ -447,6 +453,7 @@ function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, s
   stageLabel?: string
   stageAccent?: string
   onStageChange?: (lead: Lead, stage: LeadStage) => void
+  teamMode?: boolean
 }) {
   const [contacted, setContacted] = useState(false)
   const days = daysSince(lead.last_contact_at)
@@ -459,7 +466,10 @@ function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, s
     if (contacted) return
     setContacted(true)
     setTimeout(() => setContacted(false), 1500)
-    await fetch(`/api/leads/${lead.id}/contacted`, { method: 'PATCH' })
+    const url = teamMode
+      ? `/api/team/leads/${lead.id}/contacted`
+      : `/api/leads/${lead.id}/contacted`
+    await fetch(url, { method: 'PATCH' })
     onFollowUp?.()
   }
 
@@ -725,7 +735,7 @@ function MobileStageSection({
 
 function StageColumn({
   stage, label, auto, bg, accent, leads, allLeadsInStage, labels, assignments, selectedLabels, tierFilter,
-  onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages,
+  onLeadClick, onTierChange, onAddClick, onDrop, onContacted, extraStages: _extraStages, teamMode,
 }: {
   stage: LeadStage
   label: string
@@ -744,6 +754,7 @@ function StageColumn({
   onDrop: (leadId: string, targetStage: LeadStage) => void
   onContacted: (leadId: string) => void
   extraStages?: LeadStage[]
+  teamMode?: boolean
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -916,6 +927,7 @@ function StageColumn({
               onClick={() => onLeadClick(lead)}
               onTierChange={tier => onTierChange(lead.id, tier)}
               onContacted={onContacted}
+              teamMode={teamMode}
               onDragStart={e => {
                 e.dataTransfer.setData('leadId', lead.id)
                 ;(e.currentTarget as HTMLDivElement).style.opacity = '0.4'
@@ -945,7 +957,7 @@ function StageColumn({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets }: Props) {
+export default function PipelineClient({ initialLeads, labels: initialLabels, setters, assignments: initialAssignments, userId, kpiTargets, teamMode = false }: Props) {
   const isMobile = useIsMobile()
   const t = useT()
   const kanbanScrollRef = useRef<HTMLDivElement>(null)
@@ -1056,8 +1068,18 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   // ─── Actions ───────────────────────────────────────────────────────────────
 
   async function updateTier(leadId: string, tier: 1 | 2 | 3) {
+    const prevLeads = leads
     setLeads(ls => ls.map(l => l.id === leadId ? { ...l, tier } : l))
-    await supabase.from('leads').update({ tier }).eq('id', leadId)
+    if (teamMode) {
+      const res = await fetch(`/api/team/leads/${leadId}/tier`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      })
+      if (!res.ok) setLeads(prevLeads)
+    } else {
+      await supabase.from('leads').update({ tier }).eq('id', leadId)
+    }
   }
 
   async function moveStage(lead: Lead, stage: LeadStage) {
@@ -1075,16 +1097,29 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
 
     setLeads(ls => ls.map(l => l.id === lead.id ? { ...l, stage } : l))
     setDrawerLead(d => d?.id === lead.id ? { ...d, stage } : d)
-    const { error } = await supabase.from('leads').update({ stage, updated_at: new Date().toISOString() }).eq('id', lead.id)
-    if (!error) {
-      await supabase.from('lead_history').insert({
-        lead_id: lead.id, action: `Stage moved to ${STAGE_LABELS[stage]}`, actor: 'You',
+
+    if (teamMode) {
+      const res = await fetch(`/api/team/leads/${lead.id}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage }),
       })
-      triggerSheetsSync()
+      if (!res.ok) {
+        setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
+        setDrawerLead(d => d?.id === lead.id ? lead : d)
+      }
     } else {
-      // Revert optimistic update
-      setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
-      setDrawerLead(d => d?.id === lead.id ? lead : d)
+      const { error } = await supabase.from('leads').update({ stage, updated_at: new Date().toISOString() }).eq('id', lead.id)
+      if (!error) {
+        await supabase.from('lead_history').insert({
+          lead_id: lead.id, action: `Stage moved to ${STAGE_LABELS[stage]}`, actor: 'You',
+        })
+        triggerSheetsSync()
+      } else {
+        // Revert optimistic update
+        setLeads(ls => ls.map(l => l.id === lead.id ? lead : l))
+        setDrawerLead(d => d?.id === lead.id ? lead : d)
+      }
     }
   }
 
@@ -1354,6 +1389,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                 onContacted={handleContacted}
                 onAddClick={() => { setAddLeadStage(col.stage); setAddLeadOpen(true) }}
                 onDrop={handleDrop}
+                teamMode={teamMode}
               />
             )
           })}
@@ -1387,6 +1423,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                   stageLabel={col?.label}
                   stageAccent={col?.accent}
                   onStageChange={moveStage}
+                  teamMode={teamMode}
                 />
               )
             })
@@ -1403,6 +1440,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           existingLeads={leads}
           onClose={() => setAddLeadOpen(false)}
           onAdded={onLeadAdded}
+          addApiRoute={teamMode ? '/api/team/leads' : undefined}
         />
       )}
 

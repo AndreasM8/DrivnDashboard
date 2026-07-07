@@ -35,27 +35,26 @@ function VerifyInner() {
         return
       }
 
-      // Regular login — check if they're a team member and route accordingly
+      // Regular login — determine where to route
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: teamMembership } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .limit(1)
-          .maybeSingle()
+        // Fetch profile and team membership in parallel
+        const [{ data: profile }, { data: teamMembership }] = await Promise.all([
+          supabase.from('users').select('role, onboarding_complete').eq('id', user.id).maybeSingle(),
+          supabase.from('team_members').select('id').eq('user_id', user.id).eq('status', 'active').limit(1).maybeSingle(),
+        ])
+
+        // Admins always go to the coach dashboard — bypass team member routing
+        if (profile?.role === 'admin') {
+          router.replace('/dashboard')
+          return
+        }
 
         if (teamMembership) {
           router.replace('/team-dashboard')
           return
         }
 
-        const { data: profile } = await supabase
-          .from('users')
-          .select('onboarding_complete')
-          .eq('id', user.id)
-          .single()
         if (!profile?.onboarding_complete) {
           router.replace('/onboarding')
           return

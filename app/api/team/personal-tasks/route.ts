@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 import { getTeamSession } from '@/lib/team-auth'
+
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 export async function GET() {
   const session = await getTeamSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const supabase = await createServerSupabaseClient()
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('team_personal_tasks')
     .select('*')
     .eq('team_member_id', session.member.id)
@@ -24,8 +29,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json() as { title: string; priority?: string }
   if (!body.title) return NextResponse.json({ error: 'title required' }, { status: 400 })
 
-  const supabase = await createServerSupabaseClient()
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('team_personal_tasks')
     .insert({
       team_member_id: session.member.id,

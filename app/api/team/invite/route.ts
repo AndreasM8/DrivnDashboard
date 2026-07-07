@@ -44,8 +44,9 @@ async function sendInviteEmail({
 }
 
 const DEFAULT_PERMISSIONS: Record<TeamRole, TeamPermissions> = {
-  setter: { pipeline: true,  clients: false, finances: false, labels: true,  content: false },
-  closer: { pipeline: true,  clients: true,  finances: true,  labels: false, content: false },
+  setter:         { pipeline: true,  clients: false, finances: false, labels: true,  content: false },
+  closer:         { pipeline: true,  clients: true,  finances: true,  labels: false, content: false },
+  setter_closer:  { pipeline: true,  clients: true,  finances: true,  labels: true,  content: false },
 }
 
 export async function POST(request: NextRequest) {
@@ -94,6 +95,8 @@ export async function POST(request: NextRequest) {
   // Also create default EOD template
   const defaultQuestions = body.role === 'setter'
     ? ['New followers today', 'Followups to hot leads', 'Followups to warm leads', 'Followups to cold leads', 'New replies received', 'Offers sent', 'Calls booked', "Today's highlight"]
+    : body.role === 'setter_closer'
+    ? ['New followers today', 'Replies received', 'Offers sent', 'Calls booked', 'Deals closed', 'Revenue closed', "Today's highlight / blocker"]
     : ['Calls taken today', 'Deals closed', 'Revenue closed', 'No-shows', 'Reschedules', "Today's highlight / blocker"]
 
   await supabase.from('team_checkin_templates').insert({
@@ -111,7 +114,9 @@ export async function POST(request: NextRequest) {
   })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const inviteUrl = `${appUrl}/join/${data.invite_token as string}`
+  const token = data.invite_token as string | null
+  if (!token) return NextResponse.json({ error: 'Invite token not generated — check DB trigger' }, { status: 500 })
+  const inviteUrl = `${appUrl}/join/${token}`
 
   // Send invite email (best-effort — don't block response on failure)
   sendInviteEmail({ to: body.email, name: body.name, coachName, inviteUrl }).catch(err =>

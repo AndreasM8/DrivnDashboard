@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import type { TeamMember, TeamRole, TeamMemberStatus, TeamPermissions, CheckinQuestion, CheckinQuestionType } from '@/types'
+import type { TeamMember, TeamRole, TeamMemberStatus, TeamPermissions, CheckinQuestion, CheckinQuestionType, MemberKpiTargets } from '@/types'
 import TeamDashboard from './TeamDashboard'
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 const ROLE_LABELS: Record<TeamRole, string> = {
   setter: 'Setter',
   closer: 'Closer',
+  setter_closer: 'Setter + Closer',
 }
 
 const STATUS_COLORS: Record<TeamMemberStatus, { bg: string; text: string }> = {
@@ -129,13 +130,13 @@ function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (m
                 />
               </Field>
               <Field label="Role">
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {(['setter', 'closer'] as TeamRole[]).map(r => (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {(['setter', 'closer', 'setter_closer'] as TeamRole[]).map(r => (
                     <button
                       key={r} type="button"
                       onClick={() => setRole(r)}
                       style={{
-                        flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        flex: 1, minWidth: 80, padding: '9px 6px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                         cursor: 'pointer', border: '2px solid',
                         borderColor: role === r ? 'var(--accent)' : 'var(--border)',
                         background: role === r ? 'rgba(37,99,235,0.08)' : 'transparent',
@@ -175,9 +176,13 @@ const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Fri
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-function MemberCard({ member }: { member: TeamMember }) {
+function MemberCard({ member, onRemove }: { member: TeamMember; onRemove: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const [permissions, setPermissions] = useState<TeamPermissions>(member.permissions)
+  const [role, setRole] = useState<TeamRole>(member.role)
+  const [savingRole, setSavingRole] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [questions, setQuestions] = useState<CheckinQuestion[]>([])
   const [eodHour, setEodHour] = useState(20)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
@@ -190,6 +195,9 @@ function MemberCard({ member }: { member: TeamMember }) {
   const [weeklyQuestions, setWeeklyQuestions] = useState<CheckinQuestion[]>([])
   const [weeklyEnabled, setWeeklyEnabled] = useState(false)
   const [weeklyDay, setWeeklyDay] = useState(1)
+  // KPI targets
+  const [kpiTargets, setKpiTargets] = useState<MemberKpiTargets>(member.kpi_targets ?? {})
+  const [savingTargets, setSavingTargets] = useState(false)
   // Invite link state
   const [inviteToken, setInviteToken] = useState<string>(member.invite_token ?? '')
   const [inviteCopied, setInviteCopied] = useState(false)
@@ -323,6 +331,48 @@ function MemberCard({ member }: { member: TeamMember }) {
     })
   }
 
+  async function changeRole(newRole: TeamRole) {
+    if (newRole === role || savingRole) return
+    setSavingRole(true)
+    setRole(newRole)
+    await fetch(`/api/team/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    })
+    setSavingRole(false)
+  }
+
+  function setTarget(key: keyof MemberKpiTargets, val: string) {
+    setKpiTargets(prev => ({
+      ...prev,
+      [key]: val === '' ? undefined : Number(val),
+    }))
+  }
+
+  async function saveTargets() {
+    if (savingTargets) return
+    setSavingTargets(true)
+    await fetch(`/api/team/members/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kpi_targets: kpiTargets }),
+    })
+    setSavingTargets(false)
+  }
+
+  async function removeMember() {
+    if (removing) return
+    setRemoving(true)
+    const res = await fetch(`/api/team/members/${member.id}`, { method: 'DELETE' })
+    if (res.ok) {
+      onRemove(member.id)
+    } else {
+      setRemoving(false)
+      setConfirmRemove(false)
+    }
+  }
+
   return (
     <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
       {/* Header row */}
@@ -332,8 +382,8 @@ function MemberCard({ member }: { member: TeamMember }) {
       >
         <div style={{
           width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-          background: member.role === 'setter' ? 'rgba(124,58,237,0.12)' : 'rgba(37,99,235,0.12)',
-          color: member.role === 'setter' ? '#7C3AED' : '#2563EB',
+          background: role === 'setter' ? 'rgba(124,58,237,0.12)' : role === 'closer' ? 'rgba(37,99,235,0.12)' : 'rgba(5,150,105,0.12)',
+          color: role === 'setter' ? '#7C3AED' : role === 'closer' ? '#2563EB' : '#059669',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, fontWeight: 700,
         }}>
@@ -344,11 +394,11 @@ function MemberCard({ member }: { member: TeamMember }) {
             <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{member.name}</span>
             <span style={{
               fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
-              background: member.role === 'setter' ? 'rgba(124,58,237,0.12)' : 'rgba(37,99,235,0.12)',
-              color: member.role === 'setter' ? '#7C3AED' : '#2563EB',
+              background: role === 'setter' ? 'rgba(124,58,237,0.12)' : role === 'closer' ? 'rgba(37,99,235,0.12)' : 'rgba(5,150,105,0.12)',
+              color: role === 'setter' ? '#7C3AED' : role === 'closer' ? '#2563EB' : '#059669',
               textTransform: 'uppercase', letterSpacing: '0.06em',
             }}>
-              {ROLE_LABELS[member.role]}
+              {ROLE_LABELS[role]}
             </span>
             <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: statusStyle.bg, color: statusStyle.text }}>
               {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
@@ -433,6 +483,31 @@ function MemberCard({ member }: { member: TeamMember }) {
                   </div>
                 </div>
               )}
+
+              {/* Role */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Role {savingRole && <span style={{ fontWeight: 400, textTransform: 'none', color: 'var(--text-3)' }}>— saving…</span>}
+                </p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {(['setter', 'closer', 'setter_closer'] as TeamRole[]).map(r => (
+                    <button
+                      key={r} type="button"
+                      onClick={() => changeRole(r)}
+                      style={{
+                        flex: 1, minWidth: 80, padding: '7px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', border: '2px solid',
+                        borderColor: role === r ? 'var(--accent)' : 'var(--border)',
+                        background: role === r ? 'rgba(37,99,235,0.08)' : 'var(--surface-2)',
+                        color: role === r ? 'var(--accent)' : 'var(--text-2)',
+                        transition: 'all 120ms',
+                      }}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Permissions */}
               <div>
@@ -647,6 +722,79 @@ function MemberCard({ member }: { member: TeamMember }) {
                   </button>
                 </div>
               </div>
+
+              {/* KPI Targets */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>KPI Targets</p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 12px' }}>
+                  Set weekly targets for {member.name}. They&apos;ll see these on their dashboard.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 12 }}>
+                  {/* Setter fields */}
+                  {(role === 'setter' || role === 'setter_closer') && (<>
+                    <TargetInput label="Followers / wk" value={kpiTargets.followers} onChange={v => setTarget('followers', v)} />
+                    <TargetInput label="Responses / wk" value={kpiTargets.replies} onChange={v => setTarget('replies', v)} />
+                    <TargetInput label="Response Rate %" value={kpiTargets.response_rate} onChange={v => setTarget('response_rate', v)} />
+                    <TargetInput label="Calls Booked / wk" value={kpiTargets.calls_booked} onChange={v => setTarget('calls_booked', v)} />
+                    <TargetInput label="Booking Rate %" value={kpiTargets.booking_rate} onChange={v => setTarget('booking_rate', v)} />
+                    <TargetInput label="Follow-ups / wk" value={kpiTargets.followups} onChange={v => setTarget('followups', v)} />
+                  </>)}
+                  {/* Closer fields */}
+                  {(role === 'closer' || role === 'setter_closer') && (<>
+                    <TargetInput label="Calls Taken / wk" value={kpiTargets.calls_taken} onChange={v => setTarget('calls_taken', v)} />
+                    <TargetInput label="Offers Made / wk" value={kpiTargets.offers} onChange={v => setTarget('offers', v)} />
+                    <TargetInput label="Show Rate %" value={kpiTargets.show_rate} onChange={v => setTarget('show_rate', v)} />
+                    <TargetInput label="Offer Rate %" value={kpiTargets.offer_rate} onChange={v => setTarget('offer_rate', v)} />
+                    <TargetInput label="Close Rate %" value={kpiTargets.close_rate} onChange={v => setTarget('close_rate', v)} />
+                  </>)}
+                  {/* Shared */}
+                  <TargetInput label="Sales / wk" value={kpiTargets.sales} onChange={v => setTarget('sales', v)} />
+                  <TargetInput label="Revenue / wk ($)" value={kpiTargets.revenue} onChange={v => setTarget('revenue', v)} />
+                </div>
+                <button
+                  onClick={saveTargets}
+                  disabled={savingTargets}
+                  style={{ padding: '7px 16px', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: savingTargets ? 'not-allowed' : 'pointer', opacity: savingTargets ? 0.7 : 1 }}
+                >
+                  {savingTargets ? 'Saving…' : 'Save targets'}
+                </button>
+              </div>
+
+              {/* Remove member */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                {confirmRemove ? (
+                  <div style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)', margin: '0 0 10px' }}>
+                      Remove {member.name} from team?
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '0 0 12px' }}>
+                      This will revoke their access immediately. Their submitted reports will be kept.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setConfirmRemove(false)}
+                        style={{ flex: 1, padding: '8px 0', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, background: 'transparent', color: 'var(--text-2)', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={removeMember}
+                        disabled={removing}
+                        style={{ flex: 1, padding: '8px 0', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: removing ? 'not-allowed' : 'pointer', opacity: removing ? 0.7 : 1 }}
+                      >
+                        {removing ? 'Removing…' : 'Yes, remove'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmRemove(true)}
+                    style={{ padding: '7px 14px', background: 'transparent', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 500, color: 'var(--danger)', cursor: 'pointer' }}
+                  >
+                    Remove member
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -656,6 +804,33 @@ function MemberCard({ member }: { member: TeamMember }) {
 }
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
+
+function TargetInput({ label, value, onChange }: {
+  label: string
+  value: number | undefined
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-2)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </label>
+      <input
+        type="number"
+        min={0}
+        value={value !== undefined ? String(value) : ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder="–"
+        style={{
+          padding: '7px 10px', background: 'var(--surface-2)',
+          border: '1px solid var(--border)', borderRadius: 7,
+          fontSize: 14, fontWeight: 600, color: 'var(--text-1)',
+          outline: 'none', width: '100%', boxSizing: 'border-box' as const,
+        }}
+      />
+    </div>
+  )
+}
 
 const inputStyle: React.CSSProperties = {
   padding: '9px 12px',
@@ -749,7 +924,13 @@ export default function TeamClient({ initialMembers }: Props) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {members.map(m => <MemberCard key={m.id} member={m} />)}
+            {members.map(m => (
+              <MemberCard
+                key={m.id}
+                member={m}
+                onRemove={id => setMembers(prev => prev.filter(x => x.id !== id))}
+              />
+            ))}
           </div>
         )
       )}

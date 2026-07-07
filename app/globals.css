@@ -75,6 +75,7 @@
 
 /* Dark class mirrors root (app is dark-first) */
 .dark {
+  color-scheme: dark;
   --bg-base:        #0A0B0F;
   --bg-surface:     #111318;
   --bg-elevated:    #181B24;
@@ -90,6 +91,47 @@
   --shadow-raised:  none;
   --shadow-dropdown:0 8px 24px rgba(0,0,0,0.6);
   --sidebar-bg:     #0E1016;
+}
+
+/* Light mode */
+.light {
+  color-scheme: light;
+  --bg-void:         #ECEEF4;
+  --bg-base:         #F5F6FA;
+  --bg-surface:      #FFFFFF;
+  --bg-elevated:     #EEF0F7;
+  --bg-glass:        rgba(0,0,0,0.03);
+
+  --surface-1:       #FFFFFF;
+  --surface-2:       #EEF0F7;
+  --surface-3:       #E4E7F0;
+
+  --border:          rgba(0,0,0,0.08);
+  --border-strong:   rgba(0,0,0,0.14);
+  --border-glow:     rgba(99,102,241,0.25);
+
+  --text-1:          #0F1117;
+  --text-2:          #4B5568;
+  --text-3:          #9CA3AF;
+  --text-primary:    #0F1117;
+  --text-secondary:  #4B5568;
+  --text-tertiary:   #9CA3AF;
+
+  --accent:          #6366F1;
+  --accent-hover:    #4F46E5;
+
+  --glow-indigo:     0 0 20px rgba(99,102,241,0.15);
+  --glow-cyan:       0 0 20px rgba(6,182,212,0.15);
+  --glow-green:      0 0 16px rgba(16,185,129,0.12);
+  --glow-amber:      0 0 16px rgba(245,158,11,0.12);
+  --glow-red:        0 0 16px rgba(239,68,68,0.12);
+  --glow-purple:     0 0 16px rgba(139,92,246,0.12);
+
+  --shadow-card:     0 1px 3px rgba(0,0,0,0.07);
+  --shadow-raised:   0 4px 20px rgba(0,0,0,0.1);
+  --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.14);
+
+  --sidebar-bg:      #FFFFFF;
 }
 
 /* ── Base ── */
@@ -334,5 +376,19 @@ input[type='number']::-webkit-outer-spin-button {
   .card-glass {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* ── Bottom-nav scroll clearance ──
+   On mobile the fixed bottom nav (60px) may grow taller on iOS due to
+   env(safe-area-inset-bottom). Use this class on the main scroll container
+   instead of a hard-coded Tailwind pb-XX so it always clears the nav properly.
+   On desktop (md+) there is no bottom nav so padding is removed.           */
+.nav-scroll-pad {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .nav-scroll-pad {
+    padding-bottom: 0;
   }
 }

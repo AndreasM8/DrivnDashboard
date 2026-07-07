@@ -1918,7 +1918,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div className="md:h-full" style={{ display: 'flex' }}>
       {/* Left nav — desktop only */}
       <div className="hidden md:flex" style={{
         flexDirection: 'column',
@@ -2004,7 +2004,7 @@ export default function SettingsClient({ userId, userEmail, isAdmin = false, pro
       </div>
 
       {/* Mobile accordion — full width, all sections inline */}
-      <div className="md:hidden" style={{ flex: 1, overflowY: 'auto', paddingBottom: 88 }}>
+      <div className="md:hidden" style={{ flex: 1 }}>
         {/* Page title */}
         <div style={{ padding: '16px 16px 4px', borderBottom: '1px solid var(--border)' }}>
           <h1 className="page-title">Settings</h1>

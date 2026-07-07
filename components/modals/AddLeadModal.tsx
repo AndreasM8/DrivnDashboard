@@ -13,9 +13,11 @@ interface Props {
   existingLeads: Lead[]
   onClose: () => void
   onAdded: (lead: Lead) => void
+  /** When set, POST to this URL instead of using direct Supabase (team member mode) */
+  addApiRoute?: string
 }
 
-export default function AddLeadModal({ userId, defaultStage, setters, existingLeads, onClose, onAdded }: Props) {
+export default function AddLeadModal({ userId, defaultStage, setters, existingLeads, onClose, onAdded, addApiRoute }: Props) {
   const t = useT()
   const [igUsername, setIgUsername] = useState('')
   const [fullName, setFullName] = useState('')
@@ -32,6 +34,27 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
     if (!igUsername) return
     setLoading(true)
     setError('')
+
+    if (addApiRoute) {
+      // Team member mode — route through API to bypass RLS
+      const res = await fetch(addApiRoute, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ig_username: igUsername,
+          full_name: fullName,
+          stage: defaultStage,
+          setter_id: setterId || null,
+          setter_notes: notes,
+          last_contact_at: new Date().toISOString(),
+        }),
+      })
+      const json = await res.json() as { lead?: Lead; error?: string }
+      if (!res.ok) { setError(json.error ?? 'Something went wrong. Please try again.'); setLoading(false); return }
+      onAdded(json.lead!)
+      setLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const { data, error: err } = await supabase

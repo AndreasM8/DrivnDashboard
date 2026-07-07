@@ -327,7 +327,7 @@ export interface FollowUpSchedule {
 
 // ─── Team Members ─────────────────────────────────────────────────────────────
 
-export type TeamRole = 'setter' | 'closer'
+export type TeamRole = 'setter' | 'closer' | 'setter_closer'
 export type TeamMemberStatus = 'invited' | 'active' | 'inactive'
 
 // Legacy aliases kept so old code that references TeamStatus/deactivated still compiles
@@ -339,6 +339,28 @@ export interface TeamPermissions {
   finances: boolean
   labels: boolean
   content: boolean
+}
+
+// Per-member KPI targets set by the coach
+// Requires: ALTER TABLE team_members ADD COLUMN IF NOT EXISTS kpi_targets JSONB DEFAULT '{}';
+export interface MemberKpiTargets {
+  // Setter targets
+  followers?: number
+  replies?: number
+  followups?: number
+  calls_booked?: number
+  sales?: number
+  revenue?: number
+  response_rate?: number   // %
+  booking_rate?: number    // %
+  show_rate?: number       // %
+  // Closer targets
+  calls_taken?: number
+  showed?: number
+  offers?: number
+  deals?: number
+  offer_rate?: number      // %
+  close_rate?: number      // %
 }
 
 export interface TeamMember {
@@ -353,6 +375,15 @@ export interface TeamMember {
   invite_token: string
   invite_expires_at: string
   created_at: string
+  kpi_targets?: MemberKpiTargets
+}
+
+export interface WorkspaceSummary {
+  memberId: string
+  coachId: string
+  coachName: string
+  role: TeamRole
+  isActive: boolean
 }
 
 export type CheckinQuestionType = 'number' | 'text' | 'textarea' | 'boolean'

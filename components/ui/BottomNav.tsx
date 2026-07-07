@@ -82,11 +82,10 @@ export default function BottomNav({ taskBadge = 0, isOwner = false, showTeam = f
         background: 'var(--sidebar-bg)',
         borderTop: '1px solid var(--border)',
         height: 60,
-        display: 'flex',
         zIndex: 50,
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
-      className="md:hidden"
+      className="flex md:hidden"
     >
       <Tab href="/dashboard" label={t.nav.dashboard} icon={<HomeIcon />} />
       <Tab href="/tasks" label={t.nav.tasks} icon={<TasksIcon />} badge={taskBadge} />

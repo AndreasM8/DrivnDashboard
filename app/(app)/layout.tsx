@@ -131,7 +131,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Sidebar taskBadge={badge} isOwner={isOwner} isAdmin={isAdmin} showTeam={showTeam} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <MobileHeader isOwner={isOwner} />
-              <main className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ background: 'var(--bg-base)' }}>
+              <main className="flex-1 overflow-y-auto nav-scroll-pad" style={{ background: 'var(--bg-base)' }}>
                 {children}
               </main>
             </div>
