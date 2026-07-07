@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import NumbersClient from './NumbersClient'
 import WeeklyInsightCard from '@/components/numbers/WeeklyInsightCard'
 import { getMonday } from '@/lib/insights/context'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense, Ad } from '@/types'
 
 export default async function NumbersPage() {
   const supabase = await createServerSupabaseClient()
@@ -40,6 +40,9 @@ export default async function NumbersPage() {
     { data: allExpensesData },
     { data: weeklyInsight },
     { data: recurringExpensesData },
+    { data: adsData },
+    { data: monthLeadsData },
+    { data: clientsWithLeads },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', uid).single(),
@@ -77,6 +80,12 @@ export default async function NumbersPage() {
     supabase.from('weekly_insights').select('insight_text, generated_at').eq('user_id', user.id).eq('week_start', weekStart).maybeSingle(),
     // Recurring expenses (all, not month-scoped)
     supabase.from('recurring_expenses').select('*').eq('user_id', uid).order('created_at', { ascending: true }),
+    // Ads
+    supabase.from('ads').select('*').eq('user_id', uid).order('started_at', { ascending: false }),
+    // Leads this month with ad attribution (followers-per-day chart + CPF)
+    supabase.from('leads').select('created_at, ad_id').eq('user_id', uid).gte('created_at', monthStartTs),
+    // Avg sales cycle: clients with a linked lead
+    supabase.from('clients').select('started_at, leads!lead_id(created_at)').eq('user_id', uid).not('lead_id', 'is', null),
   ])
 
   // ── Exchange rate for ad spend currency conversion ────────────────────────
@@ -185,6 +194,16 @@ export default async function NumbersPage() {
     .filter(i => !i.paid)
     .reduce((s, i) => s + i.amount, 0)
 
+  // ── Avg sales cycle ───────────────────────────────────────────────────────
+  type ClientWithLead = { started_at: string; leads: { created_at: string } | null }
+  const salesCycleDays = ((clientsWithLeads ?? []) as unknown as ClientWithLead[])
+    .filter(c => c.leads?.created_at)
+    .map(c => (new Date(c.started_at).getTime() - new Date(c.leads!.created_at).getTime()) / 86_400_000)
+    .filter(d => d > 0)
+  const avgSalesCycleDays = salesCycleDays.length > 0
+    ? salesCycleDays.reduce((s, d) => s + d, 0) / salesCycleDays.length
+    : null
+
   type WeeklyInsightRow = { insight_text: string; generated_at: string } | null
   const initialInsight = (weeklyInsight as WeeklyInsightRow) ?? null
 
@@ -216,6 +235,9 @@ export default async function NumbersPage() {
         totalClientsAcquired={totalClientsCount ?? 0}
         adSpendCurrency={adSpendCurrency}
         adToBaseRate={adToBaseRate}
+        ads={(adsData as Ad[]) ?? []}
+        monthLeads={(monthLeadsData ?? []) as { created_at: string; ad_id: string | null }[]}
+        avgSalesCycleDays={avgSalesCycleDays}
       />
     </>
   )

@@ -132,6 +132,19 @@ export interface AdSpendLog {
   created_at: string
 }
 
+export interface Ad {
+  id: string
+  user_id: string
+  name: string
+  platform: string | null
+  started_at: string
+  ended_at: string | null
+  daily_budget: number
+  total_spend: number
+  currency: string
+  created_at: string
+}
+
 // ─── KPI Targets ──────────────────────────────────────────────────────────────
 
 export interface KpiTargets {
@@ -203,6 +216,7 @@ export interface Lead {
   last_contact_at: string | null
   source_flow: string
   not_interested: boolean
+  ad_id: string | null
   created_at: string
   updated_at: string
 }

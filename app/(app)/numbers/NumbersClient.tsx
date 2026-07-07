@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense, Ad } from '@/types'
 import RevenueChart from '@/components/numbers/RevenueChart'
 import ExpensesSection from './ExpensesSection'
+import AdsSection from './AdsSection'
 import { useT } from '@/contexts/LanguageContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -33,6 +34,9 @@ interface Props {
   totalClientsAcquired: number
   adSpendCurrency: string
   adToBaseRate: number
+  ads: Ad[]
+  monthLeads: { created_at: string; ad_id: string | null }[]
+  avgSalesCycleDays: number | null
 }
 
 type CompareMode = 'targets' | 'last_month'
@@ -676,6 +680,7 @@ export default function NumbersClient({
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
   adSpendCurrency, adToBaseRate,
+  ads, monthLeads, avgSalesCycleDays,
 }: Props) {
   const t = useT()
   const [viewMode, setViewMode]       = useState<'month' | 'alltime'>('month')
@@ -1233,6 +1238,15 @@ export default function NumbersClient({
             </p>
           )}
         </div>
+
+        {/* ── Ads tracking ──────────────────────────────────────────────────── */}
+        <AdsSection
+          ads={ads}
+          dailyLeads={monthLeads}
+          baseCurrency={baseCurrency}
+          currentMonth={currentMonth}
+          avgSalesCycleDays={avgSalesCycleDays}
+        />
 
         {/* ── Expenses & profit ─────────────────────────────────────────────── */}
         <ExpensesSection
