@@ -20,7 +20,7 @@ interface Props {
 }
 
 type ChartType   = 'bar' | 'line'
-type ChartPeriod = 'daily' | 'weekly' | 'monthly' | 'ytd'
+type ChartPeriod = 'weekly' | 'monthly' | 'ytd'
 
 const PLATFORMS = ['Instagram', 'Facebook', 'TikTok', 'YouTube', 'Other']
 
@@ -59,16 +59,9 @@ function fmtDate(d: string) {
 }
 
 function fmtBucketLabel(key: string, period: ChartPeriod): string {
-  if (period === 'daily') {
-    const d = new Date(key + 'T12:00:00')
-    return `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`
-  }
   if (period === 'weekly') return `Wk ${key.split('-W')[1]}`
-  if (period === 'monthly' || period === 'ytd') {
-    const [y, m] = key.split('-')
-    return new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'short', year: '2-digit' })
-  }
-  return key
+  const [y, m] = key.split('-')
+  return new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'short', year: '2-digit' })
 }
 
 // ─── Chart ────────────────────────────────────────────────────────────────────
@@ -92,20 +85,14 @@ function FollowersChart({
   const today = todayStr()
 
   // Filter leads to relevant date range
-  const filtered = allYearLeads.filter(l => {
-    const d = leadDate(l)
-    if (period === 'daily') return d.slice(0, 7) === currentMonth
-    return d.startsWith(String(year))
-  })
+  const filtered = allYearLeads.filter(l => leadDate(l).startsWith(String(year)))
 
   // Group into buckets
   const buckets = new Map<string, { count: number; adId: string | null }>()
 
   for (const lead of filtered) {
     const d = leadDate(lead)
-    let key: string
-    if (period === 'daily' || period === 'weekly') key = period === 'daily' ? d : isoWeek(d)
-    else key = d.slice(0, 7)
+    const key = period === 'weekly' ? isoWeek(d) : d.slice(0, 7)
 
     const existing = buckets.get(key)
     if (existing) {
@@ -116,23 +103,13 @@ function FollowersChart({
   }
 
   // Build sorted keys
-  let keys: string[]
-  if (period === 'daily') {
-    const [y, m] = currentMonth.split('-').map(Number)
-    const daysInMonth = new Date(y, m, 0).getDate()
-    const maxDay = currentMonth === today.slice(0, 7) ? new Date().getDate() : daysInMonth
-    keys = Array.from({ length: maxDay }, (_, i) => `${currentMonth}-${String(i + 1).padStart(2, '0')}`)
-  } else {
-    keys = [...new Set([...buckets.keys()])].sort()
-    if (period === 'ytd' || period === 'monthly') {
-      // Ensure all months from Jan to current month exist
-      for (let m = 1; m <= Number(currentMonth.slice(5, 7)); m++) {
-        const k = `${year}-${String(m).padStart(2, '0')}`
-        if (!buckets.has(k)) buckets.set(k, { count: 0, adId: null })
-      }
-      keys = [...buckets.keys()].filter(k => k.startsWith(String(year))).sort()
+  if (period === 'ytd' || period === 'monthly') {
+    for (let m = 1; m <= Number(currentMonth.slice(5, 7)); m++) {
+      const k = `${year}-${String(m).padStart(2, '0')}`
+      if (!buckets.has(k)) buckets.set(k, { count: 0, adId: null })
     }
   }
+  const keys = [...buckets.keys()].sort()
 
   const counts = keys.map(k => buckets.get(k)?.count ?? 0)
   const maxCount = Math.max(...counts, 1)
@@ -144,7 +121,7 @@ function FollowersChart({
   function colorForBucket(key: string, adId: string | null): string {
     if (adId && adColor.has(adId)) return adColor.get(adId)!
     // Determine by date range
-    const dateStr = period === 'daily' ? key : key + '-15'
+    const dateStr = key + '-15'
     for (const ad of ads) {
       if (ad.started_at <= dateStr && (ad.ended_at === null || ad.ended_at >= dateStr)) {
         return adColor.get(ad.id) ?? 'var(--border-strong)'
@@ -172,7 +149,7 @@ function FollowersChart({
       )}
 
       {chartType === 'bar' ? (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: period === 'daily' ? 2 : 4, height: HEIGHT }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: HEIGHT }}>
           {keys.map((key, i) => {
             const count = counts[i]
             const color = colorForBucket(key, buckets.get(key)?.adId ?? null)
@@ -316,7 +293,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
   const [formTotalSpend, setFormTotalSpend] = useState('')
   const [creating, setCreating] = useState(false)
   const [chartType, setChartType] = useState<ChartType>('bar')
-  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('daily')
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('weekly')
 
   const activeAd = ads.find(a => a.ended_at === null)
   const pastAds = ads.filter(a => a.ended_at !== null)
@@ -389,7 +366,6 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
   }
 
   const periodLabels: { key: ChartPeriod; label: string }[] = [
-    { key: 'daily', label: 'Day' },
     { key: 'weekly', label: 'Week' },
     { key: 'monthly', label: 'Month' },
     { key: 'ytd', label: 'YTD' },
