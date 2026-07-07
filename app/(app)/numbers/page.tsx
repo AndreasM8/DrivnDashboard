@@ -171,8 +171,29 @@ export default async function NumbersPage() {
   type AdSpendRow = { month: string; actual_amount: number }
   const adSpendLogRaw = (adSpend ?? []) as AdSpendRow[]
   const adSpendLog = adSpendLogRaw.map(r => ({ month: r.month, actual_amount: r.actual_amount * adToBaseRate }))
-  const adSpendTotal = adSpendLog.filter(r => r.month === currentMonth).reduce((sum, row) => sum + row.actual_amount, 0)
+  const adSpendFromLog = adSpendLog.filter(r => r.month === currentMonth).reduce((sum, row) => sum + row.actual_amount, 0)
   const totalAdSpend = adSpendLog.reduce((s, r) => s + r.actual_amount, 0)
+
+  // ── Prorate ad spend from ads table to current month ─────────────────────
+  function prorateAdSpend(ad: Ad, month: string): number {
+    const [y, m] = month.split('-').map(Number)
+    const monthStart = new Date(y, m - 1, 1).getTime()
+    const monthEnd   = new Date(y, m, 0, 23, 59, 59).getTime()
+    const adStart    = new Date(ad.started_at + 'T00:00:00').getTime()
+    const adEnd      = ad.ended_at ? new Date(ad.ended_at + 'T23:59:59').getTime() : now.getTime()
+    const overlapStart = Math.max(monthStart, adStart)
+    const overlapEnd   = Math.min(monthEnd, adEnd)
+    if (overlapEnd < overlapStart) return 0
+    const daysOverlap = Math.ceil((overlapEnd - overlapStart) / 86_400_000)
+    if (ad.total_spend > 0) {
+      const totalDays = Math.max(Math.ceil((adEnd - adStart) / 86_400_000), 1)
+      return (ad.total_spend * daysOverlap) / totalDays
+    }
+    return ad.daily_budget * daysOverlap
+  }
+  const adSpendFromAds = ((adsData ?? []) as Ad[]).reduce((sum, ad) => sum + prorateAdSpend(ad, currentMonth), 0)
+  // Prefer new ads-table spend when coaches are using it; fall back to legacy log
+  const adSpendTotal = adSpendFromAds > 0 ? adSpendFromAds : adSpendFromLog
   const totalAllExpenses = ((allExpensesData ?? []) as { amount: number }[]).reduce((s, e) => s + e.amount, 0)
 
   // ── All-time / current business overview (all active clients, not just this month) ──

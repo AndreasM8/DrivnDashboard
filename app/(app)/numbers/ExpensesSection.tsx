@@ -428,13 +428,21 @@ export default function ExpensesSection({
             const meta = CATEGORY_META[cat]
             const catTotal = totalByCategory[cat]
             const catExpenses = expenses.filter(e => e.category === cat)
+            const catRecurring = activeRecurring.filter(r => r.category === cat)
             const isAds = cat === 'ads'
 
             return (
               <div key={cat}>
                 {/* Category total row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{t.expenseCategories[cat as keyof typeof t.expenseCategories] ?? meta.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{t.expenseCategories[cat as keyof typeof t.expenseCategories] ?? meta.label}</span>
+                    {catRecurring.length > 0 && (
+                      <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px' }}>
+                        ↻ {catRecurring.length} recurring
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{formatCurrency(catTotal, currency)}</span>
                 </div>
 
@@ -442,7 +450,7 @@ export default function ExpensesSection({
                 {isAds && adSpendTotal > 0 && (
                   <div style={{ marginLeft: 24, marginTop: 4 }}>
                     <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                      {formatCurrency(adSpendTotal, currency)} from ad spend log
+                      {formatCurrency(adSpendTotal, currency)} tracked via Ads section
                     </span>
                   </div>
                 )}

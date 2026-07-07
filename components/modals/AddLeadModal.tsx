@@ -137,9 +137,21 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
             )}
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Full name</label>
-            <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Smith" className="input-base" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Full name</label>
+              <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Smith" className="input-base" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Date followed</label>
+              <input
+                type="date"
+                value={followedAt}
+                onChange={e => setFollowedAt(e.target.value)}
+                className="input-base"
+                max={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
           </div>
 
           {setters.length > 0 && (
@@ -151,19 +163,6 @@ export default function AddLeadModal({ userId, defaultStage, setters, existingLe
               </select>
             </div>
           )}
-
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
-              Date followed
-            </label>
-            <input
-              type="date"
-              value={followedAt}
-              onChange={e => setFollowedAt(e.target.value)}
-              className="input-base"
-              max={new Date().toISOString().slice(0, 10)}
-            />
-          </div>
 
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Notes</label>

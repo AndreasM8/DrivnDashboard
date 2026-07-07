@@ -63,7 +63,7 @@ function fmtBucketLabel(key: string, period: ChartPeriod): string {
     const d = new Date(key + 'T12:00:00')
     return `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`
   }
-  if (period === 'weekly') return key.replace('-W', ' W')
+  if (period === 'weekly') return `Wk ${key.split('-W')[1]}`
   if (period === 'monthly' || period === 'ytd') {
     const [y, m] = key.split('-')
     return new Date(Number(y), Number(m) - 1).toLocaleDateString('en', { month: 'short', year: '2-digit' })
@@ -95,7 +95,6 @@ function FollowersChart({
   const filtered = allYearLeads.filter(l => {
     const d = leadDate(l)
     if (period === 'daily') return d.slice(0, 7) === currentMonth
-    if (period === 'weekly') return d.slice(0, 7) === currentMonth
     return d.startsWith(String(year))
   })
 
@@ -481,7 +480,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 6px var(--success)' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--success)', background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.3)', padding: '2px 6px', borderRadius: 6 }}>LIVE</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{activeAd.name}</span>
                 {activeAd.platform && (
                   <span style={{ fontSize: 11, color: 'var(--text-3)', padding: '1px 6px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>{activeAd.platform}</span>
