@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense } from '@/types'
 import RevenueChart from '@/components/numbers/RevenueChart'
 import ExpensesSection from './ExpensesSection'
 import { useT } from '@/contexts/LanguageContext'
@@ -18,6 +18,7 @@ interface Props {
   installments: PaymentInstallment[]
   currentMonth: string
   expenses: Expense[]
+  recurringExpenses: RecurringExpense[]
   adSpendTotal: number
   adSpendLog: { month: string; actual_amount: number }[]
   totalAdSpend: number
@@ -670,7 +671,7 @@ function AllTimeAdKpis({
 
 export default function NumbersClient({
   baseCurrency, targets, currentSnapshot, lastMonthSnapshot, history,
-  clients, installments, currentMonth, expenses, adSpendTotal,
+  clients, installments, currentMonth, expenses, recurringExpenses, adSpendTotal,
   adSpendLog, totalAdSpend, totalAllExpenses,
   monthlyRevenueDue, totalContracted, totalCashCollected,
   totalOutstanding, cashPending, leadsReplied, totalLeads, totalClientsAcquired,
@@ -1236,6 +1237,7 @@ export default function NumbersClient({
         {/* ── Expenses & profit ─────────────────────────────────────────────── */}
         <ExpensesSection
           expenses={expenses}
+          recurringExpenses={recurringExpenses}
           adSpendTotal={adSpendTotal}
           currency={baseCurrency}
           currentMonth={currentMonth}

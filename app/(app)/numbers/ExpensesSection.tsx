@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import type { Expense } from '@/types'
+import type { Expense, RecurringExpense } from '@/types'
 import { useT } from '@/contexts/LanguageContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Props {
   expenses: Expense[]
+  recurringExpenses: RecurringExpense[]
   adSpendTotal: number
   currency: string
   currentMonth: string
@@ -58,6 +59,7 @@ function formatCurrency(amount: number, currency: string) {
 
 export default function ExpensesSection({
   expenses: initialExpenses,
+  recurringExpenses: initialRecurring,
   adSpendTotal,
   currency,
   currentMonth,
@@ -65,16 +67,22 @@ export default function ExpensesSection({
 }: Props) {
   const t = useT()
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses)
+  const [recurring, setRecurring] = useState<RecurringExpense[]>(initialRecurring)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [addingRecurring, setAddingRecurring] = useState(false)
   const [formCategory, setFormCategory] = useState<ExpenseCategory>('team')
   const [formLabel, setFormLabel] = useState('')
   const [formAmount, setFormAmount] = useState('')
+  const [formIsRecurring, setFormIsRecurring] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const [formTeamRole, setFormTeamRole] = useState<TeamRole>('setter')
   const [formPaymentStructure, setFormPaymentStructure] = useState<PaymentStructure>('monthly')
 
   // ── Derived totals ───────────────────────────────────────────────────────
+
+  const activeRecurring = recurring.filter(r => r.active)
 
   const totalByCategory: Record<ExpenseCategory, number> = {
     team:          0,
@@ -88,6 +96,9 @@ export default function ExpensesSection({
   }
 
   for (const exp of expenses) {
+    totalByCategory[exp.category] += exp.amount
+  }
+  for (const exp of activeRecurring) {
     totalByCategory[exp.category] += exp.amount
   }
 
@@ -147,6 +158,68 @@ export default function ExpensesSection({
       }
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function handleSaveRecurring() {
+    const amt = parseFloat(formAmount)
+    if (!formLabel.trim() || isNaN(amt) || amt <= 0) return
+
+    setAddingRecurring(true)
+    try {
+      const res = await fetch('/api/recurring-expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: formCategory,
+          label: formLabel.trim(),
+          amount: amt,
+          currency,
+          team_role: formCategory === 'team' ? formTeamRole : null,
+          payment_structure: formCategory === 'team' ? formPaymentStructure : null,
+        }),
+      })
+      if (res.ok) {
+        const json = await res.json() as { recurringExpense: RecurringExpense }
+        setRecurring(prev => [...prev, json.recurringExpense])
+        setFormLabel('')
+        setFormAmount('')
+        setFormCategory('team')
+        setFormTeamRole('setter')
+        setFormPaymentStructure('monthly')
+        setFormIsRecurring(false)
+        setShowAddForm(false)
+      }
+    } finally {
+      setAddingRecurring(false)
+    }
+  }
+
+  async function handleToggleRecurring(id: string, active: boolean) {
+    setTogglingId(id)
+    try {
+      const res = await fetch(`/api/recurring-expenses/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active }),
+      })
+      if (res.ok) {
+        setRecurring(prev => prev.map(r => r.id === id ? { ...r, active } : r))
+      }
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  async function handleDeleteRecurring(id: string) {
+    setTogglingId(id)
+    try {
+      const res = await fetch(`/api/recurring-expenses/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setRecurring(prev => prev.filter(r => r.id !== id))
+      }
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -250,14 +323,25 @@ export default function ExpensesSection({
               className="input-base"
             />
           </div>
+          {/* Recurring toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 4 }}>
+            <input
+              type="checkbox"
+              checked={formIsRecurring}
+              onChange={e => setFormIsRecurring(e.target.checked)}
+              style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>↻ Repeat every month (recurring)</span>
+          </label>
+
           <div className="flex items-center gap-2" style={{ paddingTop: 4 }}>
             <button
-              onClick={handleSave}
-              disabled={saving || !formLabel.trim() || !formAmount}
+              onClick={formIsRecurring ? handleSaveRecurring : handleSave}
+              disabled={(formIsRecurring ? addingRecurring : saving) || !formLabel.trim() || !formAmount}
               className="btn-primary"
               style={{ padding: '8px 16px' }}
             >
-              {saving ? t.common.saving : t.common.save}
+              {(formIsRecurring ? addingRecurring : saving) ? t.common.saving : t.common.save}
             </button>
             <button
               onClick={() => {
@@ -267,12 +351,72 @@ export default function ExpensesSection({
                 setFormCategory('team')
                 setFormTeamRole('setter')
                 setFormPaymentStructure('monthly')
+                setFormIsRecurring(false)
               }}
               className="btn-ghost"
               style={{ padding: '8px 16px' }}
             >
               {t.common.cancel}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring templates section */}
+      {recurring.length > 0 && (
+        <div style={{ marginBottom: 16, borderRadius: 'var(--radius-card)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>↻ Recurring</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>auto-added each month</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {recurring.map((r, i) => (
+              <div
+                key={r.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  gap: 10,
+                  borderBottom: i < recurring.length - 1 ? '1px solid var(--border)' : 'none',
+                  opacity: r.active ? 1 : 0.45,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-1)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.label}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    {CATEGORY_META[r.category as ExpenseCategory]?.label ?? r.category}
+                  </span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)', flexShrink: 0 }}>
+                  {formatCurrency(r.amount, r.currency)}
+                </span>
+                {/* Pause / resume */}
+                <button
+                  onClick={() => handleToggleRecurring(r.id, !r.active)}
+                  disabled={togglingId === r.id}
+                  title={r.active ? 'Pause' : 'Resume'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'var(--text-3)', padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: togglingId === r.id ? 0.4 : 1, transition: 'color 120ms' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                >
+                  {r.active ? '⏸' : '▶'}
+                </button>
+                {/* Delete template */}
+                <button
+                  onClick={() => handleDeleteRecurring(r.id)}
+                  disabled={togglingId === r.id}
+                  title="Remove recurring"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: 'var(--border-strong)', padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: togglingId === r.id ? 0.4 : 1, transition: 'color 120ms' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--border-strong)')}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

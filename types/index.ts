@@ -544,6 +544,19 @@ export interface Expense {
   created_at: string
 }
 
+export interface RecurringExpense {
+  id: string
+  user_id: string
+  category: 'team' | 'software' | 'ads' | 'withdrawal' | 'other' | 'salary' | 'subscriptions' | 'investments'
+  label: string
+  amount: number
+  currency: string
+  team_role: 'setter' | 'closer' | 'editor' | 'growth_partner' | null
+  payment_structure: 'monthly' | 'retainer' | 'both' | null
+  active: boolean
+  created_at: string
+}
+
 // ─── Calendly ─────────────────────────────────────────────────────────────────
 
 export interface CalendlyIntegration {

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import NumbersClient from './NumbersClient'
 import WeeklyInsightCard from '@/components/numbers/WeeklyInsightCard'
 import { getMonday } from '@/lib/insights/context'
-import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense } from '@/types'
+import type { KpiTargets, MonthlySnapshot, Client, PaymentInstallment, Expense, RecurringExpense } from '@/types'
 
 export default async function NumbersPage() {
   const supabase = await createServerSupabaseClient()
@@ -39,6 +39,7 @@ export default async function NumbersPage() {
     { count: totalClientsCount },
     { data: allExpensesData },
     { data: weeklyInsight },
+    { data: recurringExpensesData },
   ] = await Promise.all([
     supabase.from('users').select('*').eq('id', user.id).single(),
     supabase.from('kpi_targets').select('*').eq('user_id', uid).single(),
@@ -74,6 +75,8 @@ export default async function NumbersPage() {
     supabase.from('expenses').select('amount').eq('user_id', uid),
     // Weekly AI insight for current week
     supabase.from('weekly_insights').select('insight_text, generated_at').eq('user_id', user.id).eq('week_start', weekStart).maybeSingle(),
+    // Recurring expenses (all, not month-scoped)
+    supabase.from('recurring_expenses').select('*').eq('user_id', uid).order('created_at', { ascending: true }),
   ])
 
   // ── Exchange rate for ad spend currency conversion ────────────────────────
@@ -198,6 +201,7 @@ export default async function NumbersPage() {
         installments={allInstallments}
         currentMonth={currentMonth}
         expenses={(expenses as Expense[]) ?? []}
+        recurringExpenses={(recurringExpensesData as RecurringExpense[]) ?? []}
         adSpendTotal={adSpendTotal}
         adSpendLog={adSpendLog}
         totalAdSpend={totalAdSpend}
