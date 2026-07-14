@@ -6,6 +6,8 @@ export async function proxy(request: NextRequest) {
 
   // Public routes — no auth required
   const publicRoutes = [
+    '/welcome',              // Inner Circle onboarding landing (clean URL)
+    '/onboarding.html',      // Inner Circle onboarding landing (static file)
     '/auth/login',
     '/auth/callback',
     '/auth/verify',

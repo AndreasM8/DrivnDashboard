@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Welcome to Inner Circle — Drivnscaling</title>
+<meta name="theme-color" content="#080808" />
+<meta name="description" content="Welcome to the Drivnscaling Inner Circle. Watch your welcome video and follow your roadmap to get started." />
+
+<!-- ════════════════════════════════════════════════════════════════════
+     CONFIG — edit everything below, nothing else needs touching.
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+  const CONFIG = {
+    welcomeVideoUrl:   "", // paste YouTube EMBED url, e.g. "https://www.youtube.com/embed/VIDEO_ID"
+    kickoffCallLink:   "https://calendly.com/seb-stroemagency/onboarding-call-inner-circle", // Calendly / booking link
+    slackInviteLink:   "https://join.slack.com/t/inner-cicle-123/shared_invite/zt-4470dwma8-znUN9Bwv2XOMoZK1FbObeQ", // Slack invite URL
+    onboardingFormLink:"https://airtable.com/appUWnVLrGyq4vRkG/pag3naATUTUW9Ok7j/form", // Airtable form
+
+    // Optional 4th step (hidden by default). Set showStep4: true to reveal.
+    showStep4: false,
+    step4: {
+      number: "04",
+      title: "Explore the Content Library",
+      description: "Once you're set up, dive into the full video library and course platform for deep-dive trainings, templates, and SOPs you can use right away.",
+      button: "Open Library",
+      link: "", // e.g. YouTube channel or course platform URL
+    },
+  };
+</script>
+<!-- ════════════════════════════════════════════════════════════════════ -->
+
+<style>
+  :root{
+    --bg:#080808;
+    --surface:#111111;
+    --border:#1e1e1e;
+    --text:#F5F5F0;
+    --muted:#888888;
+    --accent:#F59E0B;
+    --accent-soft:rgba(245,158,11,0.14);
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-text-size-adjust:100%;}
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* ── Ambient glow orbs ── */
+  .orb{
+    position:fixed;
+    border-radius:50%;
+    pointer-events:none;
+    z-index:0;
+    filter:blur(90px);
+    opacity:.55;
+  }
+  .orb-1{
+    top:-160px;left:-160px;
+    width:520px;height:520px;
+    background:radial-gradient(circle,rgba(245,158,11,0.30) 0%,rgba(245,158,11,0) 70%);
+  }
+  .orb-2{
+    bottom:-200px;right:-180px;
+    width:600px;height:600px;
+    background:radial-gradient(circle,rgba(245,158,11,0.16) 0%,rgba(99,102,241,0.10) 45%,rgba(0,0,0,0) 72%);
+  }
+  @media (max-width:768px){
+    .orb{filter:blur(60px);opacity:.4;}
+    .orb-1{width:340px;height:340px;top:-120px;left:-120px;}
+    .orb-2{width:380px;height:380px;bottom:-140px;right:-120px;}
+  }
+
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:760px;
+    margin:0 auto;
+    padding:72px 20px 48px;
+  }
+  @media (max-width:600px){ .wrap{padding:48px 18px 40px;} }
+
+  /* ── Fade-in on load ── */
+  .reveal{
+    opacity:0;
+    transform:translateY(18px);
+    animation:fadeUp .9s cubic-bezier(.16,.84,.44,1) forwards;
+  }
+  @keyframes fadeUp{ to{opacity:1;transform:translateY(0);} }
+  @media (prefers-reduced-motion:reduce){
+    .reveal{animation:none;opacity:1;transform:none;}
+  }
+
+  /* ── Section 1: Hero ── */
+  .hero{ text-align:center; }
+  .eyebrow{
+    display:inline-block;
+    font-size:12px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:1px solid rgba(245,158,11,0.28);
+    border-radius:999px;
+    padding:6px 14px;
+    margin-bottom:26px;
+    font-weight:600;
+  }
+  h1{
+    font-size:clamp(2.1rem,7vw,3.4rem);
+    line-height:1.08;
+    font-weight:700;
+    letter-spacing:-.02em;
+    margin-bottom:16px;
+  }
+  .subline{
+    color:var(--accent);
+    font-size:clamp(1rem,3.2vw,1.18rem);
+    font-weight:500;
+    margin-bottom:40px;
+  }
+
+  /* ── Video frame (tablet/device look) ── */
+  .device{
+    background:linear-gradient(180deg,#161616 0%,#0d0d0d 100%);
+    border:1px solid var(--border);
+    border-radius:22px;
+    padding:14px;
+    box-shadow:
+      0 40px 80px -30px rgba(0,0,0,0.9),
+      0 0 60px -20px rgba(245,158,11,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  @media (max-width:600px){ .device{border-radius:18px;padding:10px;} }
+
+  .screen{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    border-radius:12px;
+    overflow:hidden;
+    background:#000;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05),inset 0 2px 30px rgba(0,0,0,0.9);
+  }
+  .screen iframe{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:0;
+  }
+
+  /* Empty / placeholder state */
+  .placeholder{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    background:
+      radial-gradient(circle at 50% 42%,rgba(245,158,11,0.08),transparent 60%),
+      #0a0a0a;
+    color:var(--muted);
+  }
+  .play-btn{
+    width:66px;height:66px;
+    border-radius:50%;
+    background:var(--accent-soft);
+    border:1px solid rgba(245,158,11,0.35);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 30px -6px rgba(245,158,11,0.35);
+  }
+  .play-btn svg{margin-left:4px;}
+  .placeholder span{
+    font-size:14px;
+    letter-spacing:.02em;
+  }
+
+  /* ── Section 2: What Happens Next ── */
+  .section-head{ text-align:center; margin:88px 0 8px; }
+  @media (max-width:600px){ .section-head{margin-top:64px;} }
+  .section-head h2{
+    font-size:clamp(1.7rem,5.5vw,2.5rem);
+    font-weight:700;
+    letter-spacing:-.02em;
+  }
+  .section-head .subline{
+    color:var(--muted);
+    font-weight:400;
+    margin:10px 0 0;
+    font-size:1rem;
+  }
+
+  /* Timeline */
+  .timeline{
+    position:relative;
+    margin-top:48px;
+    padding-left:34px;
+  }
+  .timeline::before{
+    content:"";
+    position:absolute;
+    left:9px;top:8px;bottom:8px;
+    width:2px;
+    background:linear-gradient(180deg,var(--accent) 0%,rgba(245,158,11,0.15) 55%,rgba(245,158,11,0) 100%);
+  }
+  @media (max-width:600px){ .timeline{padding-left:26px;} .timeline::before{left:6px;} }
+
+  .step{ position:relative; margin-bottom:14px; }
+  .dot{
+    position:absolute;
+    left:-34px;top:26px;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:var(--bg);
+    border:2px solid var(--accent);
+    box-shadow:0 0 0 5px var(--bg),0 0 16px -2px rgba(245,158,11,0.55);
+  }
+  @media (max-width:600px){ .dot{left:-26px;width:16px;height:16px;} }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:26px 26px 24px;
+    transition:border-color .25s ease,transform .25s ease;
+  }
+  .card:hover{ border-color:rgba(245,158,11,0.35); transform:translateY(-2px); }
+  @media (max-width:600px){ .card{padding:22px 20px;} }
+
+  .step-num{
+    font-size:2.6rem;
+    font-weight:700;
+    line-height:1;
+    color:#242424;
+    letter-spacing:-.03em;
+    margin-bottom:12px;
+  }
+  .step-title{
+    font-size:1.22rem;
+    font-weight:700;
+    margin-bottom:9px;
+    letter-spacing:-.01em;
+  }
+  .step-desc{
+    color:var(--muted);
+    font-size:.97rem;
+    margin-bottom:22px;
+    max-width:52ch;
+  }
+
+  /* Outlined pill button */
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    font-family:inherit;
+    font-size:.92rem;
+    font-weight:600;
+    color:var(--text);
+    text-decoration:none;
+    background:transparent;
+    border:1px solid rgba(245,245,240,0.35);
+    border-radius:999px;
+    padding:11px 22px;
+    cursor:pointer;
+    transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease;
+  }
+  .btn:hover{
+    background:var(--text);
+    color:#0a0a0a;
+    border-color:var(--text);
+    transform:translateY(-1px);
+  }
+  .btn .arrow{ transition:transform .2s ease; }
+  .btn:hover .arrow{ transform:translateX(3px); }
+
+  /* Disabled state when link not yet configured */
+  .btn[aria-disabled="true"]{
+    opacity:.45;
+    cursor:not-allowed;
+    pointer-events:none;
+  }
+
+  /* Down arrow connector between steps */
+  .connector{
+    display:flex;
+    justify-content:center;
+    color:#333;
+    margin:2px 0 16px;
+  }
+
+  /* ── Footer ── */
+  footer{
+    text-align:center;
+    color:#555;
+    font-size:.82rem;
+    margin-top:72px;
+    padding-top:28px;
+    border-top:1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <main class="wrap">
+
+    <!-- ── Section 1: Hero ── -->
+    <section class="hero reveal" style="animation-delay:.05s">
+      <span class="eyebrow">Drivnscaling · Inner Circle</span>
+      <h1>Welcome to Inner Circle</h1>
+      <p class="subline">Please watch the video below — it's important</p>
+
+      <div class="device">
+        <div class="screen" id="video-screen">
+          <!-- populated by JS: iframe when a URL is set, else placeholder -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 2: What Happens Next ── -->
+    <section class="section-head reveal" style="animation-delay:.2s">
+      <h2>What Happens Next?</h2>
+      <p class="subline">Your roadmap to getting started</p>
+    </section>
+
+    <div class="timeline reveal" id="timeline" style="animation-delay:.32s"></div>
+
+    <footer class="reveal" style="animation-delay:.5s">
+      © Drivnscaling — Stroem Media LLC-FZ
+    </footer>
+  </main>
+
+  <script>
+    // ── SVG icons ──
+    const ICONS = {
+      arrow: '<svg class="arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>',
+      down:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><polyline points="6 14 12 20 18 14"/></svg>',
+      play:  '<svg width="26" height="26" viewBox="0 0 24 24" fill="#F59E0B"><path d="M8 5v14l11-7z"/></svg>',
+    };
+
+    // ── Render video (Section 1) ──
+    (function renderVideo(){
+      const screen = document.getElementById('video-screen');
+      const url = (CONFIG.welcomeVideoUrl || '').trim();
+      if (url){
+        const iframe = document.createElement('iframe');
+        iframe.src = url;
+        iframe.title = 'Welcome to Inner Circle';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('loading', 'lazy');
+        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+        screen.appendChild(iframe);
+      } else {
+        screen.innerHTML =
+          '<div class="placeholder">' +
+            '<div class="play-btn">' + ICONS.play + '</div>' +
+            '<span>Video coming soon</span>' +
+          '</div>';
+      }
+    })();
+
+    // ── Render steps (Section 2) ──
+    (function renderSteps(){
+      const steps = [
+        {
+          number: '01',
+          title: 'Book Your Kickoff Call',
+          description: "We'll start with a kickoff call to map out your personal roadmap, set your first milestones, and make sure you know exactly where to focus from day one.",
+          button: 'Book Your Call',
+          link: CONFIG.kickoffCallLink,
+        },
+        {
+          number: '02',
+          title: 'Join the Slack Community',
+          description: 'This is where everything happens. Join the Inner Circle Slack, introduce yourself in #intros, and get access to the full resource library, weekly calls, and direct access to Andreas and Sebastian.',
+          button: 'Join Slack',
+          link: CONFIG.slackInviteLink,
+        },
+        {
+          number: '03',
+          title: 'Complete Your Onboarding Form',
+          description: 'Fill out the onboarding form at least 24 hours before your kickoff call so we can prepare a personalised roadmap for your specific situation and goals.',
+          button: 'Fill Out Form',
+          link: CONFIG.onboardingFormLink,
+        },
+      ];
+
+      if (CONFIG.showStep4 && CONFIG.step4){
+        steps.push({
+          number: CONFIG.step4.number || '04',
+          title: CONFIG.step4.title || '',
+          description: CONFIG.step4.description || '',
+          button: CONFIG.step4.button || 'Open',
+          link: CONFIG.step4.link || '',
+        });
+      }
+
+      const container = document.getElementById('timeline');
+
+      steps.forEach((s, i) => {
+        const isLast = i === steps.length - 1;
+        const href = (s.link || '').trim();
+        const disabled = href === '';
+
+        const step = document.createElement('div');
+        step.className = 'step';
+        step.innerHTML =
+          '<div class="dot"></div>' +
+          '<div class="card">' +
+            '<div class="step-num">' + s.number + '</div>' +
+            '<div class="step-title">' + s.title + '</div>' +
+            '<div class="step-desc">' + s.description + '</div>' +
+            '<a class="btn"' +
+              (disabled
+                ? ' aria-disabled="true" title="Link coming soon"'
+                : ' href="' + href + '" target="_blank" rel="noopener noreferrer"') +
+            '>' + s.button + ICONS.arrow + '</a>' +
+          '</div>';
+        container.appendChild(step);
+
+        if (!isLast){
+          const conn = document.createElement('div');
+          conn.className = 'connector';
+          conn.innerHTML = ICONS.down;
+          container.appendChild(conn);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
