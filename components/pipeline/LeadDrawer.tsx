@@ -16,6 +16,7 @@ interface Props {
   onStageChange: (stage: LeadStage) => void
   onAssignmentsChanged: (assignments: LeadLabelAssignment[]) => void
   onLabelAdded: (label: LeadLabel) => void
+  onDelete?: (leadId: string) => void
 }
 
 // ─── Preset label colours ─────────────────────────────────────────────────────
@@ -192,7 +193,7 @@ function formatDate(dateStr: string) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function LeadDrawer({ lead, labels, assignments, setters, userId, onClose, onUpdate, onStageChange, onAssignmentsChanged, onLabelAdded }: Props) {
+export default function LeadDrawer({ lead, labels, assignments, setters, userId, onClose, onUpdate, onStageChange, onAssignmentsChanged, onLabelAdded, onDelete }: Props) {
   const [activeTab, setActiveTab] = useState<'info' | 'timeline'>('info')
   const [notes, setNotes] = useState(lead.setter_notes)
   const [history, setHistory] = useState<LeadHistory[]>([])
@@ -205,6 +206,14 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
   const [newLabelName, setNewLabelName] = useState('')
   const [newLabelColor, setNewLabelColor] = useState(LABEL_PRESETS[6])
   const [creatingLabel, setCreatingLabel] = useState(false)
+
+  const [editingName, setEditingName] = useState(false)
+  const [editIg, setEditIg] = useState(lead.ig_username)
+  const [editFull, setEditFull] = useState(lead.full_name)
+  const [savingName, setSavingName] = useState(false)
+
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const supabase = createClient()
 
@@ -293,6 +302,26 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
     setCreatingLabel(false)
   }
 
+  async function saveName() {
+    if (!editIg.trim()) return
+    setSavingName(true)
+    const { data } = await supabase.from('leads')
+      .update({ ig_username: editIg.trim(), full_name: editFull.trim(), updated_at: new Date().toISOString() })
+      .eq('id', lead.id).select().single()
+    if (data) onUpdate(data as Lead)
+    setSavingName(false)
+    setEditingName(false)
+  }
+
+  async function deleteLead() {
+    setDeleting(true)
+    await supabase.from('lead_history').delete().eq('lead_id', lead.id)
+    await supabase.from('lead_label_assignments').delete().eq('lead_id', lead.id)
+    await supabase.from('leads').delete().eq('id', lead.id)
+    onDelete?.(lead.id)
+    onClose()
+  }
+
   const stageStyle = STAGE_STYLE[lead.stage]
   const setter = setters.find(s => s.id === lead.setter_id)
 
@@ -308,11 +337,44 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
         <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-start justify-between" style={{ marginBottom: 12 }}>
             <div className="flex-1 min-w-0">
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', margin: 0 }} className="truncate">
-                @{lead.ig_username}
-              </h2>
-              {lead.full_name && (
-                <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '2px 0 0', fontFamily: 'var(--font-mono)' }} className="truncate">{lead.full_name}</p>
+              {editingName ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    autoFocus
+                    value={editIg}
+                    onChange={e => setEditIg(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    placeholder="@username"
+                    className="input-base"
+                    style={{ fontSize: 14, padding: '4px 8px' }}
+                  />
+                  <input
+                    value={editFull}
+                    onChange={e => setEditFull(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    placeholder="Full name"
+                    className="input-base"
+                    style={{ fontSize: 13, padding: '4px 8px' }}
+                  />
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={saveName} disabled={savingName} className="btn-primary" style={{ fontSize: 12, padding: '4px 12px' }}>
+                      {savingName ? 'Saving…' : 'Save'}
+                    </button>
+                    <button onClick={() => { setEditingName(false); setEditIg(lead.ig_username); setEditFull(lead.full_name) }} style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ cursor: 'pointer' }} onClick={() => setEditingName(true)} title="Click to edit">
+                  <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', margin: 0 }} className="truncate">
+                    @{lead.ig_username}
+                  </h2>
+                  {lead.full_name && (
+                    <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '2px 0 0', fontFamily: 'var(--font-mono)' }} className="truncate">{lead.full_name}</p>
+                  )}
+                  <p style={{ fontSize: 10, color: 'var(--text-3)', margin: '2px 0 0' }}>Click to edit name</p>
+                </div>
               )}
             </div>
             <button
@@ -535,6 +597,39 @@ export default function LeadDrawer({ lead, labels, assignments, setters, userId,
                   )}
                 </div>
               )}
+
+              {/* Delete */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                {confirmDelete ? (
+                  <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-btn)', padding: '12px 14px' }}>
+                    <p style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600, margin: '0 0 10px' }}>Delete this lead?</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={deleteLead}
+                        disabled={deleting}
+                        style={{ flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius-btn)', cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}
+                      >
+                        {deleting ? 'Deleting…' : 'Yes, delete'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        style={{ flex: 1, padding: '8px 0', fontSize: 13, background: 'var(--surface-3)', color: 'var(--text-2)', border: 'none', borderRadius: 'var(--radius-btn)', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    style={{ width: '100%', padding: '8px 0', fontSize: 13, color: 'var(--danger)', background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-btn)', cursor: 'pointer', transition: 'background 120ms ease' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.07)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                  >
+                    Delete lead
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

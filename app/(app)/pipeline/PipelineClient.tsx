@@ -1180,6 +1180,11 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
     ])
   }
 
+  function onLeadDeleted(leadId: string) {
+    setLeads(ls => ls.filter(l => l.id !== leadId))
+    setAssignments(as => as.filter(a => a.lead_id !== leadId))
+  }
+
   function onLabelAdded(label: LeadLabel) {
     setLabels(ls => [...ls, label])
   }
@@ -1559,6 +1564,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           onStageChange={stage => moveStage(drawerLead, stage)}
           onAssignmentsChanged={as => onAssignmentsChanged(drawerLead.id, as)}
           onLabelAdded={onLabelAdded}
+          onDelete={onLeadDeleted}
         />
       )}
 
