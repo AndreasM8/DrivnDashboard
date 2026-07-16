@@ -71,13 +71,18 @@ const MONTH_MAP: Record<string, string> = {
 }
 
 export function parseDateValue(raw: string): string | null {
-  const s = raw.trim()
+  // Strip time component if present (e.g. "1/23/2026 0:00:00")
+  const s = raw.trim().replace(/\s+\d{1,2}:\d{2}(:\d{2})?$/, '').trim()
   if (!s) return null
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
 
-  // DD.MM.YYYY or DD/MM/YYYY
-  const dmy = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/)
+  // M/D/YYYY or MM/DD/YYYY (Google Sheets US format — treat as month/day/year)
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`
+
+  // DD.MM.YYYY
+  const dmy = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
   if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`
 
   // YYYY-MM

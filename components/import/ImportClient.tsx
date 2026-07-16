@@ -45,10 +45,42 @@ export default function ImportClient() {
         throw new Error(body.error ?? `Parse failed (HTTP ${res.status})`)
       }
 
-      const { columns } = await res.json() as { columns: ParsedColumn[] }
+      let { columns } = await res.json() as { columns: ParsedColumn[] }
 
       // 3. Apply mapping client-side to all rows
-      const parsedRows: ParsedRow[] = applyColumnMapping(columns, rows)
+      let parsedRows: ParsedRow[] = applyColumnMapping(columns, rows)
+
+      // 3b. If every row has only a date and no numeric fields, this is a
+      // per-record sheet (e.g. one row per follower). Count rows per month.
+      const hasAnyNumeric = parsedRows.some(r =>
+        r.revenue !== null || r.leads_count !== null || r.calls_booked !== null ||
+        r.close_rate !== null || r.ad_spend !== null || r.contracts_signed !== null ||
+        r.followers_gained !== null
+      )
+      if (!hasAnyNumeric && parsedRows.some(r => r.date !== null)) {
+        const monthCounts = new Map<string, number>()
+        for (const row of parsedRows) {
+          if (!row.date) continue
+          const month = row.date.slice(0, 7)
+          monthCounts.set(month, (monthCounts.get(month) ?? 0) + 1)
+        }
+        parsedRows = [...monthCounts.entries()].sort().map(([month, count]) => ({
+          id: crypto.randomUUID(),
+          date: `${month}-01`,
+          revenue: null,
+          leads_count: null,
+          calls_booked: null,
+          close_rate: null,
+          ad_spend: null,
+          contracts_signed: null,
+          followers_gained: count,
+          _originalValues: { month, followers_gained: String(count) },
+        }))
+        columns = [
+          { originalName: 'date',              mappedTo: 'date'              as const, hasData: true },
+          { originalName: 'followers_gained',  mappedTo: 'followers_gained'  as const, hasData: true },
+        ]
+      }
 
       // 4. Detect adSpend info client-side
       const adSpendCol   = columns.find(c => c.mappedTo === 'ad_spend')
