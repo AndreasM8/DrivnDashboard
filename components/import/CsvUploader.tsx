@@ -17,20 +17,27 @@ export default function CsvUploader({ onFileLoaded, loading = false }: Props) {
       alert('Please upload a .csv file.')
       return
     }
-    const reader = new FileReader()
-    reader.onload = e => {
-      const text = (e.target?.result as string | undefined) ?? ''
-      if (!text.trim()) {
-        alert('The file appears to be empty. Please try exporting it again from Google Sheets.')
-        return
+
+    function tryEncoding(encoding: string, fallback?: string) {
+      const reader = new FileReader()
+      reader.onload = e => {
+        const text = (e.target?.result as string | undefined) ?? ''
+        if (!text.trim()) {
+          if (fallback) {
+            tryEncoding(fallback)
+          } else {
+            alert('Could not read file content. Please re-export the CSV from Google Sheets and try again.')
+          }
+          return
+        }
+        setLoadedFile(file.name)
+        onFileLoaded(text, file.name)
       }
-      setLoadedFile(file.name)
-      onFileLoaded(text, file.name)
+      reader.onerror = () => alert('Could not read the file. Please try again.')
+      reader.readAsText(file, encoding)
     }
-    reader.onerror = () => {
-      alert('Could not read the file. Please try again.')
-    }
-    reader.readAsText(file, 'UTF-8')
+
+    tryEncoding('UTF-8', 'UTF-16')
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
