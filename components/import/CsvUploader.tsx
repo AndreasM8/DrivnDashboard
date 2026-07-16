@@ -19,11 +19,18 @@ export default function CsvUploader({ onFileLoaded, loading = false }: Props) {
     }
     const reader = new FileReader()
     reader.onload = e => {
-      const text = e.target?.result as string
+      const text = (e.target?.result as string | undefined) ?? ''
+      if (!text.trim()) {
+        alert('The file appears to be empty. Please try exporting it again from Google Sheets.')
+        return
+      }
       setLoadedFile(file.name)
       onFileLoaded(text, file.name)
     }
-    reader.readAsText(file)
+    reader.onerror = () => {
+      alert('Could not read the file. Please try again.')
+    }
+    reader.readAsText(file, 'UTF-8')
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {

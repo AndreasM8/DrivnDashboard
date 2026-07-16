@@ -17,10 +17,12 @@ export default function ImportClient() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const [importedMonths, setImportedMonths] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
+  const [pendingCsvText, setPendingCsvText] = useState<string>('')
 
-  async function handleFileLoaded(csvText: string) {
+  async function parseCSV(csvText: string) {
     setError(null)
     setParsing(true)
+    setPendingCsvText(csvText)
 
     try {
       const res = await fetch('/api/import/parse', {
@@ -49,6 +51,10 @@ export default function ImportClient() {
     } finally {
       setParsing(false)
     }
+  }
+
+  async function handleFileLoaded(csvText: string) {
+    await parseCSV(csvText)
   }
 
   async function handleConfirm(rows: ParsedRow[], adSpendDistribution: 'equal' | 'none', totalAdSpend: number | null) {
@@ -184,8 +190,29 @@ export default function ImportClient() {
           borderRadius: 'var(--radius-btn)',
           fontSize: 12,
           color: 'var(--danger)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
         }}>
-          {error}
+          <span>{error}</span>
+          {pendingCsvText && (
+            <button
+              onClick={() => parseCSV(pendingCsvText)}
+              style={{
+                flexShrink: 0,
+                fontSize: 12,
+                color: 'var(--danger)',
+                background: 'none',
+                border: '1px solid rgba(239,68,68,0.4)',
+                borderRadius: 'var(--radius-btn)',
+                padding: '3px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              Try again
+            </button>
+          )}
         </div>
       )}
 
