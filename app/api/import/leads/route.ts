@@ -16,28 +16,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const adminClient = createAdminSupabaseClient()
 
-  // Skip leads whose name already exists in this coach's pipeline
+  // Dedup against existing leads by both full_name and ig_username
   const { data: existing } = await adminClient
     .from('leads')
-    .select('full_name')
+    .select('full_name, ig_username')
     .eq('user_id', uid)
 
-  const existingNames = new Set((existing ?? []).map(l => l.full_name.toLowerCase().trim()))
+  const existingKeys = new Set<string>()
+  for (const l of existing ?? []) {
+    if (l.full_name)   existingKeys.add(l.full_name.toLowerCase().trim())
+    if (l.ig_username) existingKeys.add(l.ig_username.toLowerCase().trim())
+  }
 
   const toInsert = leads
-    .filter(l => l.full_name && !existingNames.has(l.full_name.toLowerCase().trim()))
+    .filter(l => {
+      if (!l.full_name) return false
+      const name = l.full_name.toLowerCase().trim()
+      const ig   = (l.ig_username || '').toLowerCase().trim()
+      return !existingKeys.has(name) && (!ig || !existingKeys.has(ig))
+    })
     .map(l => ({
       user_id:        uid,
       full_name:      l.full_name,
       ig_username:    l.ig_username || l.full_name,
       source:         l.source || 'Instagram',
-      stage:          'closed' as const,
+      stage:          l.stage,
+      followed_at:    l.followed_at,
       call_booked_at: l.call_booked_at,
       call_outcome:   l.call_outcome,
-      call_closed:    true,
+      call_closed:    l.stage === 'closed',
       setter_notes:   '',
       call_notes:     '',
-      last_contact_at: l.call_booked_at,
+      last_contact_at: l.call_booked_at ?? l.followed_at,
     }))
 
   const skipped = leads.length - toInsert.length

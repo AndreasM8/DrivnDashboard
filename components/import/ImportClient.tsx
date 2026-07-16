@@ -58,8 +58,12 @@ export default function ImportClient() {
       let leads:   ImportLeadRecord[]   = []
 
       if (importType === 'followers') {
-        ;({ parsedRows, columns } = parseFollowersSheet(headers, rows))
-        summary = `Found ${rows.length} follower records → ${parsedRows.length} month(s)`
+        const result = parseFollowersSheet(headers, rows)
+        parsedRows = result.parsedRows
+        columns    = result.columns
+        leads      = result.leadRecords
+        summary    = `Found ${rows.length} follower records → ${parsedRows.length} month(s)` +
+                     (leads.length ? `, ${leads.length} leads` : '')
 
       } else if (importType === 'meetings') {
         const result = parseMeetingsSheet(headers, rows)
@@ -285,15 +289,20 @@ export default function ImportClient() {
               </div>
             </div>
           ))}
-          {leadRecords.map((l, i) => (
-            <div key={`lead-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
-              <div>
-                <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{l.full_name}</span>
-                <span style={{ color: 'var(--text-3)', marginLeft: 8 }}>{l.source}</span>
+          {leadRecords.map((l, i) => {
+            const stageLabel = l.stage === 'closed' ? 'Closed' : l.stage === 'replied' ? 'Replied' : 'Follower'
+            const stageColor = l.stage === 'closed' ? 'var(--success)' : l.stage === 'replied' ? 'var(--accent)' : 'var(--text-3)'
+            const stageBg    = l.stage === 'closed' ? 'rgba(16,185,129,0.1)' : l.stage === 'replied' ? 'rgba(99,102,241,0.1)' : 'var(--surface-2)'
+            return (
+              <div key={`lead-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+                <div>
+                  <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{l.full_name}</span>
+                  {l.followed_at && <span style={{ color: 'var(--text-3)', marginLeft: 8 }}>{l.followed_at.slice(0, 10)}</span>}
+                </div>
+                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: stageBg, color: stageColor }}>{stageLabel}</span>
               </div>
-              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: 'var(--success)' }}>Closed</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {error && (

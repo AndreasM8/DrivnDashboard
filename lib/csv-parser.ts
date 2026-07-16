@@ -17,6 +17,8 @@ export interface ImportLeadRecord {
   full_name: string
   ig_username: string
   source: string
+  stage: 'follower' | 'replied' | 'closed'
+  followed_at: string | null
   call_booked_at: string | null
   call_outcome: 'showed' | 'no_show' | 'canceled' | 'rescheduled' | null
 }
@@ -136,16 +138,35 @@ const isChecked = (v: string) => /^(true|1|yes|ja|x|✓)$/i.test(v.trim())
 export function parseFollowersSheet(
   headers: string[],
   rows: Record<string, string>[]
-): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
-  const dateCol = findCol(headers, /day.?follow/i, /date.?follow/i, /follow/i, /date/i, /dato/i)
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[]; leadRecords: ImportLeadRecord[] } {
+  const dateCol     = findCol(headers, /day.?follow/i, /date.?follow/i, /date/i, /dato/i)
     ?? headers[headers.length - 1]
+  const handleCol   = findCol(headers, /instagram/i, /handle/i, /username/i, /ig/i, /name/i, /navn/i)
+  const responseCol = findCol(headers, /response/i, /replied/i, /reply/i, /svar/i)
 
   const monthCounts = new Map<string, number>()
+  const leadRecords: ImportLeadRecord[] = []
+
   for (const row of rows) {
     const date = parseDateValue(row[dateCol] ?? '')
     if (!date) continue
     const m = date.slice(0, 7)
     monthCounts.set(m, (monthCounts.get(m) ?? 0) + 1)
+
+    const handle   = handleCol   ? (row[handleCol]   ?? '').trim() : ''
+    const replied  = responseCol ? isChecked(row[responseCol] ?? '') : false
+
+    if (handle) {
+      leadRecords.push({
+        full_name:      handle,
+        ig_username:    handle,
+        source:         'Instagram',
+        stage:          replied ? 'replied' : 'follower',
+        followed_at:    date,
+        call_booked_at: null,
+        call_outcome:   null,
+      })
+    }
   }
 
   const parsedRows: ParsedRow[] = [...monthCounts.entries()].sort().map(([m, count]) => ({
@@ -159,6 +180,7 @@ export function parseFollowersSheet(
 
   return {
     parsedRows,
+    leadRecords,
     columns: [
       { originalName: 'Month',         mappedTo: 'date',             hasData: true },
       { originalName: 'New followers', mappedTo: 'followers_gained', hasData: true },
@@ -203,9 +225,11 @@ export function parseMeetingsSheet(
       else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
       else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
       leadRecords.push({
-        full_name: name,
-        ig_username: name,
-        source: sourceCol ? (row[sourceCol] ?? '').replace(/[^\w\s]/g, '').trim() : 'Instagram',
+        full_name:      name,
+        ig_username:    name,
+        source:         sourceCol ? (row[sourceCol] ?? '').replace(/[^\w\s]/g, '').trim() : 'Instagram',
+        stage:          'closed',
+        followed_at:    null,
         call_booked_at: date,
         call_outcome,
       })
