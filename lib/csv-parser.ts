@@ -194,8 +194,11 @@ export function parseMeetingsSheet(
 ): { parsedRows: ParsedRow[]; columns: ParsedColumn[]; leadRecords: ImportLeadRecord[] } {
   const nameCol     = findCol(headers, /lead.?name/i, /name/i, /navn/i)
   const dateCol     = findCol(headers, /date.?of.?call/i, /call.?date/i, /date/i, /dato/i)
+  // Numeric "Calls" column — lets users supply a count per month instead of one row per meeting
+  const callsCol    = findCol(headers, /calls.?booked/i, /meetings.?booked/i, /total.?calls/i, /^calls$/i)
   const sourceCol   = findCol(headers, /source/i, /platform/i, /kanal/i)
-  const showedCol   = findCol(headers, /showed.?up/i, /show.?up/i, /møtt/i, /møtte/i, /showed/i, /attended/i)
+  // "Calls showed" / "Showed up" — accepts a number (aggregate) or checkmark (per-meeting)
+  const showedCol   = findCol(headers, /calls.?showed/i, /showed.?up/i, /show.?up/i, /showed/i, /møtt/i, /møtte/i, /attended/i)
   const noShowCol   = findCol(headers, /no.?show/i, /ikke.?møtt/i, /no.?møtt/i)
   const canceledCol = findCol(headers, /cancel/i, /avlys/i)
   const reschedCol  = findCol(headers, /reschedul/i, /utsatt/i)
@@ -210,16 +213,38 @@ export function parseMeetingsSheet(
     if (!date) continue
     const m = date.slice(0, 7)
     const acc = byMonth.get(m) ?? { calls: 0, showed: 0, closed: 0 }
-    acc.calls++
-    if (showedCol && isChecked(row[showedCol] ?? '')) acc.showed++
-    if (closedCol && isChecked(row[closedCol]  ?? '')) acc.closed++
+
+    // Calls: use explicit numeric column if present, else count this row as one meeting
+    if (callsCol) {
+      const n = parseNumericValue(row[callsCol] ?? '')
+      acc.calls += n !== null ? n : 1
+    } else {
+      acc.calls++
+    }
+
+    // Showed: numeric value (aggregate format) or checkmark (per-meeting format)
+    if (showedCol) {
+      const raw = (row[showedCol] ?? '').trim()
+      const n = parseNumericValue(raw)
+      if (n !== null) acc.showed += n
+      else if (isChecked(raw)) acc.showed++
+    }
+
+    // Closed: numeric value (aggregate format) or checkmark (per-meeting format)
+    if (closedCol) {
+      const raw = (row[closedCol] ?? '').trim()
+      const n = parseNumericValue(raw)
+      if (n !== null) acc.closed += n
+      else if (isChecked(raw)) acc.closed++
+    }
+
     byMonth.set(m, acc)
 
+    // Lead records only in per-meeting format (when a name is present in the row)
     const name = nameCol ? (row[nameCol] ?? '').trim() : ''
     if (!name) continue
 
-    const isClosed    = closedCol   && isChecked(row[closedCol]   ?? '')
-    const isReschedule = reschedCol  && isChecked(row[reschedCol]  ?? '')
+    const isClosed = closedCol && isChecked(row[closedCol] ?? '')
 
     let call_outcome: ImportLeadRecord['call_outcome'] = null
     if      (showedCol   && isChecked(row[showedCol]   ?? '')) call_outcome = 'showed'
