@@ -131,7 +131,8 @@ export function parseDateValue(raw: string): string | null {
 
 function findCol(headers: string[], ...patterns: RegExp[]): string | undefined {
   return headers.find(h => {
-    const normalized = h.replace(/[\r\n\t]+/g, ' ').trim()
+    // Collapse all whitespace (incl. newlines from Google Sheets cell wrapping) to single space
+    const normalized = h.replace(/\s+/g, ' ').trim()
     return patterns.some(p => p.test(normalized))
   })
 }
