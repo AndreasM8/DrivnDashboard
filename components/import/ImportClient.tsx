@@ -34,6 +34,9 @@ export default function ImportClient() {
   const [leadRecords,    setLeadRecords]   = useState<ImportLeadRecord[]>([])
   const [recordsWorking, setRecordsWorking] = useState(false)
   const [recordsDone,    setRecordsDone]   = useState<{ created: number; skipped: number } | null>(null)
+  const [clearConfirm,   setClearConfirm]  = useState(false)
+  const [clearWorking,   setClearWorking]  = useState(false)
+  const [clearDone,      setClearDone]     = useState<number | null>(null)
 
   function selectType(t: ImportType) {
     setImportType(t)
@@ -224,6 +227,23 @@ export default function ImportClient() {
     setClientRecords([])
     setLeadRecords([])
     setRecordsDone(null)
+    setClearConfirm(false)
+    setClearDone(null)
+  }
+
+  async function handleClearLeads() {
+    setClearWorking(true)
+    try {
+      const res = await fetch('/api/import/leads/clear', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to clear leads')
+      const { deleted } = await res.json() as { deleted: number }
+      setClearDone(deleted)
+      setClearConfirm(false)
+    } catch {
+      setError('Failed to clear leads')
+    } finally {
+      setClearWorking(false)
+    }
   }
 
   // ── Done ──────────────────────────────────────────────────────────────────────
@@ -378,6 +398,44 @@ export default function ImportClient() {
               <span style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.4 }}>{opt.sub}</span>
             </button>
           ))}
+        </div>
+
+        {/* Clear leads section */}
+        <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          {clearDone !== null ? (
+            <p style={{ fontSize: 12, color: 'var(--success)', margin: 0 }}>
+              ✓ {clearDone} lead{clearDone !== 1 ? 's' : ''} removed (followers kept)
+            </p>
+          ) : clearConfirm ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0 }}>
+                This will delete all pipeline leads (replied, booked, nurture, closed, etc.) and keep only followers. Cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={handleClearLeads}
+                  disabled={clearWorking}
+                  style={{ fontSize: 12, padding: '5px 14px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-btn)', color: 'var(--danger)', cursor: 'pointer', opacity: clearWorking ? 0.6 : 1 }}
+                >
+                  {clearWorking ? 'Clearing…' : 'Yes, clear them'}
+                </button>
+                <button
+                  onClick={() => setClearConfirm(false)}
+                  style={{ fontSize: 12, padding: '5px 14px', background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius-btn)', color: 'var(--text-3)', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setClearConfirm(true)}
+              style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationColor: 'var(--border-strong)' }}
+            >
+              Clear pipeline leads (keep followers)
+            </button>
+          )}
+          {error && <p style={{ fontSize: 12, color: 'var(--danger)', margin: '6px 0 0' }}>{error}</p>}
         </div>
       </div>
     )
