@@ -12,20 +12,22 @@ interface Props {
 }
 
 const FIELD_LABELS: Record<MappedField, string> = {
-  date:               'Date',
-  revenue:            'Revenue',
-  leads_count:        'Leads contacted',
-  calls_booked:       'Calls booked',
-  close_rate:         'Close rate',
-  ad_spend:           'Ad spend',
-  contracts_signed:   'Contracts signed',
-  followers_gained:   'Followers gained',
-  ignore:             'Ignore this column',
+  date:                'Date',
+  revenue:             'Cash collected',
+  revenue_contracted:  'Revenue contracted',
+  leads_count:         'Leads contacted',
+  calls_booked:        'Calls booked',
+  show_up_rate:        'Show-up rate',
+  close_rate:          'Close rate',
+  ad_spend:            'Ad spend',
+  contracts_signed:    'Contracts signed',
+  followers_gained:    'Followers gained',
+  ignore:              'Ignore this column',
 }
 
 const ACTIVE_FIELDS: MappedField[] = [
-  'date', 'revenue', 'leads_count', 'calls_booked',
-  'close_rate', 'ad_spend', 'contracts_signed', 'followers_gained',
+  'date', 'revenue', 'revenue_contracted', 'leads_count', 'calls_booked',
+  'show_up_rate', 'close_rate', 'ad_spend', 'contracts_signed', 'followers_gained',
 ]
 
 const AMBER_CELL: React.CSSProperties = {

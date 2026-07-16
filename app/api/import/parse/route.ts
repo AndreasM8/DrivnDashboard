@@ -7,8 +7,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 export type MappedField =
   | 'date'
   | 'revenue'
+  | 'revenue_contracted'
   | 'leads_count'
   | 'calls_booked'
+  | 'show_up_rate'
   | 'close_rate'
   | 'ad_spend'
   | 'contracts_signed'
@@ -25,8 +27,10 @@ export interface ParsedRow {
   id: string
   date: string | null
   revenue: number | null
+  revenue_contracted: number | null
   leads_count: number | null
   calls_booked: number | null
+  show_up_rate: number | null
   close_rate: number | null
   ad_spend: number | null
   contracts_signed: number | null

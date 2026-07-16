@@ -104,6 +104,156 @@ export function parseDateValue(raw: string): string | null {
   return null
 }
 
+// ─── Specialized Sheet Parsers ────────────────────────────────────────────────
+
+function findCol(headers: string[], ...patterns: RegExp[]): string | undefined {
+  return headers.find(h => patterns.some(p => p.test(h)))
+}
+
+const isChecked = (v: string) => /^(true|1|yes|ja|x|✓)$/i.test(v.trim())
+
+export function parseFollowersSheet(
+  headers: string[],
+  rows: Record<string, string>[]
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
+  const dateCol = findCol(headers, /day.?follow/i, /date.?follow/i, /follow/i, /date/i, /dato/i)
+    ?? headers[headers.length - 1]
+
+  const monthCounts = new Map<string, number>()
+  for (const row of rows) {
+    const date = parseDateValue(row[dateCol] ?? '')
+    if (!date) continue
+    const m = date.slice(0, 7)
+    monthCounts.set(m, (monthCounts.get(m) ?? 0) + 1)
+  }
+
+  const parsedRows: ParsedRow[] = [...monthCounts.entries()].sort().map(([m, count]) => ({
+    id: crypto.randomUUID(),
+    date: `${m}-01`,
+    revenue: null, revenue_contracted: null, leads_count: null,
+    calls_booked: null, show_up_rate: null, close_rate: null,
+    ad_spend: null, contracts_signed: null, followers_gained: count,
+    _originalValues: { Month: m, 'New followers': String(count) },
+  }))
+
+  return {
+    parsedRows,
+    columns: [
+      { originalName: 'Month',         mappedTo: 'date',             hasData: true },
+      { originalName: 'New followers', mappedTo: 'followers_gained', hasData: true },
+    ],
+  }
+}
+
+export function parseMeetingsSheet(
+  headers: string[],
+  rows: Record<string, string>[]
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
+  const dateCol    = findCol(headers, /date.?of.?call/i, /call.?date/i, /date/i, /dato/i)
+  const showedCol  = findCol(headers, /showed.?up/i, /show.?up/i, /møtt/i)
+  const closedCol  = findCol(headers, /closed/i, /lukket/i, /signert/i, /close/i)
+
+  type Acc = { calls: number; showed: number; closed: number }
+  const byMonth = new Map<string, Acc>()
+
+  for (const row of rows) {
+    const date = dateCol ? parseDateValue(row[dateCol] ?? '') : null
+    if (!date) continue
+    const m = date.slice(0, 7)
+    const acc = byMonth.get(m) ?? { calls: 0, showed: 0, closed: 0 }
+    acc.calls++
+    if (showedCol && isChecked(row[showedCol] ?? '')) acc.showed++
+    if (closedCol && isChecked(row[closedCol]  ?? '')) acc.closed++
+    byMonth.set(m, acc)
+  }
+
+  const parsedRows: ParsedRow[] = [...byMonth.entries()].sort().map(([m, acc]) => {
+    const showUpRate = acc.calls > 0 ? Math.round((acc.showed / acc.calls) * 100) : null
+    return {
+      id: crypto.randomUUID(),
+      date: `${m}-01`,
+      revenue: null, revenue_contracted: null, leads_count: null,
+      calls_booked: acc.calls,
+      show_up_rate: showUpRate,
+      close_rate: null, ad_spend: null,
+      contracts_signed: acc.closed,
+      followers_gained: null,
+      _originalValues: {
+        Month: m,
+        'Meetings booked': String(acc.calls),
+        'Showed up': String(acc.showed),
+        'Show-up rate': showUpRate !== null ? `${showUpRate}%` : '—',
+        'Contracts signed': String(acc.closed),
+      },
+    }
+  })
+
+  return {
+    parsedRows,
+    columns: [
+      { originalName: 'Month',             mappedTo: 'date',             hasData: true },
+      { originalName: 'Meetings booked',   mappedTo: 'calls_booked',     hasData: true },
+      { originalName: 'Show-up rate',      mappedTo: 'show_up_rate',     hasData: showedCol !== undefined },
+      { originalName: 'Contracts signed',  mappedTo: 'contracts_signed', hasData: closedCol !== undefined },
+    ],
+  }
+}
+
+export function parseSalesSheet(
+  headers: string[],
+  rows: Record<string, string>[]
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
+  const dateCol  = findCol(headers, /date.?of.?close/i, /close.?date/i, /date/i, /dato/i)
+  const dealCol  = findCol(headers, /deal.?size/i, /deal.?verdi/i, /size/i, /amount/i)
+  const cashCol  = findCol(headers, /cash.?collect/i, /innbetalt/i, /collected/i)
+
+  type Acc = { contracted: number; cash: number; count: number }
+  const byMonth = new Map<string, Acc>()
+
+  for (const row of rows) {
+    const date = dateCol ? parseDateValue(row[dateCol] ?? '') : null
+    if (!date) continue
+    const m = date.slice(0, 7)
+    const acc = byMonth.get(m) ?? { contracted: 0, cash: 0, count: 0 }
+    acc.count++
+    const deal = dealCol ? parseNumericValue(row[dealCol] ?? '') : null
+    const cash = cashCol ? parseNumericValue(row[cashCol] ?? '') : null
+    if (deal !== null) acc.contracted += deal
+    if (cash !== null) acc.cash       += cash
+    byMonth.set(m, acc)
+  }
+
+  const hasCash = [...byMonth.values()].some(a => a.cash > 0)
+  const hasDeal = [...byMonth.values()].some(a => a.contracted > 0)
+
+  const parsedRows: ParsedRow[] = [...byMonth.entries()].sort().map(([m, acc]) => ({
+    id: crypto.randomUUID(),
+    date: `${m}-01`,
+    revenue:             hasCash ? acc.cash        : null,
+    revenue_contracted:  hasDeal ? acc.contracted  : null,
+    leads_count: null, calls_booked: null, show_up_rate: null, close_rate: null,
+    ad_spend: null,
+    contracts_signed: acc.count,
+    followers_gained: null,
+    _originalValues: {
+      Month: m,
+      'Cash collected': String(acc.cash),
+      'Revenue contracted': String(acc.contracted),
+      'Clients signed': String(acc.count),
+    },
+  }))
+
+  return {
+    parsedRows,
+    columns: [
+      { originalName: 'Month',               mappedTo: 'date',                hasData: true },
+      { originalName: 'Cash collected',      mappedTo: 'revenue',             hasData: hasCash },
+      { originalName: 'Revenue contracted',  mappedTo: 'revenue_contracted',  hasData: hasDeal },
+      { originalName: 'Clients signed',      mappedTo: 'contracts_signed',    hasData: true },
+    ],
+  }
+}
+
 // ─── Apply Mapping ────────────────────────────────────────────────────────────
 
 export function applyColumnMapping(
@@ -115,8 +265,10 @@ export function applyColumnMapping(
       id: crypto.randomUUID(),
       date: null,
       revenue: null,
+      revenue_contracted: null,
       leads_count: null,
       calls_booked: null,
+      show_up_rate: null,
       close_rate: null,
       ad_spend: null,
       contracts_signed: null,

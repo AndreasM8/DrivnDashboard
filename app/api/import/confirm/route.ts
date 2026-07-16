@@ -92,16 +92,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     }
 
+    const revContracted = sumOrNull('revenue_contracted')
+    const revCash       = sumOrNull('revenue')
     monthlyUpserts.push({
       user_id: uid,
       month,
-      cash_collected: sumOrNull('revenue'),
-      revenue_contracted: sumOrNull('revenue'),
-      new_followers: sumOrNull('followers_gained'),
-      meetings_booked: sumOrNull('calls_booked'),
-      clients_signed: sumOrNull('contracts_signed'),
-      close_rate: avgOrNull('close_rate'),
-    })
+      cash_collected:      revCash,
+      revenue_contracted:  revContracted !== null ? revContracted : revCash,
+      new_followers:       sumOrNull('followers_gained'),
+      meetings_booked:     sumOrNull('calls_booked'),
+      clients_signed:      sumOrNull('contracts_signed'),
+      close_rate:          avgOrNull('close_rate'),
+      show_up_rate:        avgOrNull('show_up_rate'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   }
 
   // Upsert monthly_snapshots
