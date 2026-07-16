@@ -137,7 +137,7 @@ function findCol(headers: string[], ...patterns: RegExp[]): string | undefined {
   })
 }
 
-const isChecked = (v: string) => /^(true|1|yes|ja|x|✓)$/i.test(v.trim())
+const isChecked = (v: string) => /^(true|sann|sant|1|yes|ja|x|✓)$/i.test(v.trim())
 
 export function parseFollowersSheet(
   headers: string[],
@@ -205,6 +205,7 @@ export function parseMeetingsSheet(
   // "Calls showed" / "Showed up" — accepts a number (aggregate) or checkmark (per-meeting)
   const showedCol   = findCol(headers, /calls.?showed/i, /showed.?up/i, /show.?up/i, /showed/i, /møtt/i, /møtte/i, /attended/i)
   console.log('[meetings] showedCol:', showedCol, '| dateCol:', dateCol, '| closedCol:', findCol(headers, /closed/i, /lukket/i, /signert/i, /close/i))
+  if (showedCol && rows[0]) console.log('[meetings] first SHOWED UP value:', JSON.stringify(rows[0][showedCol]))
   const noShowCol   = findCol(headers, /no.?show/i, /ikke.?møtt/i, /no.?møtt/i)
   const canceledCol = findCol(headers, /cancel/i, /avlys/i)
   const reschedCol  = findCol(headers, /reschedul/i, /utsatt/i)
