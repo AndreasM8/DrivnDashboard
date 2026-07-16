@@ -197,7 +197,7 @@ const STAGE_COLUMNS: StageColumnConfig[] = [
   { stage: 'bad_fit',           label: 'Bad fit',             auto: false, bg: 'bg-white', accent: '#FB7185', extraStages: undefined, hideable: true, defaultHidden: true, dotColor: '#FB7185' },
 ]
 
-const DEFAULT_HIDDEN: LeadStage[] = ['nurture_post_call', 'nurture', 'not_interested', 'bad_fit']
+const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
 
 function loadHiddenColumns(): Set<LeadStage> {
   if (typeof window === 'undefined') return new Set(DEFAULT_HIDDEN)

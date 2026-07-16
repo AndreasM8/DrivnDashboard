@@ -17,7 +17,7 @@ export interface ImportLeadRecord {
   full_name: string
   ig_username: string
   source: string
-  stage: 'follower' | 'replied' | 'call_booked' | 'closed' | 'nurture' | 'bad_fit' | 'not_interested'
+  stage: 'follower' | 'replied' | 'call_booked' | 'nurture_post_call' | 'closed' | 'nurture' | 'bad_fit' | 'not_interested'
   followed_at: string | null
   call_booked_at: string | null
   call_outcome: 'showed' | 'no_show' | 'canceled' | 'rescheduled' | null
@@ -227,7 +227,7 @@ export function parseMeetingsSheet(
     else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
     else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
 
-    const stage: ImportLeadRecord['stage'] = isClosed ? 'closed' : 'call_booked'
+    const stage: ImportLeadRecord['stage'] = isClosed ? 'closed' : 'nurture_post_call'
 
     leadRecords.push({
       full_name:      name,
