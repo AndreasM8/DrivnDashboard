@@ -70,17 +70,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     byMonth.set(month, existing)
   }
 
+  // Fetch existing snapshots so we can merge rather than overwrite
+  const allMonths = [...byMonth.keys()]
+  const { data: existingSnapshots } = await supabase
+    .from('monthly_snapshots')
+    .select('month, cash_collected, revenue_contracted, new_followers, meetings_booked, clients_signed, close_rate, show_up_rate')
+    .eq('user_id', uid)
+    .in('month', allMonths)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingByMonth = new Map<string, any>(
+    (existingSnapshots ?? []).map(s => [s.month, s])
+  )
+
   // For each month, aggregate values (sum numeric fields)
-  const monthlyUpserts: Array<{
-    user_id: string
-    month: string
-    cash_collected: number | null
-    revenue_contracted: number | null
-    new_followers: number | null
-    meetings_booked: number | null
-    clients_signed: number | null
-    close_rate: number | null
-  }> = []
+  const monthlyUpserts: Array<Record<string, unknown>> = []
 
   for (const [month, monthRows] of byMonth.entries()) {
     function sumOrNull(key: keyof ParsedRow): number | null {
@@ -92,20 +96,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     }
 
-    const revContracted = sumOrNull('revenue_contracted')
-    const revCash       = sumOrNull('revenue')
+    const ex             = existingByMonth.get(month)
+    const revContracted  = sumOrNull('revenue_contracted')
+    const revCash        = sumOrNull('revenue')
+
+    // Merge: new value wins if non-null, otherwise keep existing, all columns are NOT NULL DEFAULT 0
     monthlyUpserts.push({
-      user_id: uid,
+      user_id:            uid,
       month,
-      cash_collected:      revCash,
-      revenue_contracted:  revContracted !== null ? revContracted : revCash,
-      new_followers:       sumOrNull('followers_gained'),
-      meetings_booked:     sumOrNull('calls_booked'),
-      clients_signed:      sumOrNull('contracts_signed'),
-      close_rate:          avgOrNull('close_rate'),
-      show_up_rate:        avgOrNull('show_up_rate'),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+      cash_collected:     revCash        ?? ex?.cash_collected     ?? 0,
+      revenue_contracted: revContracted  ?? ex?.revenue_contracted ?? revCash ?? ex?.cash_collected ?? 0,
+      new_followers:      sumOrNull('followers_gained') ?? ex?.new_followers   ?? 0,
+      meetings_booked:    sumOrNull('calls_booked')     ?? ex?.meetings_booked ?? 0,
+      clients_signed:     sumOrNull('contracts_signed') ?? ex?.clients_signed  ?? 0,
+      close_rate:         avgOrNull('close_rate')       ?? ex?.close_rate      ?? 0,
+      show_up_rate:       avgOrNull('show_up_rate')     ?? ex?.show_up_rate    ?? 0,
+    })
   }
 
   // Upsert monthly_snapshots
