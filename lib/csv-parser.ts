@@ -177,7 +177,7 @@ export function parseFollowersSheet(
     id: crypto.randomUUID(),
     date: `${m}-01`,
     revenue: null, revenue_contracted: null, leads_count: null,
-    calls_booked: null, show_up_rate: null, close_rate: null,
+    calls_booked: null, calls_showed: null, show_up_rate: null, close_rate: null,
     ad_spend: null, contracts_signed: null, followers_gained: count,
     _originalValues: { Month: m, 'New followers': String(count) },
   }))
@@ -270,21 +270,20 @@ export function parseMeetingsSheet(
   }
 
   const parsedRows: ParsedRow[] = [...byMonth.entries()].sort().map(([m, acc]) => {
-    const showUpRate = acc.calls > 0 ? Math.round((acc.showed / acc.calls) * 100) : null
     return {
       id: crypto.randomUUID(),
       date: `${m}-01`,
       revenue: null, revenue_contracted: null, leads_count: null,
       calls_booked: acc.calls,
-      show_up_rate: showUpRate,
+      calls_showed: showedCol !== undefined ? acc.showed : null,
+      show_up_rate: null,
       close_rate: null, ad_spend: null,
       contracts_signed: acc.closed,
       followers_gained: null,
       _originalValues: {
         Month: m,
         'Meetings booked': String(acc.calls),
-        'Showed up': String(acc.showed),
-        'Show-up rate': showUpRate !== null ? `${showUpRate}%` : '—',
+        'Calls showed': String(acc.showed),
         'Contracts signed': String(acc.closed),
       },
     }
@@ -296,7 +295,7 @@ export function parseMeetingsSheet(
     columns: [
       { originalName: 'Month',             mappedTo: 'date',             hasData: true },
       { originalName: 'Meetings booked',   mappedTo: 'calls_booked',     hasData: true },
-      { originalName: 'Show-up rate',      mappedTo: 'show_up_rate',     hasData: showedCol !== undefined },
+      { originalName: 'Calls showed',      mappedTo: 'calls_showed',     hasData: showedCol !== undefined },
       { originalName: 'Contracts signed',  mappedTo: 'contracts_signed', hasData: closedCol !== undefined },
     ],
   }
@@ -377,7 +376,7 @@ export function parseSalesSheet(
     date: `${m}-01`,
     revenue:             hasCash ? acc.cash        : null,
     revenue_contracted:  hasDeal ? acc.contracted  : null,
-    leads_count: null, calls_booked: null, show_up_rate: null, close_rate: null,
+    leads_count: null, calls_booked: null, calls_showed: null, show_up_rate: null, close_rate: null,
     ad_spend: null,
     contracts_signed: acc.count,
     followers_gained: null,
@@ -415,6 +414,7 @@ export function applyColumnMapping(
       revenue_contracted: null,
       leads_count: null,
       calls_booked: null,
+      calls_showed: null,
       show_up_rate: null,
       close_rate: null,
       ad_spend: null,

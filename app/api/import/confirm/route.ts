@@ -100,6 +100,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const revContracted  = sumOrNull('revenue_contracted')
     const revCash        = sumOrNull('revenue')
 
+    // Compute show_up_rate: prefer calls_showed / calls_booked (raw counts), fall back to explicit rate
+    const callsBooked  = sumOrNull('calls_booked')
+    const callsShowed  = sumOrNull('calls_showed')
+    const showUpRate   = callsShowed !== null && callsBooked
+      ? Math.round((callsShowed / callsBooked) * 100)
+      : avgOrNull('show_up_rate')
+
     // Merge: new value wins if non-null, otherwise keep existing, all columns are NOT NULL DEFAULT 0
     monthlyUpserts.push({
       user_id:            uid,
@@ -107,10 +114,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       cash_collected:     revCash        ?? ex?.cash_collected     ?? 0,
       revenue_contracted: revContracted  ?? ex?.revenue_contracted ?? revCash ?? ex?.cash_collected ?? 0,
       new_followers:      sumOrNull('followers_gained') ?? ex?.new_followers   ?? 0,
-      meetings_booked:    sumOrNull('calls_booked')     ?? ex?.meetings_booked ?? 0,
+      meetings_booked:    callsBooked                  ?? ex?.meetings_booked ?? 0,
       clients_signed:     sumOrNull('contracts_signed') ?? ex?.clients_signed  ?? 0,
       close_rate:         avgOrNull('close_rate')       ?? ex?.close_rate      ?? 0,
-      show_up_rate:       avgOrNull('show_up_rate')     ?? ex?.show_up_rate    ?? 0,
+      show_up_rate:       showUpRate                   ?? ex?.show_up_rate    ?? 0,
     })
   }
 

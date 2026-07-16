@@ -10,6 +10,7 @@ export type MappedField =
   | 'revenue_contracted'
   | 'leads_count'
   | 'calls_booked'
+  | 'calls_showed'
   | 'show_up_rate'
   | 'close_rate'
   | 'ad_spend'
@@ -30,6 +31,7 @@ export interface ParsedRow {
   revenue_contracted: number | null
   leads_count: number | null
   calls_booked: number | null
+  calls_showed: number | null
   show_up_rate: number | null
   close_rate: number | null
   ad_spend: number | null

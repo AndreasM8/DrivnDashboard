@@ -114,7 +114,7 @@ export default function ImportClient() {
             id: crypto.randomUUID(),
             date: `${m}-01`,
             revenue: null, revenue_contracted: null, leads_count: null,
-            calls_booked: null, show_up_rate: null, close_rate: null,
+            calls_booked: null, calls_showed: null, show_up_rate: null, close_rate: null,
             ad_spend: null, contracts_signed: null, followers_gained: count,
             _originalValues: { month: m, followers_gained: String(count) },
           }))

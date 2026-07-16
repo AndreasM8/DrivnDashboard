@@ -17,6 +17,7 @@ const FIELD_LABELS: Record<MappedField, string> = {
   revenue_contracted:  'Revenue contracted',
   leads_count:         'Leads contacted',
   calls_booked:        'Calls booked',
+  calls_showed:        'Calls showed',
   show_up_rate:        'Show-up rate',
   close_rate:          'Close rate',
   ad_spend:            'Ad spend',
@@ -27,7 +28,7 @@ const FIELD_LABELS: Record<MappedField, string> = {
 
 const ACTIVE_FIELDS: MappedField[] = [
   'date', 'revenue', 'revenue_contracted', 'leads_count', 'calls_booked',
-  'show_up_rate', 'close_rate', 'ad_spend', 'contracts_signed', 'followers_gained',
+  'calls_showed', 'show_up_rate', 'close_rate', 'ad_spend', 'contracts_signed', 'followers_gained',
 ]
 
 const AMBER_CELL: React.CSSProperties = {
@@ -192,6 +193,7 @@ export default function DataPreview({ parseResult, onConfirm, onReset }: Props) 
     if (field === 'revenue_contracted') return row.revenue_contracted
     if (field === 'leads_count') return row.leads_count
     if (field === 'calls_booked') return row.calls_booked
+    if (field === 'calls_showed') return row.calls_showed
     if (field === 'show_up_rate') return row.show_up_rate
     if (field === 'close_rate') return row.close_rate
     if (field === 'ad_spend') return row.ad_spend
