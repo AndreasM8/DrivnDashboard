@@ -49,72 +49,66 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let csvText: string
+  let headers: string[]
+  let sampleRows: Record<string, string>[]
   try {
-    const body = await req.json() as { csvText?: string }
-    csvText = body.csvText ?? ''
+    const body = await req.json() as { headers?: string[]; sampleRows?: Record<string, string>[] }
+    headers    = body.headers    ?? []
+    sampleRows = body.sampleRows ?? []
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (!csvText.trim()) {
-    return NextResponse.json({ error: 'csvText is required' }, { status: 400 })
+  if (headers.length === 0) {
+    return NextResponse.json({ error: 'No column headers found in CSV' }, { status: 400 })
   }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
 
-  const systemPrompt = `You are parsing a CSV file from an online fitness coach's business tracking spreadsheet.
+  const prompt = `You are mapping columns from a fitness coach's CSV spreadsheet.
 
-Your job:
-1. Identify what each column contains based on its name and values
-2. Map each column to one of: date, revenue, leads_count, calls_booked, close_rate, ad_spend, contracts_signed, followers_gained, ignore
-3. Parse each row into structured data
-4. For numeric fields, strip currency symbols (NOK, $, €, kr), commas, spaces
-5. For dates, convert to ISO format (YYYY-MM-DD). Accept DD.MM.YYYY, DD/MM/YYYY, MM/DD/YYYY, "Jan 2025", "2025-01", etc. If only year+month given, use the first day of that month.
-6. If a column has mixed data or can't be mapped, mark as 'ignore'
-7. Return ONLY valid JSON matching the schema, no explanation
+Map each column header to one of these field types:
+- date: a date or month column
+- revenue: money received / cash collected
+- leads_count: number of leads, DMs, people contacted
+- calls_booked: calls or meetings booked
+- close_rate: close rate or conversion rate (%)
+- ad_spend: advertising spend / ad cost
+- contracts_signed: contracts or clients signed
+- followers_gained: new followers gained
+- ignore: anything else (totals, notes, cumulative counts, etc.)
 
-Return this JSON structure:
-{
-  "columns": [{"originalName": "...", "mappedTo": "...", "hasData": true}],
-  "rows": [{"id": "uuid-placeholder-{{INDEX}}", "date": "2025-01-15" or null, "revenue": 50000 or null, "leads_count": null, "calls_booked": null, "close_rate": null, "ad_spend": null, "contracts_signed": null, "followers_gained": null, "_originalValues": {"ColName": "raw value"}}],
-  "summary": "Found X rows spanning ...",
-  "adSpendHasDates": true,
-  "totalAdSpend": null
-}
+Headers: ${JSON.stringify(headers)}
 
-For adSpendHasDates: set to false if the CSV has ad_spend data but no date column, or if ad_spend rows all lack dates.
-For totalAdSpend: if adSpendHasDates is false, sum all ad_spend values and return the total; otherwise return null.
-For row ids, use the placeholder format "uuid-placeholder-0", "uuid-placeholder-1", etc. (they will be replaced client-side).`
+Sample rows:
+${JSON.stringify(sampleRows.slice(0, 5), null, 2)}
 
-  const userMessage = `Parse this CSV:\n\n${csvText.slice(0, 20000)}`
+Return ONLY a JSON array, no explanation:
+[{"originalName":"<header>","mappedTo":"<field>","hasData":<bool>}]`
 
   let rawJson: string
   try {
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 8096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
     })
-
     const textBlock = message.content.find(b => b.type === 'text')
     rawJson = textBlock ? textBlock.text : ''
   } catch (err) {
     console.error('[import/parse] Anthropic error:', err)
-    return NextResponse.json({ error: 'Failed to parse CSV with AI' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to get column mapping from AI' }, { status: 500 })
   }
 
-  // Strip markdown code fences if present
   const cleaned = rawJson.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
 
-  let parsed: ParseResult
+  let columns: ParsedColumn[]
   try {
-    parsed = JSON.parse(cleaned) as ParseResult
+    columns = JSON.parse(cleaned) as ParsedColumn[]
   } catch {
-    console.error('[import/parse] JSON parse failed:', cleaned.slice(0, 500))
-    return NextResponse.json({ error: 'AI returned invalid JSON' }, { status: 500 })
+    console.error('[import/parse] JSON parse failed:', cleaned.slice(0, 300))
+    return NextResponse.json({ error: 'AI returned invalid column mapping' }, { status: 500 })
   }
 
-  return NextResponse.json(parsed)
+  return NextResponse.json({ columns })
 }

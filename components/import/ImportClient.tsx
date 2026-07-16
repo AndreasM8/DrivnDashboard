@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import CsvUploader from './CsvUploader'
 import DataPreview from './DataPreview'
-import type { ParseResult, ParsedRow } from '@/app/api/import/parse/route'
+import { parseCsv, applyColumnMapping, parseDateValue } from '@/lib/csv-parser'
+import type { ParseResult, ParsedRow, ParsedColumn } from '@/app/api/import/parse/route'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,10 +26,18 @@ export default function ImportClient() {
     setPendingCsvText(csvText)
 
     try {
+      // 1. Parse CSV client-side
+      const { headers, rows } = parseCsv(csvText)
+
+      if (headers.length === 0 || rows.length === 0) {
+        throw new Error('No data found in file. Please check the CSV has headers and rows.')
+      }
+
+      // 2. Ask Claude only for the column mapping (tiny response)
       const res = await fetch('/api/import/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csvText }),
+        body: JSON.stringify({ headers, sampleRows: rows.slice(0, 5) }),
       })
 
       if (!res.ok) {
@@ -36,14 +45,26 @@ export default function ImportClient() {
         throw new Error(body.error ?? `Parse failed (HTTP ${res.status})`)
       }
 
-      const result = await res.json() as ParseResult
+      const { columns } = await res.json() as { columns: ParsedColumn[] }
 
-      // Replace placeholder IDs with real UUIDs
-      result.rows = result.rows.map(r => ({
-        ...r,
-        id: r.id.startsWith('uuid-placeholder') ? crypto.randomUUID() : r.id,
-      }))
+      // 3. Apply mapping client-side to all rows
+      const parsedRows: ParsedRow[] = applyColumnMapping(columns, rows)
 
+      // 4. Detect adSpend info client-side
+      const adSpendCol   = columns.find(c => c.mappedTo === 'ad_spend')
+      const dateCol      = columns.find(c => c.mappedTo === 'date')
+      const adSpendHasDates = !!(adSpendCol && dateCol)
+      const totalAdSpend = adSpendHasDates
+        ? null
+        : parsedRows.reduce((s, r) => s + (r.ad_spend ?? 0), 0) || null
+
+      // 5. Build summary
+      const dates = parsedRows.map(r => r.date).filter(Boolean).sort() as string[]
+      const summary = dates.length > 0
+        ? `Found ${parsedRows.length} rows spanning ${dates[0].slice(0,7)} to ${dates[dates.length-1].slice(0,7)}`
+        : `Found ${parsedRows.length} rows`
+
+      const result: ParseResult = { columns, rows: parsedRows, summary, adSpendHasDates, totalAdSpend }
       setParseResult(result)
       setState('previewing')
     } catch (err) {
@@ -87,6 +108,7 @@ export default function ImportClient() {
     setParseResult(null)
     setError(null)
     setImportedMonths(0)
+    setPendingCsvText('')
   }
 
   if (state === 'done') {
