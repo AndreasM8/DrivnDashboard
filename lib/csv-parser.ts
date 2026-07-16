@@ -203,9 +203,13 @@ export function parseSalesSheet(
   headers: string[],
   rows: Record<string, string>[]
 ): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
-  const dateCol  = findCol(headers, /date.?of.?close/i, /close.?date/i, /date/i, /dato/i)
-  const dealCol  = findCol(headers, /deal.?size/i, /deal.?verdi/i, /size/i, /amount/i)
-  const cashCol  = findCol(headers, /cash.?collect/i, /innbetalt/i, /collected/i)
+  const dateCol    = findCol(headers, /date.?of.?close/i, /close.?date/i, /date/i, /dato/i)
+  const dealCol    = findCol(headers, /deal.?size/i, /deal.?verdi/i, /size/i, /amount/i)
+  const cashCol    = findCol(headers, /cash.?collect/i, /innbetalt/i, /collected/i)
+  const payTypeCol = findCol(headers, /type.?of.?pay/i, /payment.?type/i, /pay.?type/i, /betalings/i)
+
+  // Klarna = paid in full up front — treat deal size as cash collected
+  const isKlarna = (v: string) => /klarna/i.test(v.trim())
 
   type Acc = { contracted: number; cash: number; count: number }
   const byMonth = new Map<string, Acc>()
@@ -216,10 +220,20 @@ export function parseSalesSheet(
     const m = date.slice(0, 7)
     const acc = byMonth.get(m) ?? { contracted: 0, cash: 0, count: 0 }
     acc.count++
-    const deal = dealCol ? parseNumericValue(row[dealCol] ?? '') : null
-    const cash = cashCol ? parseNumericValue(row[cashCol] ?? '') : null
+
+    const deal     = dealCol    ? parseNumericValue(row[dealCol]    ?? '') : null
+    const cashRaw  = cashCol    ? parseNumericValue(row[cashCol]    ?? '') : null
+    const payType  = payTypeCol ? (row[payTypeCol] ?? '')                  : ''
+
     if (deal !== null) acc.contracted += deal
-    if (cash !== null) acc.cash       += cash
+
+    // Klarna = paid in full → cash collected = full deal value
+    if (isKlarna(payType) && deal !== null) {
+      acc.cash += deal
+    } else if (cashRaw !== null) {
+      acc.cash += cashRaw
+    }
+
     byMonth.set(m, acc)
   }
 
