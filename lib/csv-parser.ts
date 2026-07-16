@@ -227,9 +227,7 @@ export function parseMeetingsSheet(
     else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
     else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
 
-    const stage: ImportLeadRecord['stage'] = isClosed ? 'closed'
-      : isReschedule ? 'call_booked'
-      : 'nurture'
+    const stage: ImportLeadRecord['stage'] = isClosed ? 'closed' : 'call_booked'
 
     leadRecords.push({
       full_name:      name,
