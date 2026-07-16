@@ -1516,7 +1516,7 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
           </div>
         ) : (
           (() => {
-            const stageOrder: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'closed', 'nurture', 'not_interested', 'bad_fit']
+            const stageOrder: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'closed', 'nurture_post_call', 'nurture', 'not_interested', 'bad_fit']
             const sorted = [...filteredLeads].sort((a, b) => stageOrder.indexOf(a.stage) - stageOrder.indexOf(b.stage))
             return sorted.map(lead => {
               const col = STAGE_COLUMNS.find(c => c.stage === lead.stage || (c.extraStages?.includes(lead.stage) ?? false))
