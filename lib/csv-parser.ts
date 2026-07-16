@@ -214,37 +214,37 @@ export function parseMeetingsSheet(
 
   for (const row of rows) {
     const date = dateCol ? parseDateValue(row[dateCol] ?? '') : null
-    if (!date) continue
-    const m = date.slice(0, 7)
-    const acc = byMonth.get(m) ?? { calls: 0, showed: 0, closed: 0 }
 
-    // Calls: use explicit numeric column if present, else count this row as one meeting
-    if (callsCol) {
-      const n = parseNumericValue(row[callsCol] ?? '')
-      acc.calls += n !== null ? n : 1
-    } else {
-      acc.calls++
+    // Monthly stats: only accumulate when a date is present
+    if (date) {
+      const m = date.slice(0, 7)
+      const acc = byMonth.get(m) ?? { calls: 0, showed: 0, closed: 0 }
+
+      if (callsCol) {
+        const n = parseNumericValue(row[callsCol] ?? '')
+        acc.calls += n !== null ? n : 1
+      } else {
+        acc.calls++
+      }
+
+      if (showedCol) {
+        const raw = (row[showedCol] ?? '').trim()
+        const n = parseNumericValue(raw)
+        if (n !== null) acc.showed += n
+        else if (isChecked(raw)) acc.showed++
+      }
+
+      if (closedCol) {
+        const raw = (row[closedCol] ?? '').trim()
+        const n = parseNumericValue(raw)
+        if (n !== null) acc.closed += n
+        else if (isChecked(raw)) acc.closed++
+      }
+
+      byMonth.set(m, acc)
     }
 
-    // Showed: numeric value (aggregate format) or checkmark (per-meeting format)
-    if (showedCol) {
-      const raw = (row[showedCol] ?? '').trim()
-      const n = parseNumericValue(raw)
-      if (n !== null) acc.showed += n
-      else if (isChecked(raw)) acc.showed++
-    }
-
-    // Closed: numeric value (aggregate format) or checkmark (per-meeting format)
-    if (closedCol) {
-      const raw = (row[closedCol] ?? '').trim()
-      const n = parseNumericValue(raw)
-      if (n !== null) acc.closed += n
-      else if (isChecked(raw)) acc.closed++
-    }
-
-    byMonth.set(m, acc)
-
-    // Lead records only in per-meeting format (when a name is present in the row)
+    // Lead records: still import even without a date (just skip unnamed rows)
     const name = nameCol ? (row[nameCol] ?? '').trim() : ''
     if (!name) continue
 
