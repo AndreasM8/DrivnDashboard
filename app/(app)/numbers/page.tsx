@@ -131,7 +131,11 @@ export default async function NumbersPage() {
   const cashPending = cashFromDueInstallments - cashFromPaidInstallments
 
   // Leads metrics — meetings attributed to the month they were BOOKED
-  const newFollowers  = (newLeads ?? []).length
+  // Prefer followers_generated sum from ads active this month; fall back to pipeline lead count
+  const adFollowersThisMonth = ((adsData ?? []) as Ad[])
+    .filter(ad => ad.started_at <= `${currentMonth}-31` && (ad.ended_at === null || ad.ended_at >= monthStart))
+    .reduce((sum, ad) => sum + (ad.followers_generated ?? 0), 0)
+  const newFollowers = adFollowersThisMonth > 0 ? adFollowersThisMonth : (newLeads ?? []).length
   const allBookedLeads = (bookedLeads ?? []) as { call_booked_at: string; call_outcome: string | null }[]
   const meetingsBooked = allBookedLeads.length
   const withOutcome   = allBookedLeads.filter(l => l.call_outcome)

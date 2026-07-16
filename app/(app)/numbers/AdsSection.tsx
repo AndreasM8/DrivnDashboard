@@ -291,6 +291,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
   const [formEnded, setFormEnded] = useState('')
   const [formBudget, setFormBudget] = useState('')
   const [formTotalSpend, setFormTotalSpend] = useState('')
+  const [formFollowers, setFormFollowers] = useState('0')
   const [creating, setCreating] = useState(false)
   const [chartType, setChartType] = useState<ChartType>('bar')
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('weekly')
@@ -299,12 +300,13 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
   const pastAds = ads.filter(a => a.ended_at !== null)
   const isPastAd = formEnded !== ''
 
-  function followersForAd(adId: string) {
-    return allYearLeads.filter(l => l.ad_id === adId).length
+  function followersForAd(ad: Ad) {
+    if (ad.followers_generated > 0) return ad.followers_generated
+    return allYearLeads.filter(l => l.ad_id === ad.id).length
   }
 
   function cpf(ad: Ad) {
-    const f = followersForAd(ad.id)
+    const f = followersForAd(ad)
     if (f === 0 || ad.total_spend === 0) return null
     return ad.total_spend / f
   }
@@ -317,6 +319,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
   async function handleCreate() {
     const budget = parseFloat(formBudget)
     const totalSpend = formTotalSpend ? parseFloat(formTotalSpend) : 0
+    const followers = parseInt(formFollowers, 10) || 0
     if (!formName.trim() || isNaN(budget) || budget <= 0) return
     setCreating(true)
     try {
@@ -330,6 +333,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
           ended_at: formEnded || null,
           daily_budget: budget,
           total_spend: totalSpend,
+          followers_generated: followers,
           currency: baseCurrency,
         }),
       })
@@ -346,6 +350,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
         setFormName('')
         setFormBudget('')
         setFormTotalSpend('')
+        setFormFollowers('0')
         setFormStarted(todayStr())
         setFormEnded('')
       }
@@ -433,6 +438,11 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
             )}
           </div>
           <div>
+            <label className="label-caps" style={{ display: 'block', marginBottom: 4 }}>Followers generated</label>
+            <input type="number" value={formFollowers} onChange={e => setFormFollowers(e.target.value)} placeholder="0" min="0" className="input-base" style={{ maxWidth: 160 }} />
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>Total followers gained from this campaign so far</p>
+          </div>
+          <div>
             <button onClick={handleCreate} disabled={creating || !formName.trim() || !formBudget} className="btn-primary" style={{ padding: '8px 16px' }}>
               {creating ? 'Saving…' : isPastAd ? 'Add past ad' : 'Activate ad'}
             </button>
@@ -478,7 +488,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
             </div>
             <div>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', margin: '0 0 2px' }}>Followers</p>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{followersForAd(activeAd.id)}</span>
+              <InlineEdit value={activeAd.followers_generated} onSave={v => updateAd(activeAd.id, { followers_generated: Math.round(v) })} />
             </div>
             <div>
               <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', margin: '0 0 2px' }}>Cost / follow</p>
@@ -555,7 +565,7 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
               ))}
             </div>
             {pastAds.map(ad => {
-              const f = followersForAd(ad.id)
+              const f = followersForAd(ad)
               const c = cpf(ad)
               return (
                 <div key={ad.id} className="grid grid-cols-4" style={{ gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
@@ -569,7 +579,10 @@ export default function AdsSection({ ads: initialAds, allYearLeads, baseCurrency
                   </div>
                   <div>
                     <InlineEdit value={ad.total_spend} prefix={baseCurrency + ' '} onSave={v => updateAd(ad.id, { total_spend: v })} />
-                    <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '1px 0 0' }}>{f} followers</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                      <InlineEdit value={f} onSave={v => updateAd(ad.id, { followers_generated: Math.round(v) })} />
+                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>followers</span>
+                    </div>
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: c ? 'var(--text-1)' : 'var(--text-3)' }}>
                     {c != null ? fmt(c, baseCurrency) : '—'}

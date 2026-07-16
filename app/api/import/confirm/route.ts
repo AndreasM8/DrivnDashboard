@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getEffectiveUserId } from '@/lib/admin'
 import type { ParsedRow } from '../parse/route'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const uid = await getEffectiveUserId()
 
   let payload: ConfirmPayload
   try {
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     monthlyUpserts.push({
-      user_id: user.id,
+      user_id: uid,
       month,
       cash_collected: sumOrNull('revenue'),
       revenue_contracted: sumOrNull('revenue'),
@@ -132,7 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const perMonth = totalAdSpend / allMonths.length
     for (const month of allMonths) {
       expenseInserts.push({
-        user_id: user.id,
+        user_id: uid,
         month,
         category: 'ads',
         label: 'Imported ad spend',
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     for (const row of validRows) {
       if (row.ad_spend !== null && row.ad_spend > 0) {
         expenseInserts.push({
-          user_id: user.id,
+          user_id: uid,
           month: toMonth(row.date!),
           category: 'ads',
           label: 'Imported ad spend',

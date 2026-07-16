@@ -42,11 +42,12 @@ export default async function AdminPage() {
   const adminClient   = createAdminSupabaseClient()
   const currentMonth  = new Date().toISOString().slice(0, 7)
 
-  // Fetch all coaches
+  // Fetch all active coaches (deactivated = false or null)
   const { data: coaches } = await supabase
     .from('users')
     .select('id, name, business_name, base_currency, role')
     .in('role', ['coach', 'admin'])
+    .neq('deactivated', true)
     .order('created_at')
 
   if (!coaches) return <div style={{ padding: 40, color: 'var(--text-2)' }}>No coaches found.</div>

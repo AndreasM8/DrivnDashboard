@@ -320,10 +320,12 @@ function TeamSection({
   )
 }
 
-export default function AdminClient({ coachStats, currentMonth, missingCheckins, teamMembers, todayEods }: Props) {
+export default function AdminClient({ coachStats: initialCoachStats, currentMonth, missingCheckins, teamMembers, todayEods }: Props) {
   const router    = useRouter()
   const t         = useT()
+  const [coachStats, setCoachStats] = useState(initialCoachStats)
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [hidingId,  setHidingId]  = useState<string | null>(null)
   const [tab,       setTab]       = useState<'overview' | 'numbers' | 'coaches'>('overview')
   const [nSortKey,  setNSortKey]  = useState<NumbersSortKey>('cashThisMonth')
   const [nSortDir,  setNSortDir]  = useState<'desc' | 'asc'>('desc')
@@ -339,6 +341,22 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
     })
     if (res.ok) { router.push('/dashboard'); router.refresh() }
     else { setLoadingId(null); alert('Failed to switch view') }
+  }
+
+  async function handleDeactivate(userId: string, name: string) {
+    if (!window.confirm(`Hide "${name}" from admin stats? You can restore them via the database if needed.`)) return
+    setHidingId(userId)
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ deactivated: true }),
+    })
+    if (res.ok) {
+      setCoachStats(prev => prev.filter(c => c.userId !== userId))
+    } else {
+      alert('Failed to hide profile')
+    }
+    setHidingId(null)
   }
 
   function toggleSort(key: SortKey) {
@@ -654,29 +672,41 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
                           {timeAgo(c.lastLogin)}
                         </td>
 
-                        {/* View as */}
+                        {/* View as + Hide */}
                         <td style={{ padding: '12px 14px' }}>
-                          <button
-                            onClick={() => handleViewAs(c.userId, c.name)}
-                            disabled={loadingId === c.userId}
-                            style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
-                            onMouseEnter={e => {
-                              if (loadingId !== c.userId) {
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                              onClick={() => handleViewAs(c.userId, c.name)}
+                              disabled={loadingId === c.userId}
+                              style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
+                              onMouseEnter={e => {
+                                if (loadingId !== c.userId) {
+                                  const el = e.currentTarget as HTMLButtonElement
+                                  el.style.background    = 'rgba(37,99,235,0.1)'
+                                  el.style.color         = 'var(--accent)'
+                                  el.style.borderColor   = 'rgba(37,99,235,0.3)'
+                                }
+                              }}
+                              onMouseLeave={e => {
                                 const el = e.currentTarget as HTMLButtonElement
-                                el.style.background    = 'rgba(37,99,235,0.1)'
-                                el.style.color         = 'var(--accent)'
-                                el.style.borderColor   = 'rgba(37,99,235,0.3)'
-                              }
-                            }}
-                            onMouseLeave={e => {
-                              const el = e.currentTarget as HTMLButtonElement
-                              el.style.background  = 'transparent'
-                              el.style.color       = 'var(--text-2)'
-                              el.style.borderColor = 'var(--border-strong)'
-                            }}
-                          >
-                            {loadingId === c.userId ? '…' : 'View as →'}
-                          </button>
+                                el.style.background  = 'transparent'
+                                el.style.color       = 'var(--text-2)'
+                                el.style.borderColor = 'var(--border-strong)'
+                              }}
+                            >
+                              {loadingId === c.userId ? '…' : 'View as →'}
+                            </button>
+                            <button
+                              onClick={() => handleDeactivate(c.userId, c.name)}
+                              disabled={hidingId === c.userId}
+                              title="Hide from admin stats"
+                              style={{ ...VIEW_BTN, padding: '5px 8px', color: 'var(--text-3)', opacity: hidingId === c.userId ? 0.4 : 1 }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(220,38,38,0.3)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)' }}
+                            >
+                              {hidingId === c.userId ? '…' : '×'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -834,29 +864,41 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
                             {c.clientsSignedThisMonth > 0 ? `+${c.clientsSignedThisMonth}` : '0'}
                           </td>
 
-                          {/* View as */}
+                          {/* View as + Hide */}
                           <td style={{ padding: '12px 14px' }}>
-                            <button
-                              onClick={() => handleViewAs(c.userId, c.name)}
-                              disabled={loadingId === c.userId}
-                              style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
-                              onMouseEnter={e => {
-                                if (loadingId !== c.userId) {
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button
+                                onClick={() => handleViewAs(c.userId, c.name)}
+                                disabled={loadingId === c.userId}
+                                style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
+                                onMouseEnter={e => {
+                                  if (loadingId !== c.userId) {
+                                    const el = e.currentTarget as HTMLButtonElement
+                                    el.style.background  = 'rgba(37,99,235,0.1)'
+                                    el.style.color       = 'var(--accent)'
+                                    el.style.borderColor = 'rgba(37,99,235,0.3)'
+                                  }
+                                }}
+                                onMouseLeave={e => {
                                   const el = e.currentTarget as HTMLButtonElement
-                                  el.style.background  = 'rgba(37,99,235,0.1)'
-                                  el.style.color       = 'var(--accent)'
-                                  el.style.borderColor = 'rgba(37,99,235,0.3)'
-                                }
-                              }}
-                              onMouseLeave={e => {
-                                const el = e.currentTarget as HTMLButtonElement
-                                el.style.background  = 'transparent'
-                                el.style.color       = 'var(--text-2)'
-                                el.style.borderColor = 'var(--border-strong)'
-                              }}
-                            >
-                              {loadingId === c.userId ? '…' : 'View as →'}
-                            </button>
+                                  el.style.background  = 'transparent'
+                                  el.style.color       = 'var(--text-2)'
+                                  el.style.borderColor = 'var(--border-strong)'
+                                }}
+                              >
+                                {loadingId === c.userId ? '…' : 'View as →'}
+                              </button>
+                              <button
+                                onClick={() => handleDeactivate(c.userId, c.name)}
+                                disabled={hidingId === c.userId}
+                                title="Hide from admin stats"
+                                style={{ ...VIEW_BTN, padding: '5px 8px', color: 'var(--text-3)', opacity: hidingId === c.userId ? 0.4 : 1 }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(220,38,38,0.3)' }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)' }}
+                              >
+                                {hidingId === c.userId ? '…' : '×'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -874,7 +916,7 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)', overflow: 'hidden' }}>
 
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px 110px', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px auto', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
             {['Coach', 'Business', 'Clients', 'Leads', 'Last login', ''].map(h => (
               <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {h}
@@ -890,7 +932,7 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
             coachStats.map((c, i) => (
               <div
                 key={c.userId}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px 110px', padding: '14px 16px', alignItems: 'center', borderBottom: i < coachStats.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 100ms' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px auto', padding: '14px 16px', alignItems: 'center', borderBottom: i < coachStats.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 100ms' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
@@ -906,27 +948,39 @@ export default function AdminClient({ coachStats, currentMonth, missingCheckins,
                   {c.totalLeads}
                 </p>
                 <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{timeAgo(c.lastLogin)}</p>
-                <button
-                  onClick={() => handleViewAs(c.userId, c.name)}
-                  disabled={loadingId === c.userId}
-                  style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => {
-                    if (loadingId !== c.userId) {
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    onClick={() => handleViewAs(c.userId, c.name)}
+                    disabled={loadingId === c.userId}
+                    style={{ ...VIEW_BTN, opacity: loadingId === c.userId ? 0.5 : 1, cursor: loadingId === c.userId ? 'not-allowed' : 'pointer' }}
+                    onMouseEnter={e => {
+                      if (loadingId !== c.userId) {
+                        const el = e.currentTarget as HTMLButtonElement
+                        el.style.background  = 'rgba(37,99,235,0.1)'
+                        el.style.color       = 'var(--accent)'
+                        el.style.borderColor = 'rgba(37,99,235,0.3)'
+                      }
+                    }}
+                    onMouseLeave={e => {
                       const el = e.currentTarget as HTMLButtonElement
-                      el.style.background  = 'rgba(37,99,235,0.1)'
-                      el.style.color       = 'var(--accent)'
-                      el.style.borderColor = 'rgba(37,99,235,0.3)'
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLButtonElement
-                    el.style.background  = 'transparent'
-                    el.style.color       = 'var(--text-2)'
-                    el.style.borderColor = 'var(--border-strong)'
-                  }}
-                >
-                  {loadingId === c.userId ? 'Loading…' : 'View as →'}
-                </button>
+                      el.style.background  = 'transparent'
+                      el.style.color       = 'var(--text-2)'
+                      el.style.borderColor = 'var(--border-strong)'
+                    }}
+                  >
+                    {loadingId === c.userId ? 'Loading…' : 'View as →'}
+                  </button>
+                  <button
+                    onClick={() => handleDeactivate(c.userId, c.name)}
+                    disabled={hidingId === c.userId}
+                    title="Hide from admin stats"
+                    style={{ ...VIEW_BTN, padding: '5px 10px', color: 'var(--text-3)', opacity: hidingId === c.userId ? 0.4 : 1 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(220,38,38,0.3)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)' }}
+                  >
+                    {hidingId === c.userId ? '…' : 'Hide'}
+                  </button>
+                </div>
               </div>
             ))
           )}

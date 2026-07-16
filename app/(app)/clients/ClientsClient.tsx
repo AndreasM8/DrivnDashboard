@@ -62,7 +62,6 @@ export default function ClientsClient({ initialClients, installments, userId, ba
   const [search, setSearch]   = useState('')
   const [drawerClient, setDrawerClient] = useState<Client | null>(null)
   const [addOpen, setAddOpen] = useState(false)
-  const [mobileTab, setMobileTab] = useState<'clients' | 'products'>('clients')
   const isMobile = useIsMobile()
 
   const allInstallments = installments
@@ -263,37 +262,8 @@ export default function ClientsClient({ initialClients, installments, userId, ba
         <div
           style={{ flex: isMobile ? '1' : '0 0 50%', overflowY: 'auto', padding: '16px 24px 88px', height: '100%' }}
         >
-          {/* ── Mobile segmented tab control ──────────────────────────────── */}
-          <div className="md:hidden" style={{ display: 'flex', gap: 4, marginBottom: 12, background: 'var(--surface-1)' }}>
-            {(['clients', 'products'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setMobileTab(tab)}
-                style={{
-                  flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  background: mobileTab === tab ? 'var(--accent)' : 'var(--surface-2)',
-                  color: mobileTab === tab ? '#fff' : 'var(--text-2)',
-                  transition: 'background 120ms, color 120ms',
-                }}
-              >
-                {tab === 'clients' ? 'Clients' : 'Products'}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Mobile: Products tab ──────────────────────────────────────── */}
-          <div className="md:hidden" style={{ display: mobileTab === 'products' ? 'block' : 'none', height: '100%', overflowY: 'auto', paddingBottom: 88 }}>
-            <ProductsPanel initialProducts={products} baseCurrency={baseCurrency} />
-          </div>
-
-          {/* ── Client list (shown always on desktop; on mobile when tab = clients) ── */}
-          <div style={{ display: mobileTab === 'clients' ? 'block' : 'none' }} className="md:block">
+          {/* ── Client list ── */}
+          <div>
             {filtered.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0', maxWidth: '360px', margin: '0 auto' }}>
                 {clients.length === 0 ? (
@@ -382,7 +352,7 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             {nextDate ? ` · ${new Date(nextDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })}` : ''}
                           </p>
                         </div>
-                        {/* Status badge */}
+                        {/* Status badge + chevron */}
                         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                           {hasOverdue ? (
                             <span className="badge" style={{ background: 'rgba(220,38,38,0.1)', color: 'var(--danger)', fontSize: 10 }}>
@@ -403,6 +373,9 @@ export default function ClientsClient({ initialClients, installments, userId, ba
                             </span>
                           )}
                         </div>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
                       </div>
 
                       {/* ── Desktop card layout ── */}

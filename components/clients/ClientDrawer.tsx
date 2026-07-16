@@ -62,9 +62,13 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
   const [extendPayType, setExtendPayType] = useState<'plan' | 'pif'>('plan')
   const [extendAmount, setExtendAmount] = useState(client.monthly_amount ? String(client.monthly_amount) : '')
   const [extending, setExtending] = useState(false)
+  const [editingField, setEditingField] = useState<'total_amount' | 'monthly_amount' | null>(null)
+  const [editVal, setEditVal] = useState('')
+  const [localTotalAmount, setLocalTotalAmount] = useState(client.total_amount)
+  const [localMonthlyAmount, setLocalMonthlyAmount] = useState<number | null>(client.monthly_amount ?? null)
   const supabase = createClient()
 
-  const totalContracted = client.total_amount
+  const totalContracted = localTotalAmount
   const totalPaid = insts.filter(i => i.paid).reduce((sum, i) => sum + i.amount, 0)
   const totalOutstanding = Math.max(0, totalContracted - totalPaid)
   const paidPercent = totalContracted > 0 ? Math.round((totalPaid / totalContracted) * 100) : 0
@@ -142,6 +146,16 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
     setExtending(false)
   }
 
+  async function saveAmount(field: 'total_amount' | 'monthly_amount') {
+    const num = Number(editVal)
+    setEditingField(null)
+    if (!editVal || isNaN(num) || num <= 0) return
+    if (field === 'total_amount') setLocalTotalAmount(num)
+    else setLocalMonthlyAmount(num)
+    const { data } = await supabase.from('clients').update({ [field]: num }).eq('id', client.id).select().single()
+    if (data) onUpdate(data as Client)
+  }
+
   async function toggleUpsell() {
     const newVal = !upsellOn
     setUpsellOn(newVal)
@@ -207,7 +221,26 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
           <div className="grid grid-cols-3 gap-3" style={{ marginBottom: 12 }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>Contract value</p>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>{fmt(totalContracted, baseCurrency)}</p>
+              {editingField === 'total_amount' ? (
+                <input
+                  autoFocus
+                  type="number"
+                  value={editVal}
+                  onChange={e => setEditVal(e.target.value)}
+                  onBlur={() => saveAmount('total_amount')}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingField(null) }}
+                  style={{ width: '100%', textAlign: 'center', fontSize: 14, fontWeight: 700, background: 'transparent', border: 'none', borderBottom: '1px solid var(--accent)', color: 'var(--text-1)', outline: 'none', padding: '0 2px' }}
+                />
+              ) : (
+                <p
+                  onClick={() => { setEditingField('total_amount'); setEditVal(String(localTotalAmount)) }}
+                  title="Click to edit"
+                  style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', margin: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}
+                >
+                  {fmt(localTotalAmount, baseCurrency)}
+                  <span style={{ fontSize: 9, opacity: 0.4 }}>✎</span>
+                </p>
+              )}
             </div>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>Collected</p>
@@ -283,7 +316,31 @@ export default function ClientDrawer({ client, installments, baseCurrency, onClo
                     client.payment_type === 'pif' ? 'Paid in full' :
                     client.payment_type === 'split' ? 'Split pay' : 'Payment plan'
                   } />
-                  {client.monthly_amount ? <InfoRow label="Monthly" value={fmt(client.monthly_amount, baseCurrency)} /> : null}
+                  {localMonthlyAmount ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Monthly</span>
+                      {editingField === 'monthly_amount' ? (
+                        <input
+                          autoFocus
+                          type="number"
+                          value={editVal}
+                          onChange={e => setEditVal(e.target.value)}
+                          onBlur={() => saveAmount('monthly_amount')}
+                          onKeyDown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingField(null) }}
+                          style={{ width: 100, textAlign: 'right', fontSize: 12, fontWeight: 500, background: 'transparent', border: 'none', borderBottom: '1px solid var(--accent)', color: 'var(--text-1)', outline: 'none', padding: '0 2px' }}
+                        />
+                      ) : (
+                        <span
+                          onClick={() => { setEditingField('monthly_amount'); setEditVal(String(localMonthlyAmount)) }}
+                          title="Click to edit"
+                          style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+                        >
+                          {fmt(localMonthlyAmount, baseCurrency)}
+                          <span style={{ fontSize: 9, opacity: 0.4 }}>✎</span>
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                   {client.email && <InfoRow label="Email" value={client.email} />}
                   {client.phone && <InfoRow label="Phone" value={client.phone} />}
                   {client.referred_by && <InfoRow label="Referred by" value={client.referred_by} />}

@@ -92,8 +92,8 @@ For row ids, use the placeholder format "uuid-placeholder-0", "uuid-placeholder-
   let rawJson: string
   try {
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 4000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 8096,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
     })

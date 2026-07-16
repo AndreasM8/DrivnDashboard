@@ -141,6 +141,7 @@ export interface Ad {
   ended_at: string | null
   daily_budget: number
   total_spend: number
+  followers_generated: number
   currency: string
   created_at: string
 }

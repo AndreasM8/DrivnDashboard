@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { getEffectiveUserId } from '@/lib/admin'
 
 export async function GET() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const uid = await getEffectiveUserId()
 
   const { data, error } = await supabase
     .from('ads')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', uid)
     .order('started_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const uid = await getEffectiveUserId()
 
   const body = await request.json() as {
     name: string
@@ -28,6 +31,7 @@ export async function POST(request: NextRequest) {
     ended_at?: string | null
     daily_budget: number
     total_spend?: number
+    followers_generated?: number
     currency: string
   }
 
@@ -37,20 +41,21 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('ads')
       .update({ ended_at: body.started_at ?? today })
-      .eq('user_id', user.id)
+      .eq('user_id', uid)
       .is('ended_at', null)
   }
 
   const { data, error } = await supabase
     .from('ads')
     .insert({
-      user_id: user.id,
+      user_id: uid,
       name: body.name,
       platform: body.platform ?? null,
       started_at: body.started_at,
       ended_at: body.ended_at ?? null,
       daily_budget: body.daily_budget,
       total_spend: body.total_spend ?? 0,
+      followers_generated: body.followers_generated ?? 0,
       currency: body.currency,
     })
     .select()
