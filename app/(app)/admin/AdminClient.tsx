@@ -916,7 +916,7 @@ export default function AdminClient({ coachStats: initialCoachStats, currentMont
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-card)', border: '1px solid var(--border)', overflow: 'hidden' }}>
 
           {/* Header row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px auto', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px 170px', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
             {['Coach', 'Business', 'Clients', 'Leads', 'Last login', ''].map((h, i) => (
               <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: (i === 2 || i === 3) ? 'center' : 'left' }}>
                 {h}
@@ -932,7 +932,7 @@ export default function AdminClient({ coachStats: initialCoachStats, currentMont
             coachStats.map((c, i) => (
               <div
                 key={c.userId}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px auto', padding: '14px 16px', alignItems: 'center', borderBottom: i < coachStats.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 100ms' }}
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px 170px', padding: '14px 16px', alignItems: 'center', borderBottom: i < coachStats.length - 1 ? '1px solid var(--border)' : 'none', transition: 'background 100ms' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--surface-2)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
               >
