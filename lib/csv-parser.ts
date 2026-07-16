@@ -130,7 +130,10 @@ export function parseDateValue(raw: string): string | null {
 // ─── Specialized Sheet Parsers ────────────────────────────────────────────────
 
 function findCol(headers: string[], ...patterns: RegExp[]): string | undefined {
-  return headers.find(h => patterns.some(p => p.test(h)))
+  return headers.find(h => {
+    const normalized = h.replace(/[\r\n\t]+/g, ' ').trim()
+    return patterns.some(p => p.test(normalized))
+  })
 }
 
 const isChecked = (v: string) => /^(true|1|yes|ja|x|✓)$/i.test(v.trim())
