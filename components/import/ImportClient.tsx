@@ -4,20 +4,23 @@ import { useState } from 'react'
 import CsvUploader from './CsvUploader'
 import DataPreview from './DataPreview'
 import {
-  parseCsv, applyColumnMapping, parseDateValue,
+  parseCsv, applyColumnMapping,
   parseFollowersSheet, parseMeetingsSheet, parseSalesSheet,
 } from '@/lib/csv-parser'
+import type { ImportClientRecord, ImportLeadRecord } from '@/lib/csv-parser'
 import type { ParseResult, ParsedRow, ParsedColumn } from '@/app/api/import/parse/route'
 
-type ImportState  = 'select-type' | 'idle' | 'previewing' | 'importing' | 'done'
-type ImportType   = 'followers' | 'meetings' | 'sales' | 'custom'
+type ImportState = 'select-type' | 'idle' | 'previewing' | 'importing' | 'records' | 'done'
+type ImportType  = 'followers' | 'meetings' | 'sales' | 'custom'
 
 const TYPE_OPTIONS: { key: ImportType; label: string; sub: string; icon: string }[] = [
-  { key: 'followers', label: 'New followers',     sub: 'One row per follower, date column',          icon: '👥' },
-  { key: 'meetings',  label: 'Meetings & calls',  sub: 'Sales pipeline, calls + show-up tracking',  icon: '📅' },
-  { key: 'sales',     label: 'Sales & revenue',   sub: 'Clients overview, deal sizes & cash',       icon: '💰' },
-  { key: 'custom',    label: 'Monthly summary',   sub: 'Pre-aggregated CSV — Claude maps columns',  icon: '📊' },
+  { key: 'followers', label: 'New followers',    sub: 'One row per follower, date column',         icon: '👥' },
+  { key: 'meetings',  label: 'Meetings & calls', sub: 'Sales pipeline, calls + show-up tracking', icon: '📅' },
+  { key: 'sales',     label: 'Sales & revenue',  sub: 'Clients overview, deal sizes & cash',      icon: '💰' },
+  { key: 'custom',    label: 'Monthly summary',  sub: 'Pre-aggregated CSV — Claude maps columns', icon: '📊' },
 ]
+
+const PAY_LABEL: Record<string, string> = { pif: 'Paid in full', plan: 'Payment plan', split: 'Split' }
 
 export default function ImportClient() {
   const [state,          setState]         = useState<ImportState>('select-type')
@@ -27,6 +30,10 @@ export default function ImportClient() {
   const [importedMonths, setImportedMonths] = useState(0)
   const [error,          setError]         = useState<string | null>(null)
   const [pendingCsv,     setPendingCsv]    = useState('')
+  const [clientRecords,  setClientRecords] = useState<ImportClientRecord[]>([])
+  const [leadRecords,    setLeadRecords]   = useState<ImportLeadRecord[]>([])
+  const [recordsWorking, setRecordsWorking] = useState(false)
+  const [recordsDone,    setRecordsDone]   = useState<{ created: number; skipped: number } | null>(null)
 
   function selectType(t: ImportType) {
     setImportType(t)
@@ -41,28 +48,37 @@ export default function ImportClient() {
 
     try {
       const { headers, rows } = parseCsv(csvText)
-      if (headers.length === 0 || rows.length === 0) {
-        throw new Error('No data found in the file. Please check it has headers and rows.')
-      }
+      if (headers.length === 0 || rows.length === 0)
+        throw new Error('No data found in the file. Check it has headers and rows.')
 
       let parsedRows: ParsedRow[]
       let columns: ParsedColumn[]
       let summary: string
+      let clients: ImportClientRecord[] = []
+      let leads:   ImportLeadRecord[]   = []
 
       if (importType === 'followers') {
-        ({ parsedRows, columns } = parseFollowersSheet(headers, rows))
-        summary = `Found ${rows.length} follower records → ${parsedRows.length} month(s) of data`
+        ;({ parsedRows, columns } = parseFollowersSheet(headers, rows))
+        summary = `Found ${rows.length} follower records → ${parsedRows.length} month(s)`
 
       } else if (importType === 'meetings') {
-        ({ parsedRows, columns } = parseMeetingsSheet(headers, rows))
-        summary = `Found ${rows.length} meeting records → ${parsedRows.length} month(s) of data`
+        const result = parseMeetingsSheet(headers, rows)
+        parsedRows = result.parsedRows
+        columns    = result.columns
+        leads      = result.leadRecords
+        summary    = `Found ${rows.length} meeting records → ${parsedRows.length} month(s)` +
+                     (leads.length ? `, ${leads.length} closed deals` : '')
 
       } else if (importType === 'sales') {
-        ({ parsedRows, columns } = parseSalesSheet(headers, rows))
-        summary = `Found ${rows.length} client records → ${parsedRows.length} month(s) of data`
+        const result = parseSalesSheet(headers, rows)
+        parsedRows = result.parsedRows
+        columns    = result.columns
+        clients    = result.clientRecords
+        summary    = `Found ${rows.length} client records → ${parsedRows.length} month(s)` +
+                     (clients.length ? `, ${clients.length} clients` : '')
 
       } else {
-        // Custom / monthly summary — ask Claude for column mapping
+        // Custom monthly summary — AI column mapping
         const res = await fetch('/api/import/parse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,7 +91,6 @@ export default function ImportClient() {
         ;({ columns } = await res.json() as { columns: ParsedColumn[] })
         parsedRows = applyColumnMapping(columns, rows)
 
-        // Auto-detect per-row patterns (only dates, no numbers)
         const hasAnyNumeric = parsedRows.some(r =>
           r.revenue !== null || r.leads_count !== null || r.calls_booked !== null ||
           r.close_rate !== null || r.ad_spend !== null || r.contracts_signed !== null ||
@@ -108,16 +123,17 @@ export default function ImportClient() {
           : `Found ${parsedRows.length} rows`
       }
 
-      if (parsedRows.length === 0) {
-        throw new Error('Could not find any dated rows to import. Check that the date column is filled in.')
-      }
+      if (parsedRows.length === 0)
+        throw new Error('No dated rows found. Check the date column is filled in.')
 
-      const adSpendCol    = columns.find(c => c.mappedTo === 'ad_spend')
-      const dateCol       = columns.find(c => c.mappedTo === 'date')
+      const adSpendCol      = columns.find(c => c.mappedTo === 'ad_spend')
+      const dateCol         = columns.find(c => c.mappedTo === 'date')
       const adSpendHasDates = !!(adSpendCol && dateCol)
-      const totalAdSpend  = adSpendHasDates ? null
+      const totalAdSpend    = adSpendHasDates ? null
         : parsedRows.reduce((s, r) => s + (r.ad_spend ?? 0), 0) || null
 
+      setClientRecords(clients)
+      setLeadRecords(leads)
       setParseResult({ columns, rows: parsedRows, summary, adSpendHasDates, totalAdSpend })
       setState('previewing')
     } catch (err) {
@@ -140,12 +156,54 @@ export default function ImportClient() {
         const body = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(body.error ?? `Import failed (HTTP ${res.status})`)
       }
-      const data = await res.json() as { imported: number; months: string[] }
+      const data = await res.json() as { imported: number }
       setImportedMonths(data.imported)
-      setState('done')
+
+      // If we have individual records to import, go to step 2
+      if (clientRecords.length > 0 || leadRecords.length > 0) {
+        setState('records')
+      } else {
+        setState('done')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
       setState('previewing')
+    }
+  }
+
+  async function handleImportRecords() {
+    setRecordsWorking(true)
+    setError(null)
+    try {
+      let created = 0, skipped = 0
+
+      if (clientRecords.length > 0) {
+        const res = await fetch('/api/import/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clients: clientRecords, currency: 'NOK' }),
+        })
+        if (!res.ok) throw new Error('Failed to import clients')
+        const d = await res.json() as { created: number; skipped: number }
+        created += d.created; skipped += d.skipped
+      }
+
+      if (leadRecords.length > 0) {
+        const res = await fetch('/api/import/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leads: leadRecords }),
+        })
+        if (!res.ok) throw new Error('Failed to import leads')
+        const d = await res.json() as { created: number; skipped: number }
+        created += d.created; skipped += d.skipped
+      }
+
+      setRecordsDone({ created, skipped })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setRecordsWorking(false)
     }
   }
 
@@ -156,22 +214,22 @@ export default function ImportClient() {
     setError(null)
     setImportedMonths(0)
     setPendingCsv('')
+    setClientRecords([])
+    setLeadRecords([])
+    setRecordsDone(null)
   }
 
-  // ── Done ──────────────────────────────────────────────────────────────────
-
+  // ── Done ──────────────────────────────────────────────────────────────────────
   if (state === 'done') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '48px 32px', textAlign: 'center' }}>
         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg viewBox="0 0 24 24" fill="none" width="28" height="28" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" width="28" height="28" stroke="var(--success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
         </div>
         <div>
           <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Import complete</p>
           <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '6px 0 0' }}>
-            {importedMonths} month{importedMonths !== 1 ? 's' : ''} of data imported successfully.
+            {importedMonths} month{importedMonths !== 1 ? 's' : ''} of data imported.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -182,19 +240,97 @@ export default function ImportClient() {
     )
   }
 
-  // ── Importing spinner ──────────────────────────────────────────────────────
-
+  // ── Importing spinner ─────────────────────────────────────────────────────────
   if (state === 'importing') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '48px 32px', textAlign: 'center' }}>
         <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid var(--neon-indigo)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
-        <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Importing your data…</p>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>Importing monthly stats…</p>
       </div>
     )
   }
 
-  // ── Preview ────────────────────────────────────────────────────────────────
+  // ── Step 2: individual records ────────────────────────────────────────────────
+  if (state === 'records') {
+    const allRecords = [...clientRecords, ...leadRecords]
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '12px 16px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 'var(--radius-btn)', fontSize: 12, color: 'var(--success)' }}>
+          ✓ {importedMonths} month{importedMonths !== 1 ? 's' : ''} of stats imported
+        </div>
 
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', margin: '0 0 4px' }}>
+            Step 2 — Import individual records
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            {clientRecords.length > 0 && `${clientRecords.length} client${clientRecords.length !== 1 ? 's' : ''} → Clients tab`}
+            {clientRecords.length > 0 && leadRecords.length > 0 && ' · '}
+            {leadRecords.length > 0 && `${leadRecords.length} closed deal${leadRecords.length !== 1 ? 's' : ''} → Pipeline`}
+            {' '}(skips anyone already in the system)
+          </p>
+        </div>
+
+        {/* Preview list */}
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', overflow: 'hidden', maxHeight: 320, overflowY: 'auto' }}>
+          {clientRecords.map((c, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+              <div>
+                <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{c.full_name}</span>
+                <span style={{ color: 'var(--text-3)', marginLeft: 8 }}>{c.program_type}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12, color: 'var(--text-2)' }}>
+                <span>{PAY_LABEL[c.payment_type]}</span>
+                <span style={{ fontWeight: 500 }}>{c.total_amount.toLocaleString()} NOK</span>
+              </div>
+            </div>
+          ))}
+          {leadRecords.map((l, i) => (
+            <div key={`lead-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', fontSize: 12 }}>
+              <div>
+                <span style={{ fontWeight: 500, color: 'var(--text-1)' }}>{l.full_name}</span>
+                <span style={{ color: 'var(--text-3)', marginLeft: 8 }}>{l.source}</span>
+              </div>
+              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: 'var(--success)' }}>Closed</span>
+            </div>
+          ))}
+        </div>
+
+        {error && (
+          <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-btn)', fontSize: 12, color: 'var(--danger)' }}>{error}</div>
+        )}
+
+        {recordsDone ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '16px 0' }}>
+            <p style={{ fontSize: 14, color: 'var(--success)', margin: 0, fontWeight: 600 }}>
+              ✓ {recordsDone.created} record{recordsDone.created !== 1 ? 's' : ''} added
+              {recordsDone.skipped > 0 && `, ${recordsDone.skipped} already existed`}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <a href="/clients" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-block' }}>View Clients</a>
+              <button onClick={handleReset} className="btn-ghost">Import more</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              onClick={handleImportRecords}
+              disabled={recordsWorking}
+              className="btn-primary"
+              style={{ opacity: recordsWorking ? 0.6 : 1 }}
+            >
+              {recordsWorking ? 'Importing…' : `Import ${allRecords.length} record${allRecords.length !== 1 ? 's' : ''}`}
+            </button>
+            <button onClick={() => setState('done')} className="btn-ghost">
+              Skip
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Preview ───────────────────────────────────────────────────────────────────
   if (state === 'previewing' && parseResult) {
     return (
       <div>
@@ -204,8 +340,7 @@ export default function ImportClient() {
     )
   }
 
-  // ── Type selector ──────────────────────────────────────────────────────────
-
+  // ── Type selector ─────────────────────────────────────────────────────────────
   if (state === 'select-type') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -215,12 +350,7 @@ export default function ImportClient() {
             <button
               key={opt.key}
               onClick={() => selectType(opt.key)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                gap: 6, padding: '14px 16px', background: 'var(--surface-2)',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius-card)',
-                cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms',
-              }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6, padding: '14px 16px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-card)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms' }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)' }}
             >
@@ -234,8 +364,7 @@ export default function ImportClient() {
     )
   }
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
-
+  // ── Upload ────────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <button

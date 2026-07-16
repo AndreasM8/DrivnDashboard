@@ -1,5 +1,26 @@
 import type { ParsedColumn, ParsedRow } from '@/app/api/import/parse/route'
 
+// ─── Record types for individual CRM entries ─────────────────────────────────
+
+export interface ImportClientRecord {
+  full_name: string
+  program_type: string
+  payment_type: 'pif' | 'split' | 'plan'
+  total_amount: number
+  monthly_amount: number | null
+  plan_months: number | null
+  total_paid: number
+  started_at: string
+}
+
+export interface ImportLeadRecord {
+  full_name: string
+  ig_username: string
+  source: string
+  call_booked_at: string | null
+  call_outcome: 'showed' | 'no_show' | 'canceled' | 'rescheduled' | null
+}
+
 // ─── CSV Tokeniser ────────────────────────────────────────────────────────────
 
 function tokenizeLine(line: string): string[] {
@@ -148,13 +169,19 @@ export function parseFollowersSheet(
 export function parseMeetingsSheet(
   headers: string[],
   rows: Record<string, string>[]
-): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
-  const dateCol    = findCol(headers, /date.?of.?call/i, /call.?date/i, /date/i, /dato/i)
-  const showedCol  = findCol(headers, /showed.?up/i, /show.?up/i, /møtt/i)
-  const closedCol  = findCol(headers, /closed/i, /lukket/i, /signert/i, /close/i)
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[]; leadRecords: ImportLeadRecord[] } {
+  const nameCol     = findCol(headers, /lead.?name/i, /name/i, /navn/i)
+  const dateCol     = findCol(headers, /date.?of.?call/i, /call.?date/i, /date/i, /dato/i)
+  const sourceCol   = findCol(headers, /source/i, /platform/i, /kanal/i)
+  const showedCol   = findCol(headers, /showed.?up/i, /show.?up/i, /møtt/i)
+  const noShowCol   = findCol(headers, /no.?show/i, /ikke.?møtt/i)
+  const canceledCol = findCol(headers, /cancel/i, /avlys/i)
+  const reschedCol  = findCol(headers, /reschedul/i, /utsatt/i)
+  const closedCol   = findCol(headers, /closed/i, /lukket/i, /signert/i, /close/i)
 
   type Acc = { calls: number; showed: number; closed: number }
   const byMonth = new Map<string, Acc>()
+  const leadRecords: ImportLeadRecord[] = []
 
   for (const row of rows) {
     const date = dateCol ? parseDateValue(row[dateCol] ?? '') : null
@@ -165,6 +192,24 @@ export function parseMeetingsSheet(
     if (showedCol && isChecked(row[showedCol] ?? '')) acc.showed++
     if (closedCol && isChecked(row[closedCol]  ?? '')) acc.closed++
     byMonth.set(m, acc)
+
+    // Closed rows → pipeline lead record
+    if (closedCol && isChecked(row[closedCol] ?? '')) {
+      const name = nameCol ? (row[nameCol] ?? '').trim() : ''
+      if (!name) continue
+      let call_outcome: ImportLeadRecord['call_outcome'] = null
+      if (showedCol   && isChecked(row[showedCol]   ?? '')) call_outcome = 'showed'
+      else if (noShowCol   && isChecked(row[noShowCol]   ?? '')) call_outcome = 'no_show'
+      else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
+      else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
+      leadRecords.push({
+        full_name: name,
+        ig_username: name,
+        source: sourceCol ? (row[sourceCol] ?? '').replace(/[^\w\s]/g, '').trim() : 'Instagram',
+        call_booked_at: date,
+        call_outcome,
+      })
+    }
   }
 
   const parsedRows: ParsedRow[] = [...byMonth.entries()].sort().map(([m, acc]) => {
@@ -190,6 +235,7 @@ export function parseMeetingsSheet(
 
   return {
     parsedRows,
+    leadRecords,
     columns: [
       { originalName: 'Month',             mappedTo: 'date',             hasData: true },
       { originalName: 'Meetings booked',   mappedTo: 'calls_booked',     hasData: true },
@@ -199,20 +245,29 @@ export function parseMeetingsSheet(
   }
 }
 
+function parsePlanMonths(raw: string): number | null {
+  const n = parseInt(raw.replace(/[^\d]/g, ''), 10)
+  return isNaN(n) ? null : n
+}
+
 export function parseSalesSheet(
   headers: string[],
   rows: Record<string, string>[]
-): { parsedRows: ParsedRow[]; columns: ParsedColumn[] } {
+): { parsedRows: ParsedRow[]; columns: ParsedColumn[]; clientRecords: ImportClientRecord[] } {
+  const nameCol    = findCol(headers, /client.?name/i, /name/i, /navn/i)
   const dateCol    = findCol(headers, /date.?of.?close/i, /close.?date/i, /date/i, /dato/i)
   const dealCol    = findCol(headers, /deal.?size/i, /deal.?verdi/i, /size/i, /amount/i)
   const cashCol    = findCol(headers, /cash.?collect/i, /innbetalt/i, /collected/i)
   const payTypeCol = findCol(headers, /type.?of.?pay/i, /payment.?type/i, /pay.?type/i, /betalings/i)
+  const offerCol   = findCol(headers, /offer.?type/i, /program/i, /type/i)
+  const lengthCol  = findCol(headers, /deal.?length/i, /length/i, /mnd/i, /months/i)
 
-  // Klarna = paid in full up front — treat deal size as cash collected
-  const isKlarna = (v: string) => /klarna/i.test(v.trim())
+  const isKlarna  = (v: string) => /klarna/i.test(v.trim())
+  const isPlan    = (v: string) => /plan/i.test(v.trim())
 
   type Acc = { contracted: number; cash: number; count: number }
   const byMonth = new Map<string, Acc>()
+  const clientRecords: ImportClientRecord[] = []
 
   for (const row of rows) {
     const date = dateCol ? parseDateValue(row[dateCol] ?? '') : null
@@ -221,20 +276,40 @@ export function parseSalesSheet(
     const acc = byMonth.get(m) ?? { contracted: 0, cash: 0, count: 0 }
     acc.count++
 
-    const deal     = dealCol    ? parseNumericValue(row[dealCol]    ?? '') : null
-    const cashRaw  = cashCol    ? parseNumericValue(row[cashCol]    ?? '') : null
-    const payType  = payTypeCol ? (row[payTypeCol] ?? '')                  : ''
+    const deal    = dealCol    ? parseNumericValue(row[dealCol]    ?? '') : null
+    const cashRaw = cashCol    ? parseNumericValue(row[cashCol]    ?? '') : null
+    const payType = payTypeCol ? (row[payTypeCol] ?? '').trim()           : ''
+    const offer   = offerCol   ? (row[offerCol]   ?? '').trim()           : ''
+    const name    = nameCol    ? (row[nameCol]    ?? '').trim()           : ''
 
     if (deal !== null) acc.contracted += deal
 
-    // Klarna = paid in full → cash collected = full deal value
-    if (isKlarna(payType) && deal !== null) {
-      acc.cash += deal
-    } else if (cashRaw !== null) {
-      acc.cash += cashRaw
-    }
+    const klarna = isKlarna(payType)
+    const cashForMonth = klarna && deal !== null ? deal : (cashRaw ?? 0)
+    acc.cash += cashForMonth
 
     byMonth.set(m, acc)
+
+    // Build individual client record (skip placeholder / empty rows)
+    if (name && name.toLowerCase() !== 'client name' && deal !== null && deal > 0) {
+      const planMonths  = lengthCol ? parsePlanMonths(row[lengthCol] ?? '') : null
+      const payTypeMapped: ImportClientRecord['payment_type'] =
+        klarna ? 'pif' : isPlan(payType) ? 'plan' : 'split'
+      const monthly = payTypeMapped === 'plan' && planMonths
+        ? Math.round(deal / planMonths)
+        : null
+
+      clientRecords.push({
+        full_name:     name,
+        program_type:  offer,
+        payment_type:  payTypeMapped,
+        total_amount:  deal,
+        monthly_amount: monthly,
+        plan_months:   planMonths,
+        total_paid:    klarna && deal !== null ? deal : (cashRaw ?? 0),
+        started_at:    date,
+      })
+    }
   }
 
   const hasCash = [...byMonth.values()].some(a => a.cash > 0)
@@ -259,6 +334,7 @@ export function parseSalesSheet(
 
   return {
     parsedRows,
+    clientRecords,
     columns: [
       { originalName: 'Month',               mappedTo: 'date',                hasData: true },
       { originalName: 'Cash collected',      mappedTo: 'revenue',             hasData: hasCash },
