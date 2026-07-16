@@ -70,8 +70,11 @@ export default function ImportClient() {
         parsedRows = result.parsedRows
         columns    = result.columns
         leads      = result.leadRecords
-        summary    = `Found ${rows.length} meeting records → ${parsedRows.length} month(s)` +
-                     (leads.length ? `, ${leads.length} closed deals` : '')
+        const closedCount  = leads.filter(l => l.stage === 'closed').length
+        const nurtureCount = leads.filter(l => l.stage !== 'closed').length
+        summary = `Found ${rows.length} meeting records → ${parsedRows.length} month(s)` +
+          (closedCount  ? `, ${closedCount} closed`   : '') +
+          (nurtureCount ? `, ${nurtureCount} nurture`  : '')
 
       } else if (importType === 'sales') {
         const result = parseSalesSheet(headers, rows)
@@ -270,7 +273,14 @@ export default function ImportClient() {
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
             {clientRecords.length > 0 && `${clientRecords.length} client${clientRecords.length !== 1 ? 's' : ''} → Clients tab`}
             {clientRecords.length > 0 && leadRecords.length > 0 && ' · '}
-            {leadRecords.length > 0 && `${leadRecords.length} closed deal${leadRecords.length !== 1 ? 's' : ''} → Pipeline`}
+            {leadRecords.length > 0 && (() => {
+              const closed  = leadRecords.filter(l => l.stage === 'closed').length
+              const nurture = leadRecords.filter(l => l.stage !== 'closed').length
+              const parts = []
+              if (closed)  parts.push(`${closed} closed`)
+              if (nurture) parts.push(`${nurture} nurture`)
+              return `${parts.join(', ')} → Pipeline`
+            })()}
             {' '}(skips anyone already in the system)
           </p>
         </div>

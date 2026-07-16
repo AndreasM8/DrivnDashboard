@@ -17,7 +17,7 @@ export interface ImportLeadRecord {
   full_name: string
   ig_username: string
   source: string
-  stage: 'follower' | 'replied' | 'closed'
+  stage: 'follower' | 'replied' | 'call_booked' | 'closed' | 'nurture' | 'bad_fit' | 'not_interested'
   followed_at: string | null
   call_booked_at: string | null
   call_outcome: 'showed' | 'no_show' | 'canceled' | 'rescheduled' | null
@@ -215,25 +215,31 @@ export function parseMeetingsSheet(
     if (closedCol && isChecked(row[closedCol]  ?? '')) acc.closed++
     byMonth.set(m, acc)
 
-    // Closed rows → pipeline lead record
-    if (closedCol && isChecked(row[closedCol] ?? '')) {
-      const name = nameCol ? (row[nameCol] ?? '').trim() : ''
-      if (!name) continue
-      let call_outcome: ImportLeadRecord['call_outcome'] = null
-      if (showedCol   && isChecked(row[showedCol]   ?? '')) call_outcome = 'showed'
-      else if (noShowCol   && isChecked(row[noShowCol]   ?? '')) call_outcome = 'no_show'
-      else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
-      else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
-      leadRecords.push({
-        full_name:      name,
-        ig_username:    name,
-        source:         sourceCol ? (row[sourceCol] ?? '').replace(/[^\w\s]/g, '').trim() : 'Instagram',
-        stage:          'closed',
-        followed_at:    null,
-        call_booked_at: date,
-        call_outcome,
-      })
-    }
+    const name = nameCol ? (row[nameCol] ?? '').trim() : ''
+    if (!name) continue
+
+    const isClosed    = closedCol   && isChecked(row[closedCol]   ?? '')
+    const isReschedule = reschedCol  && isChecked(row[reschedCol]  ?? '')
+
+    let call_outcome: ImportLeadRecord['call_outcome'] = null
+    if      (showedCol   && isChecked(row[showedCol]   ?? '')) call_outcome = 'showed'
+    else if (noShowCol   && isChecked(row[noShowCol]   ?? '')) call_outcome = 'no_show'
+    else if (canceledCol && isChecked(row[canceledCol] ?? '')) call_outcome = 'canceled'
+    else if (reschedCol  && isChecked(row[reschedCol]  ?? '')) call_outcome = 'rescheduled'
+
+    const stage: ImportLeadRecord['stage'] = isClosed ? 'closed'
+      : isReschedule ? 'call_booked'
+      : 'nurture'
+
+    leadRecords.push({
+      full_name:      name,
+      ig_username:    name,
+      source:         sourceCol ? (row[sourceCol] ?? '').replace(/[^\w\s]/g, '').trim() : 'Instagram',
+      stage,
+      followed_at:    null,
+      call_booked_at: date,
+      call_outcome,
+    })
   }
 
   const parsedRows: ParsedRow[] = [...byMonth.entries()].sort().map(([m, acc]) => {
