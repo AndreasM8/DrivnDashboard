@@ -968,6 +968,8 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
   const [tierFilter, setTierFilter] = useState<TierFilter>('all')
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
   const [search, setSearch] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<LeadStage>>(loadHiddenColumns)
   const [showColumnToggles, setShowColumnToggles] = useState(false)
@@ -1018,6 +1020,33 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
       sessionStorage.setItem('drivn_pipeline_scroll', String(el.scrollLeft))
     } catch { /* ignore */ }
   }, [])
+
+  // ─── Click-outside to close search dropdown ────────────────────────────────
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // ─── Smart search results (across all stages, unfiltered by tier/label) ────
+
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    const tokens = q.split(/\s+/)
+    return leads
+      .filter(l => {
+        const haystack = [
+          l.ig_username, l.full_name, l.setter_notes, l.call_notes,
+        ].join(' ').toLowerCase()
+        return tokens.every(tok => haystack.includes(tok))
+      })
+      .slice(0, 20)
+  }, [leads, search])
 
   // ─── Tier counts (unfiltered, across entire pipeline) ──────────────────────
 
@@ -1342,13 +1371,87 @@ export default function PipelineClient({ initialLeads, labels: initialLabels, se
                 </div>
               )}
             </div>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search…"
-              className="input-base"
-              style={{ width: '160px' }}
-            />
+            <div ref={searchRef} style={{ position: 'relative' }}>
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setSearchFocused(true) }}
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); setSearchFocused(false) } }}
+                placeholder="Search leads…"
+                className="input-base"
+                style={{ width: '180px' }}
+              />
+              {searchFocused && search.trim() && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  width: '320px',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-card)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  zIndex: 100,
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                }}>
+                  {searchResults.length === 0 ? (
+                    <p style={{ padding: '16px', fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>No leads found</p>
+                  ) : (
+                    <>
+                      <p style={{ padding: '8px 12px 4px', fontSize: 10, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                      </p>
+                      {searchResults.map(lead => {
+                        const col = STAGE_COLUMNS.find(c => c.stage === lead.stage || (c.extraStages?.includes(lead.stage) ?? false))
+                        return (
+                          <button
+                            key={lead.id}
+                            onMouseDown={e => { e.preventDefault(); setDrawerLead(lead); setSearchFocused(false) }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 10,
+                              padding: '9px 12px',
+                              background: 'transparent',
+                              border: 'none',
+                              borderBottom: '1px solid var(--border)',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'background 80ms ease',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--neon-indigo)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                                @{lead.ig_username}
+                              </p>
+                              {lead.full_name && lead.full_name !== lead.ig_username && (
+                                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {lead.full_name}
+                                </p>
+                              )}
+                            </div>
+                            {col && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, flexShrink: 0,
+                                padding: '2px 7px', borderRadius: 4,
+                                background: `${col.accent}22`, color: col.accent,
+                              }}>
+                                {col.label}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
