@@ -917,8 +917,8 @@ export default function AdminClient({ coachStats: initialCoachStats, currentMont
 
           {/* Header row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 90px 80px auto', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-            {['Coach', 'Business', 'Clients', 'Leads', 'Last login', ''].map(h => (
-              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {['Coach', 'Business', 'Clients', 'Leads', 'Last login', ''].map((h, i) => (
+              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: (i === 2 || i === 3) ? 'center' : 'left' }}>
                 {h}
               </span>
             ))}
@@ -941,10 +941,10 @@ export default function AdminClient({ coachStats: initialCoachStats, currentMont
                   <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{c.currency}</p>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{c.businessName || '—'}</p>
-                <p style={{ fontSize: 13, fontWeight: 600, color: c.activeClients > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, textAlign: 'center', color: c.activeClients > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>
                   {c.activeClients}
                 </p>
-                <p style={{ fontSize: 13, color: c.totalLeads > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>
+                <p style={{ fontSize: 13, textAlign: 'center', color: c.totalLeads > 0 ? 'var(--text-1)' : 'var(--text-3)' }}>
                   {c.totalLeads}
                 </p>
                 <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{timeAgo(c.lastLogin)}</p>
