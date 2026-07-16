@@ -89,15 +89,16 @@ Return ONLY a JSON array, no explanation:
   let rawJson: string
   try {
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     })
     const textBlock = message.content.find(b => b.type === 'text')
     rawJson = textBlock ? textBlock.text : ''
   } catch (err) {
-    console.error('[import/parse] Anthropic error:', err)
-    return NextResponse.json({ error: 'Failed to get column mapping from AI' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[import/parse] Anthropic error:', msg)
+    return NextResponse.json({ error: `AI error: ${msg}` }, { status: 500 })
   }
 
   const cleaned = rawJson.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
