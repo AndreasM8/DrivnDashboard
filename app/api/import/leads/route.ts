@@ -5,7 +5,7 @@ import { getEffectiveUserId } from '@/lib/admin'
 import type { ImportLeadRecord } from '@/lib/csv-parser'
 
 // Stage priority — higher index = more advanced, never downgrade to a lower index
-const STAGE_ORDER = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'not_interested', 'bad_fit', 'closed']
+const STAGE_ORDER = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'nurture_post_call', 'not_interested', 'bad_fit', 'closed']
 function stageRank(s: string) { const i = STAGE_ORDER.indexOf(s); return i === -1 ? 0 : i }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

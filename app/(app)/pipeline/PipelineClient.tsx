@@ -48,14 +48,14 @@ function contactColor(days: number | null) {
 function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTargets | null }) {
   const total = leads.length
 
-  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const callBookedStages: LeadStage[] = ['call_booked', 'second_call', 'closed']
+  const repliedStages: LeadStage[] = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'nurture_post_call', 'bad_fit', 'not_interested', 'closed']
 
   const steps = [
-    { label: 'LEADS',       count: total },
-    { label: 'REPLIED',     count: leads.filter(l => repliedStages.includes(l.stage)).length },
-    { label: 'BOOKED',      count: leads.filter(l => callBookedStages.includes(l.stage)).length },
-    { label: 'CLOSED',      count: leads.filter(l => l.stage === 'closed').length },
+    { label: 'LEADS',   count: total },
+    { label: 'REPLIED', count: leads.filter(l => repliedStages.includes(l.stage)).length },
+    // BOOKED = anyone who has had a call, regardless of current stage
+    { label: 'BOOKED',  count: leads.filter(l => l.call_booked_at !== null || ['call_booked', 'second_call', 'closed'].includes(l.stage)).length },
+    { label: 'CLOSED',  count: leads.filter(l => l.stage === 'closed').length },
   ]
 
   const convMeta: { target: number | null }[] = [
@@ -159,15 +159,16 @@ function PipelineFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiT
 // ─── Stage neon colors ────────────────────────────────────────────────────────
 
 const STAGE_COLORS: Record<string, string> = {
-  follower:       'var(--neon-indigo)',
-  replied:        'var(--neon-cyan)',
-  freebie_sent:   'var(--neon-purple)',
-  call_booked:    'var(--neon-amber)',
-  second_call:    'var(--neon-amber)',
-  closed:         'var(--neon-green)',
-  nurture:        'var(--neon-purple)',
-  bad_fit:        'var(--text-3)',
-  not_interested: 'var(--text-3)',
+  follower:          'var(--neon-indigo)',
+  replied:           'var(--neon-cyan)',
+  freebie_sent:      'var(--neon-purple)',
+  call_booked:       'var(--neon-amber)',
+  second_call:       'var(--neon-amber)',
+  closed:            'var(--neon-green)',
+  nurture:           'var(--neon-purple)',
+  nurture_post_call: '#0D9488',
+  bad_fit:           'var(--text-3)',
+  not_interested:    'var(--text-3)',
 }
 
 // ─── Stage column config ──────────────────────────────────────────────────────
@@ -190,12 +191,13 @@ const STAGE_COLUMNS: StageColumnConfig[] = [
   { stage: 'call_booked',    label: 'Call booked',    auto: false, bg: 'bg-white', accent: '#F97316',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#F97316' },
   { stage: 'second_call',    label: '2nd call',       auto: false, bg: 'bg-white', accent: '#EAB308',  extraStages: undefined,        hideable: true,  defaultHidden: false, dotColor: '#EAB308' },
   { stage: 'closed',         label: 'Closed',         auto: false, bg: 'bg-white', accent: '#10B981',  extraStages: undefined,        hideable: false, defaultHidden: false, dotColor: '#10B981' },
-  { stage: 'nurture',        label: 'Nurture',        auto: false, bg: 'bg-white', accent: '#F59E0B',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#F59E0B' },
-  { stage: 'not_interested', label: 'Not interested', auto: false, bg: 'bg-white', accent: '#94A3B8',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#94A3B8' },
-  { stage: 'bad_fit',        label: 'Bad fit',        auto: false, bg: 'bg-white', accent: '#FB7185',  extraStages: undefined,        hideable: true,  defaultHidden: true,  dotColor: '#FB7185' },
+  { stage: 'nurture_post_call', label: 'Nurture — had call', auto: false, bg: 'bg-white', accent: '#0D9488', extraStages: undefined, hideable: true, defaultHidden: true, dotColor: '#0D9488' },
+  { stage: 'nurture',           label: 'Nurture',             auto: false, bg: 'bg-white', accent: '#F59E0B', extraStages: undefined, hideable: true, defaultHidden: true, dotColor: '#F59E0B' },
+  { stage: 'not_interested',    label: 'Not interested',      auto: false, bg: 'bg-white', accent: '#94A3B8', extraStages: undefined, hideable: true, defaultHidden: true, dotColor: '#94A3B8' },
+  { stage: 'bad_fit',           label: 'Bad fit',             auto: false, bg: 'bg-white', accent: '#FB7185', extraStages: undefined, hideable: true, defaultHidden: true, dotColor: '#FB7185' },
 ]
 
-const DEFAULT_HIDDEN: LeadStage[] = ['nurture', 'not_interested', 'bad_fit']
+const DEFAULT_HIDDEN: LeadStage[] = ['nurture_post_call', 'nurture', 'not_interested', 'bad_fit']
 
 function loadHiddenColumns(): Set<LeadStage> {
   if (typeof window === 'undefined') return new Set(DEFAULT_HIDDEN)
@@ -433,14 +435,15 @@ function LeadCard({
 // ─── Mobile lead card ─────────────────────────────────────────────────────────
 
 const MOBILE_STAGE_CHIPS: { stage: LeadStage; label: string; accent: string }[] = [
-  { stage: 'follower',       label: 'Follower',  accent: '#3B82F6' },
-  { stage: 'replied',        label: 'Replied',   accent: '#8B5CF6' },
-  { stage: 'freebie_sent',   label: 'Freebie',   accent: '#8B5CF6' },
-  { stage: 'call_booked',    label: 'Booked',    accent: '#F97316' },
-  { stage: 'nurture',        label: 'Nurture',   accent: '#F59E0B' },
-  { stage: 'bad_fit',        label: 'Bad fit',   accent: '#FB7185' },
-  { stage: 'not_interested', label: 'Not int.',  accent: '#94A3B8' },
-  { stage: 'closed',         label: 'Closed',    accent: '#10B981' },
+  { stage: 'follower',          label: 'Follower',     accent: '#3B82F6' },
+  { stage: 'replied',           label: 'Replied',      accent: '#8B5CF6' },
+  { stage: 'freebie_sent',      label: 'Freebie',      accent: '#8B5CF6' },
+  { stage: 'call_booked',       label: 'Booked',       accent: '#F97316' },
+  { stage: 'nurture_post_call', label: 'Nurture (call)', accent: '#0D9488' },
+  { stage: 'nurture',           label: 'Nurture',      accent: '#F59E0B' },
+  { stage: 'bad_fit',           label: 'Bad fit',      accent: '#FB7185' },
+  { stage: 'not_interested',    label: 'Not int.',     accent: '#94A3B8' },
+  { stage: 'closed',            label: 'Closed',       accent: '#10B981' },
 ]
 
 function MobileLeadCard({ lead, labels, assignedLabelIds, onClick, onFollowUp, showFollowUp, stageLabel, stageAccent, onStageChange, teamMode }: {
@@ -608,13 +611,12 @@ function MobileFunnel({ leads, kpiTargets }: { leads: Lead[]; kpiTargets: KpiTar
   const total = leads.length
   if (total === 0) return null
 
-  const repliedStages: LeadStage[]    = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'bad_fit', 'not_interested', 'closed']
-  const callBookedStages: LeadStage[] = ['call_booked', 'second_call', 'closed']
+  const repliedStages: LeadStage[] = ['replied', 'freebie_sent', 'call_booked', 'second_call', 'nurture', 'nurture_post_call', 'bad_fit', 'not_interested', 'closed']
 
   const counts = [
     total,
     leads.filter(l => repliedStages.includes(l.stage)).length,
-    leads.filter(l => callBookedStages.includes(l.stage)).length,
+    leads.filter(l => l.call_booked_at !== null || ['call_booked', 'second_call', 'closed'].includes(l.stage)).length,
     leads.filter(l => l.stage === 'closed').length,
   ]
 

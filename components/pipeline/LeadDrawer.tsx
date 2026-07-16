@@ -33,7 +33,7 @@ const LABEL_PRESETS: { bg: string; text: string; swatch: string }[] = [
   { bg: '#E5E7EB', text: '#374151', swatch: '#6B7280' },
 ]
 
-const MOVEABLE_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'closed', 'nurture', 'bad_fit', 'not_interested']
+const MOVEABLE_STAGES: LeadStage[] = ['follower', 'replied', 'freebie_sent', 'call_booked', 'second_call', 'closed', 'nurture_post_call', 'nurture', 'bad_fit', 'not_interested']
 
 // ─── Stage badge config ───────────────────────────────────────────────────────
 
@@ -44,8 +44,9 @@ const STAGE_STYLE: Record<LeadStage, { background: string; color: string; dot: s
   call_booked:    { background: 'rgba(245,158,11,0.1)',       color: 'var(--warning)',   dot: 'var(--warning)' },
   second_call:    { background: 'rgba(234,179,8,0.12)',       color: '#A16207',          dot: '#CA8A04' },
   closed:         { background: 'rgba(22,163,74,0.1)',        color: 'var(--success)',   dot: 'var(--success)' },
-  nurture:        { background: 'rgba(20,184,166,0.1)',       color: '#0D9488',          dot: '#0D9488' },
-  bad_fit:        { background: 'rgba(220,38,38,0.08)',       color: 'var(--danger)',    dot: 'var(--danger)' },
+  nurture:           { background: 'rgba(245,158,11,0.1)',    color: '#D97706',          dot: '#D97706' },
+  nurture_post_call: { background: 'rgba(20,184,166,0.1)',   color: '#0D9488',          dot: '#0D9488' },
+  bad_fit:           { background: 'rgba(220,38,38,0.08)',   color: 'var(--danger)',    dot: 'var(--danger)' },
   not_interested: { background: 'var(--surface-3)',           color: 'var(--text-3)',    dot: 'var(--border-strong)' },
 }
 
