@@ -189,8 +189,10 @@ export default function DataPreview({ parseResult, onConfirm, onReset }: Props) 
   function getRowValue(row: ParsedRow, field: MappedField): string | number | null {
     if (field === 'date') return row.date
     if (field === 'revenue') return row.revenue
+    if (field === 'revenue_contracted') return row.revenue_contracted
     if (field === 'leads_count') return row.leads_count
     if (field === 'calls_booked') return row.calls_booked
+    if (field === 'show_up_rate') return row.show_up_rate
     if (field === 'close_rate') return row.close_rate
     if (field === 'ad_spend') return row.ad_spend
     if (field === 'contracts_signed') return row.contracts_signed
